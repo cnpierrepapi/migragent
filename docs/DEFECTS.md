@@ -210,3 +210,67 @@ not one the lane says so plainly in the form rather than being quietly listed as
 
 **Status:** open. It is a source problem, not a code problem, and it is recorded so the Australia
 lane is not marked deep on the strength of a page nobody could read.
+
+---
+
+## D8. A flaky local network nearly marked six working government sites dead
+
+**Found:** 18 August 2026, probing alternative sources for the lanes that failed the first seed.
+
+**What happened.** Six hosts returned `URLError: [Errno 11001] getaddrinfo failed`, including
+`service-public.fr`, which had returned 383,307 bytes about a minute earlier. The fetcher recorded
+each as `unreachable`, and the seeder was about to write that into the registry as a property of the
+source.
+
+**Checked rather than assumed.** Resolving all six hosts three times each immediately afterwards
+gave 3/3 for every one of them. So the failures were transient and local, and the sources were fine
+the whole time.
+
+**Why it matters more here than in most code.** The registry is the product's memory. A row saying a
+government page is unreachable would take that lane out of coverage, and the reason recorded would
+have been wrong. Worse, it would have looked like diligence: a specific error, a timestamp, a source
+marked honestly unavailable. Bad data with a citation on it is exactly what this product exists not
+to produce.
+
+**Fix.** Transport failures are retried three times with a growing backoff. Outcomes now separate
+what the server said from what the network did:
+
+- `refused` for 401, 403 and 429, which is the server answering, so it is final and about the source
+- `unreachable` for 404 and 410, also the server answering
+- `network_unknown` when nothing answered at all after every retry
+
+`network_unknown` is deliberately **not** a blocked state in the registry. It sets
+`unverified_reason` and leaves the row unverified, and `Registry.counts()` reports readable, blocked
+and unverified as three separate numbers. A source we could not reach is not a source we know is
+unavailable, and the count on screen should not pretend otherwise.
+
+**Status:** closed. The re-run reported Spain as unverified rather than blocked, which is the
+distinction working.
+
+---
+
+## D9. Spain's official sites failed TLS verification
+
+**Found:** 18 August 2026, seeding the registry.
+
+**What happened.** Both `www.exteriores.gob.es` and `extranjeros.inclusion.gob.es` failed with
+`SSL: CERTIFICATE_VERIFY_FAILED, self-signed certificate in certificate chain`, consistently, across
+retries. Every other jurisdiction verified fine.
+
+**Diagnosed instead of guessed.** `openssl s_client` shows the chain ends at **AC RAIZ FNMT-RCM**,
+the Spanish national certificate authority, run by the Fabrica Nacional de Moneda y Timbre. For
+comparison, gov.uk chains to GlobalSign, which verifies without complaint.
+
+That root is present in the installed certifi bundle, and the Windows trust store validates both
+hosts without error. So this was never a missing CA. It is how Python's default context assembles
+its chain on this machine.
+
+**Fix.** The fetcher verifies against the operating system trust store via `truststore`, falling
+back to the stock default context if that package is unavailable.
+
+**What was deliberately not done.** Verification was not disabled, and no host was exempted. This
+code fetches pages for a product that holds people's passports, and an unverified TLS connection to
+a government site is not a shortcut worth taking to make a seed script look tidier. If the trust
+store cannot be used, Spain fails loudly rather than being silently downgraded.
+
+**Status:** closed. `exteriores.gob.es` now returns 200 and 163,798 bytes.

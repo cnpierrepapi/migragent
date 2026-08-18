@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import ssl
 import time
 import urllib.error
 import urllib.parse
@@ -36,7 +37,45 @@ USER_AGENT = (
 DEFAULT_DELAY_SECONDS = 2.0
 TIMEOUT_SECONDS = 30
 
-Outcome = Literal["fetched", "blocked_by_robots", "unreachable", "not_html"]
+# A DNS or connection failure says something about the network between here and
+# the host. It does not say anything about the source, and it must never be
+# written into the registry as though it did. See D8: a run of transient
+# getaddrinfo failures nearly recorded six working government sites as
+# unreachable, permanently, on the strength of one attempt each.
+#
+# So transport level failures are retried with a backoff, and if they still
+# fail they get their own outcome that says the cause is unknown rather than
+# claiming the source is dead.
+TRANSPORT_ATTEMPTS = 3
+BACKOFF_SECONDS = 2.0
+
+
+def _tls_context() -> ssl.SSLContext:
+    """Verify certificates against the operating system's trust store.
+
+    Spain's official sites chain to AC RAIZ FNMT-RCM, the Spanish national CA.
+    Python's default context rejected them with "self-signed certificate in
+    certificate chain", while the same roots verify fine through the OS store.
+    That root is present in certifi too, so this is about how the default
+    context assembles its chain rather than about a missing CA. See D9.
+
+    The fix is to trust the right roots, never to stop checking. This code
+    fetches pages for a product that holds people's passports, and an
+    unverified TLS connection to a government site is not a shortcut worth
+    having. If `truststore` is unavailable we keep full verification with the
+    stock context and let Spain fail loudly rather than silently downgrading.
+    """
+    try:
+        import truststore
+
+        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    except Exception:  # noqa: BLE001
+        return ssl.create_default_context()
+
+
+TLS = _tls_context()
+
+Outcome = Literal["fetched", "blocked_by_robots", "refused", "unreachable", "network_unknown", "not_html"]
 
 # Hashing the raw bytes does not work, and this was measured rather than
 # assumed. Two fetches of the same canada.ca study permit page, seconds apart,
@@ -95,6 +134,7 @@ class Fetched:
     content_type: str | None = None
     final_url: str | None = None
     reason: str | None = None
+    attempts: int = 1
 
     @property
     def ok(self) -> bool:
@@ -195,19 +235,39 @@ class Fetcher:
             "Accept-Language": "en,fr;q=0.8,es;q=0.8,ar;q=0.8",
         })
 
-        try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                body = response.read()
-                read_at = _now()
-                content_type = response.headers.get("Content-Type", "")
-                final_url = response.geturl()
-                status = response.status
-        except urllib.error.HTTPError as exc:
-            return Fetched(url=url, outcome="unreachable", read_at=_now(),
-                           status=exc.code, reason=f"HTTP {exc.code}")
-        except Exception as exc:  # noqa: BLE001
-            return Fetched(url=url, outcome="unreachable", read_at=_now(),
-                           reason=f"{type(exc).__name__}: {exc}")
+        last_error: Exception | None = None
+        for attempt in range(1, TRANSPORT_ATTEMPTS + 1):
+            try:
+                with urllib.request.urlopen(request, timeout=self.timeout,
+                                            context=TLS) as response:
+                    body = response.read()
+                    read_at = _now()
+                    content_type = response.headers.get("Content-Type", "")
+                    final_url = response.geturl()
+                    status = response.status
+                break
+            except urllib.error.HTTPError as exc:
+                # The server answered. That is information about the source, so
+                # it is final and there is nothing to retry.
+                outcome = "refused" if exc.code in (401, 403, 429) else "unreachable"
+                return Fetched(url=url, outcome=outcome, read_at=_now(), status=exc.code,
+                               reason=f"HTTP {exc.code}", attempts=attempt)
+            except Exception as exc:  # noqa: BLE001
+                # Nothing answered. Could be the host, could be us. Try again.
+                last_error = exc
+                if attempt < TRANSPORT_ATTEMPTS:
+                    time.sleep(BACKOFF_SECONDS * attempt)
+        else:
+            return Fetched(
+                url=url,
+                outcome="network_unknown",
+                read_at=_now(),
+                reason=(f"{type(last_error).__name__}: {last_error} "
+                        f"(after {TRANSPORT_ATTEMPTS} attempts; this may be our network "
+                        f"rather than the source, so it is not recorded as a property "
+                        f"of the source)"),
+                attempts=TRANSPORT_ATTEMPTS,
+            )
 
         if "html" not in content_type.lower() and "xml" not in content_type.lower():
             return Fetched(url=url, outcome="not_html", read_at=read_at, status=status,
