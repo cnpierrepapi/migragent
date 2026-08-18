@@ -60,3 +60,51 @@ thing before anything had checked the property. It is a cheap example, which is 
 worth logging: the habit is what matters, not the size of the bug.
 
 **Status:** closed, verified by eye in Chrome at all three sizes on 18 August 2026.
+
+---
+
+## D3. Every Imagen endpoint 404s on this project
+
+**Found:** 18 August 2026, generating the photographic set.
+
+**What happened.** `imagen-4.0-generate-001` and `imagen-3.0-generate-002` both returned 404 at
+`us-central1`, with "not found or your project does not have access to it". Then
+`gemini-3-pro-image-preview` returned 404 at both `us-central1` and `global`.
+
+**What works.** `gemini-2.5-flash-image` returned 200 at both `us-central1` and `global`, using
+`generateContent` with `responseModalities: ["IMAGE"]` rather than the Imagen `:predict` shape.
+
+**Why it is logged.** It is the same shape as the Gemini 3.5 gotcha already in `INHERITED.md`: a
+model name that reads as current is simply absent on this project, and the error says nothing useful
+about which one to reach for. The next person needs the working name and the probe, not a guess.
+`tools/make_images.py` carries the working endpoint and the date it was probed.
+
+**Also fixed on the way.** `subprocess` could not launch `gcloud` on Windows because it is a `.cmd`
+wrapper, so `CreateProcess` raised `WinError 2`. Resolved with `shutil.which` rather than
+`shell=True`.
+
+**Status:** closed. Six images generated.
+
+---
+
+## D4. A generated image broke the image rules written two hours earlier
+
+**Found:** 18 August 2026, looking at the generated set rather than filing it.
+
+**What happened.** `docs/BRAND.md` bans a government crest and any readable document in the
+photography, and the generation prompt carried those bans in words. The desk shot came back with a
+passport cover carrying a gold emblem and embossed lettering. The emblem belongs to no real country,
+which is not a defence: a made up crest on the marketing page of a product that sells not inventing
+things is the worst possible place for one.
+
+**Why it happened.** The prompt named a passport, and asked the model not to draw what a passport
+has on it. Naming the object was the mistake, not the ban.
+
+**Fix.** The shot was rebuilt with no passport in the frame at all, a plain unmarked folder in its
+place, and the prompt now says so explicitly. Regenerated and checked: no emblem, no lettering.
+
+**Note on the rest of the set.** The bank counter shot has wall signage and a small wall notice, both
+too soft to resolve into any word or mark. That is inside the rule, which is about anything readable
+or attributable, and it is recorded here so the judgement is visible rather than assumed.
+
+**Status:** closed, every one of the six looked at individually on 18 August 2026.

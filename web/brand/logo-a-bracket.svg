@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="MIGRAGENT">
+  <title>MIGRAGENT, the citation bracket</title>
+  <!-- A square bracket. It is the universal mark for a source: every cited
+       claim ever written ends in one. It is also two posts with a gap, so the
+       same shape is the passage you are trying to get through. The dot between
+       them is the claim being held.
+       Meaning first: this is literally "a thing, with a source around it". -->
+  <path d="M24 12 H12 V52 H24" fill="none" stroke="currentColor" stroke-width="8"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M40 12 H52 V52 H40" fill="none" stroke="currentColor" stroke-width="8"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="32" cy="32" r="5" fill="currentColor"/>
+</svg>

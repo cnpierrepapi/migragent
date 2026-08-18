@@ -11,19 +11,19 @@
 
 :root {
   /* LIGHT, bright and youthful */
-  --paper: #FCFAF6;         /* warm, so a screen guide and a printed one match */
+  --paper: #FAFBFD;         /* cool paper. Trust reads cooler than warm. */
   --paper-raised: #FFFFFF;
-  --ink: #15191E;           /* 16.93 on paper */
-  --ink-soft: #5A6472;      /*  5.75 on paper */
-  --rule: #E4DFD6;
-  --primary: #0B6E4F;       /*  6.00 on paper, safe for body text */
-  --primary-hot: #12A16F;   /*  3.17 on paper, FILL AND HOVER ONLY, not text */
-  --accent: #FFC53D;        /*  1.51 on paper, DECORATION ONLY, never text */
-  --link: #1C5FCF;          /*  5.62 on paper, the colour of a real source */
-  --warn: #B4442A;          /*  5.30 on paper, marks an open question */
+  --ink: #0F172A;           /* 17.24 on paper */
+  --ink-soft: #55627A;      /*  5.94 on paper */
+  --rule: #DEE4EE;
+  --primary: #16467D;       /*  9.19 on paper. Institutional blue. */
+  --primary-hot: #1E5FA8;   /*  6.23 on paper, and now safe for text too */
+  --accent: #FFC53D;        /*  1.52 on paper, DECORATION ONLY, never text */
+  --link: #1B5FCC;          /*  5.70 on paper, the colour of a real source */
+  --warn: #A63A22;          /*  6.24 on paper, marks an open question */
 
-  --shadow: 0 1px 2px rgba(21, 25, 30, .06), 0 8px 24px rgba(21, 25, 30, .05);
-  --ring: 0 0 0 3px rgba(11, 110, 79, .28);
+  --shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 8px 24px rgba(15, 23, 42, .06);
+  --ring: 0 0 0 3px rgba(22, 70, 125, .26);
 
   /* Type. Fraunces carries both moods from one family by moving its optical
    * size and its wonk axis, which is why it beat a two-serif pairing. */
@@ -52,21 +52,21 @@
 :root[data-theme="dark"],
 html.dark {
   /* DARK, elite and mature */
-  --paper: #0B0D10;
-  --paper-raised: #14181D;
-  --ink: #E9EBEE;           /* 16.29 on paper */
-  --ink-soft: #99A2AE;      /*  7.54 on paper */
-  --rule: #232A32;
-  --primary: #3DD68C;       /* 10.37 on paper */
-  --primary-hot: #6FE7AE;   /* 12.71 on paper */
-  --accent: #C9A227;        /*  8.04 on paper. Aged gold, not the light amber.
-                             * Dropping the saturation is the whole difference
-                             * between youthful and grown up. */
-  --link: #8FB3F5;          /*  9.20 on paper */
-  --warn: #E0765A;          /*  6.40 on paper */
+  --paper: #080B12;
+  --paper-raised: #111823;
+  --ink: #E8ECF2;           /* 16.60 on paper */
+  --ink-soft: #97A3B6;      /*  7.71 on paper */
+  --rule: #1E2836;
+  --primary: #7FB0F2;       /*  8.81 on paper */
+  --primary-hot: #A6C9F8;   /* 11.56 on paper */
+  --accent: #C9A227;        /*  8.14 on paper. Aged gold against navy.
+                             * Navy and gold is the oldest trustworthy
+                             * pairing there is, which is the point. */
+  --link: #8FB3F5;          /*  9.31 on paper */
+  --warn: #E0765A;          /*  6.48 on paper */
 
   --shadow: 0 1px 2px rgba(0, 0, 0, .6), 0 12px 40px rgba(0, 0, 0, .45);
-  --ring: 0 0 0 3px rgba(61, 214, 140, .26);
+  --ring: 0 0 0 3px rgba(127, 176, 242, .24);
 
   /* Mature: tighter, flatter, less radius, thinner rules. Same family, and it
    * is the geometry rather than the palette that carries most of the shift. */
@@ -85,18 +85,18 @@ html.dark {
 /* Someone who has never touched the toggle still gets the right face. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #0B0D10;
-    --paper-raised: #14181D;
-    --ink: #E9EBEE;
-    --ink-soft: #99A2AE;
-    --rule: #232A32;
-    --primary: #3DD68C;
-    --primary-hot: #6FE7AE;
+    --paper: #080B12;
+    --paper-raised: #111823;
+    --ink: #E8ECF2;
+    --ink-soft: #97A3B6;
+    --rule: #1E2836;
+    --primary: #7FB0F2;
+    --primary-hot: #A6C9F8;
     --accent: #C9A227;
     --link: #8FB3F5;
     --warn: #E0765A;
     --shadow: 0 1px 2px rgba(0, 0, 0, .6), 0 12px 40px rgba(0, 0, 0, .45);
-    --ring: 0 0 0 3px rgba(61, 214, 140, .26);
+    --ring: 0 0 0 3px rgba(127, 176, 242, .24);
     --radius: 6px;
     --radius-sm: 4px;
     --display-wght: 400;
