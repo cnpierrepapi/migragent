@@ -108,6 +108,42 @@ sources, and produces a file you can open. The demo is: fill it in, watch it wor
 
 ---
 
+---
+
+## What it looks like, and what it costs
+
+### The look
+
+Two faces on purpose. Light is bright and youthful, because starting an application is a hopeful
+thing. Dark is elite and mature, because the document it hands back has to survive being read across
+a desk by a bank officer. Most of the difference is not colour, it is geometry: dark is tighter,
+flatter and quieter.
+
+The whole brand pack is in `docs/BRAND.md`, and the files it describes are in `web/brand/`. Every
+contrast ratio quoted there was measured by `tools/contrast.py` before it was written down, because
+a palette that says it is accessible without a measurement is the same untested claim this project
+keeps promising not to make.
+
+One animation earns its place: the run itself, one line per source as it lands, with the address and
+the moment it was read, and a counter showing the real number. A product whose pitch is that it does
+not invent things cannot have an interface that performs work it is not doing.
+
+### What it costs
+
+The first agent run is free, with the full guide and the PDF.
+
+After that it is $14 a month for reruns and the daily digest, or $105 once per case for the done
+for you tier.
+
+The detail is in `docs/BRAND.md`, including two things that are not settled yet: the fact that the number of watched sources shown on
+the page is always the live count from the registry rather than an aspiration, and where the line
+sits between preparing somebody's documents and representing them, which is a regulated activity in
+Canada and needs a licensed third party.
+
+**None of this is in Builds 1 to 4.** Payment is not part of the hackathon entry and no billing code
+goes in before 31 August. The design carries the prices so the interface is right. The plumbing
+waits.
+
 ## Build log
 
 Started 18 August 2026. Nothing here is claimed as working until it has been checked.

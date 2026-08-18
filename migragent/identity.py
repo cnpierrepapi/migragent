@@ -1,13 +1,20 @@
 """Each worker runs as itself.
 
 Carried over from an earlier build because the reasoning is not specific to any
-domain. A worker holds only the permissions its job needs, and the machine it
-runs on holds none of its own: it is allowed to mint tokens for these identities
-and nothing else. So a claim like "the reader cannot write" is enforced by
-Google rather than by our code choosing to behave.
+domain. The intent is that a worker holds only the permissions its job needs,
+and that the machine it runs on holds none of its own: it is allowed to mint
+tokens for these identities and nothing else.
 
-That distinction cost a day to learn the hard way and it is the reason this file
-came along.
+STATE ON 18 AUGUST 2026: the four accounts below exist and hold no roles at all.
+Nothing is enforced yet, so nothing in this file may be described as a
+guarantee. An earlier version of this docstring said a claim like "the reader
+cannot write" is enforced by Google rather than by our code choosing to behave.
+That sentence was not true when it was written, which is the exact failure
+recorded in docs/INHERITED.md, and it travelled here by being copied across with
+the file. See D1 in docs/DEFECTS.md.
+
+It goes back only after two things: the least privilege grants are applied, and
+a test shows the researcher being refused a write. Not before.
 """
 from __future__ import annotations
 

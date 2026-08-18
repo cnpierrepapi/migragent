@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MIGRAGENT brand pack</title>
+<link rel="icon" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box }
+  body { margin: 0; padding: 48px 32px 96px; transition: background var(--motion) var(--ease), color var(--motion) var(--ease) }
+  main { max-width: 940px; margin: 0 auto }
+  section { margin: 0 0 64px }
+  h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); margin: 0 0 8px; line-height: 1.04 }
+  h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: .14em; font-family: var(--font-body);
+       font-weight: 600; color: var(--ink-soft); margin: 0 0 20px; padding-bottom: 10px; border-bottom: 1px solid var(--rule) }
+  p { line-height: 1.65; max-width: 62ch; color: var(--ink-soft); margin: 0 0 14px }
+  p.lead { font-size: 1.16rem; color: var(--ink) }
+
+  .toggle { position: fixed; top: 20px; right: 20px; z-index: 9; font: 500 .82rem/1 var(--font-body);
+            padding: 11px 16px; border-radius: var(--radius); border: 1px solid var(--rule);
+            background: var(--paper-raised); color: var(--ink); cursor: pointer; box-shadow: var(--shadow);
+            transition: border-color var(--motion-fast) var(--ease) }
+  .toggle:hover { border-color: var(--primary) }
+  .toggle:focus-visible { outline: none; box-shadow: var(--ring) }
+
+  .marks { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px }
+  .mark { background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius);
+          padding: 26px; box-shadow: var(--shadow) }
+  .mark .row { display: flex; align-items: flex-end; gap: 18px; color: var(--primary); margin-bottom: 18px }
+  .mark svg.lg { width: 60px; height: 60px } .mark svg.md { width: 28px; height: 28px }
+  .mark svg.sm { width: 16px; height: 16px }
+  .mark b { display: block; font: 600 .95rem var(--font-body); color: var(--ink); margin-bottom: 4px }
+  .mark small { font: .8rem/1.55 var(--font-body); color: var(--ink-soft) }
+
+  .lockup { display: flex; align-items: center; gap: 13px; color: var(--primary) }
+  .lockup svg { width: 34px; height: 34px }
+  .lockup span { font-family: var(--font-display); font-weight: var(--display-wght);
+                 font-size: 1.55rem; letter-spacing: .02em; color: var(--ink);
+                 font-variation-settings: "SOFT" var(--display-soft), "WONK" var(--display-wonk) }
+
+  .swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(126px, 1fr)); gap: 12px }
+  .sw { border: 1px solid var(--rule); border-radius: var(--radius-sm); overflow: hidden; background: var(--paper-raised) }
+  .sw .chip { height: 58px } .sw .meta { padding: 9px 11px; font: .72rem/1.5 var(--font-mono); color: var(--ink-soft) }
+  .sw .meta b { display: block; color: var(--ink); font-family: var(--font-body); font-size: .78rem }
+
+  .req { background: var(--paper-raised); border: 1px solid var(--rule); border-left: 3px solid var(--primary);
+         border-radius: var(--radius); padding: 20px 22px; margin-bottom: 12px; box-shadow: var(--shadow) }
+  .req h4 { margin: 0 0 6px; font: 600 1.02rem var(--font-body); color: var(--ink) }
+  .req .facts { display: flex; flex-wrap: wrap; gap: 18px; margin: 12px 0 10px;
+                font: .84rem var(--font-body); color: var(--ink-soft) }
+  .req .facts b { color: var(--ink); font-weight: 600 }
+  .req.oq { border-left-color: var(--warn) }
+  mark { background: var(--accent); color: #15191E; padding: 0 4px; border-radius: 3px }
+
+  .run { background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); padding: 22px }
+  .run ol { list-style: none; margin: 0; padding: 0; font-family: var(--font-mono); font-size: .82rem }
+  .run li { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--rule); color: var(--ink-soft);
+            opacity: 0; transform: translateY(6px); animation: land .34s var(--ease) forwards }
+  .run li:last-child { border-bottom: 0 }
+  .run li .u { color: var(--link); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+  .run li .t { color: var(--primary) }
+  @keyframes land { to { opacity: 1; transform: none } }
+  .counter { font: 600 2.6rem var(--font-display); color: var(--ink); font-variant-numeric: tabular-nums }
+  .cap { font: .8rem var(--font-body); color: var(--ink-soft); margin-bottom: 14px }
+
+  .tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px }
+  .tier { background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius);
+          padding: 24px; box-shadow: var(--shadow); transition: transform var(--motion) var(--ease), border-color var(--motion) var(--ease) }
+  .tier:hover { transform: translateY(-3px); border-color: var(--primary) }
+  .tier .price { font: var(--display-wght) 2.5rem var(--font-display); color: var(--ink); font-variant-numeric: tabular-nums }
+  .tier .price sup { font-size: 1.1rem; vertical-align: super; color: var(--ink-soft) }
+  .tier .per { font: .8rem var(--font-body); color: var(--ink-soft) }
+  .tier ul { margin: 16px 0 0; padding: 0; list-style: none; font: .88rem/1.75 var(--font-body); color: var(--ink-soft) }
+  .tier li:before { content: "\2013"; color: var(--primary); margin-right: 8px }
+  .tier.mid { border-color: var(--primary) }
+</style>
+</head>
+<body>
+<button class="toggle" id="t">Dark, elite and mature</button>
+<main>
+
+<section>
+  <div class="lockup" style="margin-bottom:26px">
+    <svg viewBox="0 0 64 64"><path d="M10 45 V11 L32 33 L54 11 V45" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="56" r="5" fill="currentColor"/></svg>
+    <span>MIGRAGENT</span>
+  </div>
+  <h1>Nothing is stated<br>without a source.</h1>
+  <p class="lead">You are applying to move country, or to be licensed to work in one. Fill in one short form. An agent reads the official pages itself and hands you a guide you can save as a PDF.</p>
+</section>
+
+<section>
+  <h2>Three marks, judged at the size that matters</h2>
+  <div class="marks">
+    <div class="mark">
+      <div class="row">
+        <svg class="lg" viewBox="0 0 64 64"><path d="M10 45 V11 L32 33 L54 11 V45" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="56" r="5" fill="currentColor"/></svg>
+        <svg class="md" viewBox="0 0 64 64"><path d="M10 45 V11 L32 33 L54 11 V45" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="56" r="5" fill="currentColor"/></svg>
+        <svg class="sm" viewBox="0 0 64 64"><path d="M10 45 V11 L32 33 L54 11 V45" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="56" r="5" fill="currentColor"/></svg>
+      </div>
+      <b>A. The gate</b>
+      <small>An M whose centre stops short, so the space beneath is a doorway. The dot standing in it is the footnote marker. Says both halves of the product in one shape.</small>
+    </div>
+    <div class="mark">
+      <div class="row">
+        <svg class="lg" viewBox="0 0 64 64"><g transform="rotate(-7 32 32)"><rect x="7" y="7" width="50" height="50" rx="11" fill="none" stroke="currentColor" stroke-width="6"/><path d="M25 21 L39 32 L25 43" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g></svg>
+        <svg class="md" viewBox="0 0 64 64"><g transform="rotate(-7 32 32)"><rect x="7" y="7" width="50" height="50" rx="11" fill="none" stroke="currentColor" stroke-width="6"/><path d="M25 21 L39 32 L25 43" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g></svg>
+        <svg class="sm" viewBox="0 0 64 64"><g transform="rotate(-7 32 32)"><rect x="7" y="7" width="50" height="50" rx="11" fill="none" stroke="currentColor" stroke-width="6"/><path d="M25 21 L39 32 L25 43" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g></svg>
+      </div>
+      <b>B. The stamp</b>
+      <small>An entry stamp, landed slightly crooked. Warmest and most instantly readable. Also the most crowded space, because every visa brand already owns a stamp.</small>
+    </div>
+    <div class="mark">
+      <div class="row">
+        <svg class="lg" viewBox="0 0 64 64"><circle cx="52" cy="15" r="7" fill="currentColor"/><rect x="8" y="26" width="34" height="7" rx="3.5" fill="currentColor"/><rect x="8" y="39" width="48" height="7" rx="3.5" fill="currentColor"/><rect x="8" y="52" width="22" height="7" rx="3.5" fill="currentColor"/></svg>
+        <svg class="md" viewBox="0 0 64 64"><circle cx="52" cy="15" r="7" fill="currentColor"/><rect x="8" y="26" width="34" height="7" rx="3.5" fill="currentColor"/><rect x="8" y="39" width="48" height="7" rx="3.5" fill="currentColor"/><rect x="8" y="52" width="22" height="7" rx="3.5" fill="currentColor"/></svg>
+        <svg class="sm" viewBox="0 0 64 64"><circle cx="52" cy="15" r="7" fill="currentColor"/><rect x="8" y="26" width="34" height="7" rx="3.5" fill="currentColor"/><rect x="8" y="39" width="48" height="7" rx="3.5" fill="currentColor"/><rect x="8" y="52" width="22" height="7" rx="3.5" fill="currentColor"/></svg>
+      </div>
+      <b>C. The footnote</b>
+      <small>A claim and the raised marker that proves it. The most honest of the three and the least obvious. Says nothing at all about travel, which may be the point.</small>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Palette, measured not eyeballed</h2>
+  <div class="swatches">
+    <div class="sw"><div class="chip" style="background:var(--ink)"></div><div class="meta"><b>ink</b>body</div></div>
+    <div class="sw"><div class="chip" style="background:var(--ink-soft)"></div><div class="meta"><b>ink soft</b>secondary</div></div>
+    <div class="sw"><div class="chip" style="background:var(--primary)"></div><div class="meta"><b>primary</b>cleared</div></div>
+    <div class="sw"><div class="chip" style="background:var(--primary-hot)"></div><div class="meta"><b>primary hot</b>fill only</div></div>
+    <div class="sw"><div class="chip" style="background:var(--accent)"></div><div class="meta"><b>accent</b>never text</div></div>
+    <div class="sw"><div class="chip" style="background:var(--link)"></div><div class="meta"><b>link</b>a real source</div></div>
+    <div class="sw"><div class="chip" style="background:var(--warn)"></div><div class="meta"><b>warn</b>open question</div></div>
+    <div class="sw"><div class="chip" style="background:var(--rule)"></div><div class="meta"><b>rule</b>borders</div></div>
+  </div>
+</section>
+
+<section>
+  <h2>How a requirement looks, and how an unsourced one looks</h2>
+  <div class="req">
+    <h4>Step 4. Show proof of funds</h4>
+    <p style="margin:0">Placeholder wording. Nothing on this page is a real requirement, because the source reader is not built yet. This block exists to prove the type and the citation line render.</p>
+    <div class="facts"><span>Cost <b class="cost">example</b></span><span>Takes <b class="duration">example</b></span><span>Blocks <b>step 6</b></span></div>
+    <a class="source" href="#">placeholder.source.url/example</a>
+    <span class="read-on">&nbsp; read on a date the fetch will supply</span>
+  </div>
+  <div class="req oq">
+    <h4>Open question</h4>
+    <p style="margin:0">No official source was found for this, so it is not stated as a requirement. It sits at the back of the guide, marked, rather than being <mark>quietly guessed</mark>.</p>
+  </div>
+</section>
+
+<section>
+  <h2>The one animation that earns its place</h2>
+  <p>Not a spinner. The run itself, one line per source as it lands, carrying the address and the moment it was read. The number is whatever the run really did.</p>
+  <div class="run">
+    <div class="counter" id="c">0</div>
+    <div class="cap">sources read in this run</div>
+    <ol id="ol"></ol>
+  </div>
+</section>
+
+<section>
+  <h2>Pricing</h2>
+  <div class="tiers">
+    <div class="tier">
+      <div class="price">Free</div><div class="per">no card</div>
+      <ul><li>Your first agent run</li><li>The full guide, sources on every line</li><li>Save it as a PDF</li></ul>
+    </div>
+    <div class="tier mid">
+      <div class="price"><sup>$</sup>14</div><div class="per">per month</div>
+      <ul><li>3 reruns</li><li>Daily digest across the watched sources, filtered to the ones that touch your case</li><li>Up to 7 applications filled out for you, school, job or exam</li></ul>
+    </div>
+    <div class="tier">
+      <div class="price"><sup>$</sup>105</div><div class="per">per case, charged once</div>
+      <ul><li>Done for you</li><li>Visa checklist</li><li>Third party services arranged</li></ul>
+    </div>
+  </div>
+</section>
+
+</main>
+<script>
+  var root = document.documentElement, btn = document.getElementById('t');
+  btn.onclick = function () {
+    var dark = root.dataset.theme === 'dark';
+    root.dataset.theme = dark ? 'light' : 'dark';
+    btn.textContent = dark ? 'Dark, elite and mature' : 'Light, bright and youthful';
+  };
+
+  // Placeholder addresses. Real ones only once the fetcher exists.
+  var lines = [
+    'example.gc.ca/study-permit', 'example.gc.ca/proof-of-funds',
+    'example.gc.ca/attestation-letter', 'example.gc.ca/biometrics',
+    'example.gc.ca/medical-exam', 'example.gc.ca/fees'
+  ];
+  var ol = document.getElementById('ol'), c = document.getElementById('c');
+  lines.forEach(function (u, i) {
+    var li = document.createElement('li');
+    li.style.animationDelay = (i * 160) + 'ms';
+    li.innerHTML = '<span class="t">read</span><span class="u">' + u + '</span><span>hh:mm:ss</span>';
+    ol.appendChild(li);
+    setTimeout(function () { c.textContent = i + 1; }, i * 160 + 340);
+  });
+</script>
+</body>
+</html>

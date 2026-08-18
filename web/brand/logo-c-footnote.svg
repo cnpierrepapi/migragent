@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="MIGRAGENT">
+  <title>MIGRAGENT, the footnote</title>
+  <!-- Three lines of a claim, and the raised marker that proves it. The most
+       honest mark of the three and the least obvious. It says the product's
+       one rule and says nothing about travel. -->
+  <circle cx="52" cy="15" r="7" fill="currentColor"/>
+  <rect x="8" y="26" width="34" height="7" rx="3.5" fill="currentColor"/>
+  <rect x="8" y="39" width="48" height="7" rx="3.5" fill="currentColor"/>
+  <rect x="8" y="52" width="22" height="7" rx="3.5" fill="currentColor"/>
+</svg>
