@@ -1,20 +1,33 @@
 """Each worker runs as itself.
 
-Carried over from an earlier build because the reasoning is not specific to any
-domain. The intent is that a worker holds only the permissions its job needs,
-and that the machine it runs on holds none of its own: it is allowed to mint
-tokens for these identities and nothing else.
+Each worker holds only the permissions its job needs. Roles are applied by
+tools/grant_roles.sh, which keeps the whole model in one readable place.
 
-STATE ON 18 AUGUST 2026: the four accounts below exist and hold no roles at all.
-Nothing is enforced yet, so nothing in this file may be described as a
-guarantee. An earlier version of this docstring said a claim like "the reader
-cannot write" is enforced by Google rather than by our code choosing to behave.
-That sentence was not true when it was written, which is the exact failure
-recorded in docs/INHERITED.md, and it travelled here by being copied across with
-the file. See D1 in docs/DEFECTS.md.
+MEASURED ON 18 AUGUST 2026 by tools/test_isolation.py, which reported 4 passed,
+0 failed, 0 unproven:
 
-It goes back only after two things: the least privilege grants are applied, and
-a test shows the researcher being refused a write. Not before.
+  - the researcher CAN read the source registry
+  - the researcher CANNOT write to Firestore, refused with PermissionDenied 403
+  - the writer CAN write, which is what makes the line above evidence rather
+    than a database being unreachable
+  - nothing can mint a token for the watcher
+
+So "the researcher cannot publish a guide" is enforced by Google rather than by
+our code choosing to behave. That sentence is allowed here only because the test
+above exists and passed, and it comes straight back out if it ever stops
+passing. An earlier version of this file asserted it while the four accounts
+held no roles at all, which is D1 in docs/DEFECTS.md and the same failure
+already recorded in docs/INHERITED.md.
+
+The watcher is the strongest boundary of the four and it is worth naming: it has
+no serviceAccountTokenCreator bindings whatsoever, so no principal anywhere can
+become it. It runs as itself on its own Cloud Run job and is reached through
+Pub/Sub, never by impersonation. A web request therefore cannot start a crawl
+round by any path.
+
+Re-run the test after any change here or in tools/grant_roles.sh:
+
+    python tools/test_isolation.py
 """
 from __future__ import annotations
 

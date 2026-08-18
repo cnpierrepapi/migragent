@@ -31,8 +31,27 @@ across with the file.
 the stronger sentence goes back, and says where the check lives. The strong claim gets restored only
 after roles are granted and a test has proved a denial.
 
-**Status:** open. It closes when the least privilege grants exist and a test shows the researcher
-being refused a write. That test is the first task of Build 1.
+**Closed 18 August 2026.** `tools/grant_roles.sh` applied the roles and `tools/test_isolation.py`
+reported **4 passed, 0 failed, 0 unproven**, exit 0:
+
+```
+PASS  researcher can read the registry: read succeeded
+PASS  researcher CANNOT write: PermissionDenied, which is the point (403)
+PASS  writer CAN write: wrote and cleaned up, so Firestore is reachable
+PASS  web CANNOT become the watcher: refused: RefreshError
+```
+
+The third line is what makes the second one evidence. A denial while the database is unreachable
+would look identical and mean nothing.
+
+The claim is back in `identity.py`, and it names the test that earns it. It comes out again if the
+test ever stops passing.
+
+**One honest caveat, checked rather than waved at.** The fourth check runs as the developer's user
+account, not as `migragent-web`, so on its own it proves that *that* principal cannot become the
+watcher. `gcloud iam service-accounts get-iam-policy` on all four accounts settles the stronger
+version: the watcher has **no `serviceAccountTokenCreator` bindings at all**, so no principal
+anywhere can impersonate it. It runs as itself on its own Cloud Run job, reached through Pub/Sub.
 
 ---
 
