@@ -1,8 +1,9 @@
 # What came from the previous build, and why
 
-MIGRAGENT is built in the same Google Cloud project as an earlier project called ACCESSION, which was
-stood down on 18 August. Everything ACCESSION-specific has been deleted. What follows is what was
-kept, and it was kept because it is not specific to any domain.
+MIGRAGENT is built in the same Google Cloud project as an earlier build, which was deleted on 18
+August: the VM, both Cloud SQL instances, the Cloud Run service, its service accounts, its Pub/Sub
+topic, its Firestore data and its DNS record are all gone. What follows is what was kept, and it was
+kept because it is not specific to any domain.
 
 ## Working plumbing
 
