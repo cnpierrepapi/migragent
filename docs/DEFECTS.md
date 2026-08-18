@@ -498,3 +498,32 @@ registry holds the seed that exists rather than every seed that ever existed. Ve
 purged 857 rows and reported ten entry points.
 
 **Status:** closed.
+
+---
+
+## D17. The quote check caught its first real one in production
+
+**Not a defect in the build. Recorded because it is the first evidence the mechanism fires on real
+traffic rather than on a test I wrote to make it fire.**
+
+**18 August 2026.** The deployed service reports, from live counts:
+
+```
+1046 sources in the registry · 79 pages read · 422 requirements ·
+1 dropped for having no quote on the page
+```
+
+Until now the drop count had been zero across every page read, which is a number that can mean two
+opposite things: the model is behaving, or the check is not running. The synthetic tests in
+`docs/DECISIONS.md` showed it rejects invented requirements, altered numbers and stitched fragments,
+so the mechanism was proven. It had still never rejected anything real.
+
+One in 423 is now on the record, dropped and counted, and the number is on the front page rather
+than in a log.
+
+**Why it is worth its own entry.** A guard that has never triggered is indistinguishable from a
+guard that is switched off, and the difference only shows up on the day it matters. The drop count
+is displayed permanently for that reason. If it goes back to a flat zero for thousands of pages, the
+right response is to suspect the check rather than to congratulate the model.
+
+**Status:** working as designed, and now demonstrated on real pages.
