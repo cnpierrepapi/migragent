@@ -108,3 +108,32 @@ too soft to resolve into any word or mark. That is inside the rule, which is abo
 or attributable, and it is recorded here so the judgement is visible rather than assumed.
 
 **Status:** closed, every one of the six looked at individually on 18 August 2026.
+
+---
+
+## D5. The isolation test passed while proving nothing
+
+**Found:** 18 August 2026, on the very first run of `tools/test_isolation.py`.
+
+**What happened.** There are no application default credentials on this machine, so every check
+raised `DefaultCredentialsError`. Three checks correctly reported FAIL. The fourth, "web CANNOT
+become the watcher", reported **PASS**, because it was a negative check and its `except` branch
+treated any exception as the boundary holding.
+
+Then the summary printed `4 of 4 passed`, because it counted anything not marked FAIL as a pass.
+
+**Why this is the worst kind of bug for this project.** It is a test that produces evidence for a
+security claim while testing nothing at all. It would have gone green in CI on a machine with no
+credentials, and the sentence it exists to justify would have gone back into `identity.py` on the
+strength of it. That is D1 all over again, only with a green tick in front of it.
+
+**Fix.** A third verdict, `UNPROVEN`, distinct from both pass and fail. Missing credentials are
+detected specifically (`google.auth.exceptions.DefaultCredentialsError`) and can never be read as a
+boundary holding. The summary counts the three separately and prints unproven checks in full. The
+exit code is zero only when something actually passed and nothing failed and nothing was unproven.
+
+**Status:** closed. Verified by re-running with credentials still absent: it now reports
+`0 passed, 0 failed, 4 unproven, of 4` and exits 1.
+
+**Still open behind it:** the isolation itself is unproven until the test runs with credentials.
+D1 stays open until then.
