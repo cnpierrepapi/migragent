@@ -110,12 +110,13 @@ def guide() -> Response:
         return redirect("/")
 
     db = _db()
-    corpus = Corpus(db)
+    corpus, registry = Corpus(db), Registry(db)
+    near = {s.url.rstrip("/") for s in registry.near_lane(jurisdiction, lane)}
     built = build(
         jurisdiction, lane,
-        corpus.requirements_for(jurisdiction, lane),
-        corpus.open_questions_for(jurisdiction, lane),
-        Registry(db).total_sources(),
+        corpus.requirements_for(jurisdiction, lane, allowed_urls=near),
+        corpus.open_questions_for(jurisdiction, lane, allowed_urls=near),
+        registry.total_sources(),
     )
     return Response(to_html(built), mimetype="text/html")
 

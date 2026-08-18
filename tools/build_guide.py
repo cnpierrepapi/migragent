@@ -37,8 +37,11 @@ def main() -> int:
     corpus = Corpus(db)
     registry = Registry(db)
 
-    requirements = corpus.requirements_for(jurisdiction, lane)
-    questions = corpus.open_questions_for(jurisdiction, lane)
+    # The guide cites pages the entry page itself links to. Everything further
+    # out stays in the corpus for the watcher.
+    near = {s.url.rstrip("/") for s in registry.near_lane(jurisdiction, lane)}
+    requirements = corpus.requirements_for(jurisdiction, lane, allowed_urls=near)
+    questions = corpus.open_questions_for(jurisdiction, lane, allowed_urls=near)
     total = registry.total_sources()
 
     guide = build(jurisdiction, lane, requirements, questions, total)

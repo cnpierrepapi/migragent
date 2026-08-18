@@ -79,6 +79,17 @@ class Source:
     discovered_via: str = "seed"
     lead_url: str | None = None
 
+    # How many links from the lane's entry page. 0 is the entry itself, 1 is a
+    # page the entry links to directly, 2 is a page one hop further out.
+    #
+    # This decides what the GUIDE may cite, not what the registry may hold. The
+    # walk reaches other visa types at depth 2, so a UK study walk collects the
+    # Ancestry visa and airport transit pages. Those are worth watching, because
+    # they are real UK immigration pages that really change, and they have no
+    # business in a study guide. The corpus stays wide and the guide stays
+    # close, which is why one number can serve both.
+    depth: int | None = None
+
     # Politeness state, refreshed on a schedule rather than trusted forever.
     robots_allowed: bool | None = None
     robots_checked_at: str | None = None
@@ -191,6 +202,11 @@ class Registry:
         still counted here rather than dropped to make the figure prettier.
         """
         return self._count(self._db.collection(COLLECTION))
+
+    def near_lane(self, jurisdiction: str, lane: Lane, max_depth: int = 1) -> list["Source"]:
+        """Sources close enough to the entry page to belong in the guide."""
+        return [s for s in self.for_lane(jurisdiction, lane)
+                if (s.depth or 0) <= max_depth]
 
     def counts(self) -> dict[str, int]:
         """The full breakdown, for runs and logs rather than for the page.

@@ -122,8 +122,15 @@ class Corpus:
         batch.commit()
         return read
 
-    def requirements_for(self, jurisdiction: str, lane: str) -> list[dict[str, Any]]:
-        """Everything read for one lane.
+    def requirements_for(self, jurisdiction: str, lane: str,
+                         allowed_urls: set[str] | None = None) -> list[dict[str, Any]]:
+        """Everything read for one lane, optionally narrowed to nearby pages.
+
+        `allowed_urls` is how the guide stays about the thing you asked for. The
+        walk reaches other visa types two hops out, so a UK study walk holds the
+        Ancestry visa and airport transit pages. They are real pages that really
+        change and they belong in the corpus, and a study guide that quoted them
+        would be padding. The corpus stays wide, the guide stays close.
 
         Two equality filters and then sorting in Python, because a where plus an
         order_by needs a composite index and a fresh clone would 400 on an index
@@ -135,18 +142,23 @@ class Corpus:
             .where(filter=firestore.FieldFilter("lane", "==", lane))
         )
         rows = [d.to_dict() for d in query.stream()]
+        if allowed_urls is not None:
+            rows = [r for r in rows if r.get("source_url", "").rstrip("/") in allowed_urls]
         order = {"eligibility": 0, "document": 1, "requirement": 2, "cost": 3, "timing": 4}
         return sorted(rows, key=lambda r: (order.get(r.get("category", ""), 5),
                                            r.get("source_url", "")))
 
-    def open_questions_for(self, jurisdiction: str, lane: str) -> list[dict[str, Any]]:
+    def open_questions_for(self, jurisdiction: str, lane: str,
+                           allowed_urls: set[str] | None = None) -> list[dict[str, Any]]:
         query = (
             self._db.collection(OPEN_QUESTIONS)
             .where(filter=firestore.FieldFilter("jurisdiction", "==", jurisdiction))
             .where(filter=firestore.FieldFilter("lane", "==", lane))
         )
-        return sorted((d.to_dict() for d in query.stream()),
-                      key=lambda r: r.get("question", ""))
+        rows = [d.to_dict() for d in query.stream()]
+        if allowed_urls is not None:
+            rows = [r for r in rows if r.get("source_url", "").rstrip("/") in allowed_urls]
+        return sorted(rows, key=lambda r: r.get("question", ""))
 
     def _count(self, query) -> int:
         return int(query.count().get()[0][0].value)

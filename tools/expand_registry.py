@@ -132,6 +132,7 @@ def main() -> int:
                     provenance="official",
                     discovered_via=f"walked from {entry.source_id}",
                     lead_url=d.lead_url,
+                depth=d.depth,
                     robots_allowed=True,
                     robots_checked_at=page.read_at,
                     last_read_at=page.read_at,

@@ -50,10 +50,23 @@ def main() -> int:
     snapshots = SnapshotStore(storage.Client(project=PROJECT, credentials=reader_creds))
     extractor = Extractor(PROJECT, MODEL, MODEL_LOCATION, reader_creds)
 
-    sources = [s for s in registry.for_lane(jurisdiction, lane) if s.readable]
+    # By default, read only the pages the guide is allowed to cite: the entry
+    # page and what it links to directly. The walk reaches other visa types two
+    # hops out, so reading everything spends model calls on pages about bringing
+    # food into the country, which no study guide will ever quote. Those pages
+    # stay in the registry and stay watched.
+    #
+    # --all reads them too, for when the corpus is the point rather than the
+    # guide.
+    if "--all" in sys.argv:
+        sources = [s for s in registry.for_lane(jurisdiction, lane) if s.readable]
+        scope = "readable sources, every depth"
+    else:
+        sources = [s for s in registry.near_lane(jurisdiction, lane) if s.readable]
+        scope = "sources at depth 0 and 1, which is what the guide may cite"
     if limit:
         sources = sources[:limit]
-    print(f"{len(sources)} readable sources for {jurisdiction} {lane}\n")
+    print(f"{len(sources)} {scope} for {jurisdiction} {lane}\n")
 
     fetcher = Fetcher(delay_seconds=0.5)
     kept = dropped = questions = errors = 0
