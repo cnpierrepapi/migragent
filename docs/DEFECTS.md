@@ -395,3 +395,54 @@ that is silently the ceiling is a number that means nothing while looking like i
 reported as having hit the cap, rather than having its ceiling quietly presented as its size.
 
 **Status:** closed.
+
+---
+
+## D14. Playwright did not unblock either blocked lane, and that is the answer
+
+**Investigated:** 18 August 2026, on the question of whether a real browser could read the pages a
+plain HTTP client could not.
+
+**The two blocked lanes are not the same case, and the difference decides everything.**
+
+`immi.homeaffairs.gov.au` publishes a robots.txt that **allows** the visa pages, then returns 403 to
+a polite identified urllib request. Their own machine-readable crawl policy says yes and something
+in front of the site refuses anything that does not look like a browser. Rendering the page in a real
+browser there is meeting their transport, not getting around their policy.
+
+`travel.state.gov`, `uscis.gov` and `studyinthestates.dhs.gov` **disallow** the pages in robots.txt.
+A browser does not change that answer. Using one there would be precisely the "no fetching anyway,
+no changing the user agent to get around it" that rule 10 rules out.
+
+**So `migragent/render.py` checks robots before it opens a page**, and refuses a disallowed URL
+itself rather than trusting the caller to remember. Verified: the US page returns
+`blocked_by_robots` with the reason, and no request is made.
+
+**Result for Australia: still 403, to a real Chromium carrying our honest MIGRAGENT user agent.**
+
+The obvious next move is to send Chrome's own user agent string and get in. That is refused. It
+means passing ourselves off as a person browsing in order to collect a page, and this product's
+entire claim is that its records are true. A site that refuses our identified client has given a
+clear answer, and the answer is taken. Australia stays recorded as `server_refused`, with the reason,
+and reaches its lanes through the portal fallback in `docs/SOURCES.md` or not at all.
+
+**Does the browser earn its place anywhere?** Measured, on pages that a plain fetch already reads,
+comparing visible text:
+
+| source | plain | rendered | change |
+| --- | --- | --- | --- |
+| service-public.fr | 28,494 | 35,643 | **+25%** |
+| gov.uk | 9,265 | 9,536 | +3% |
+| u.ae | 1,357 | 1,293 | -5% |
+| exteriores.gob.es | 13,724 | 5,373 | -61% |
+
+France gains real content that only exists after scripts run. Spain's drop was checked rather than
+assumed: rendered and plain both open with the same real content, so that is duplicated menu markup
+being collapsed and not a consent wall swallowing the page.
+
+**Decision:** the browser is kept and used selectively, where a source is refused a plain fetch or
+where rendering demonstrably yields more for that source, and the method used is recorded per
+snapshot. It is not a blanket replacement, because on three of four hosts it costs time and returns
+the same page or less.
+
+**Status:** closed as investigated. Australia and the United States both remain blocked, honestly.

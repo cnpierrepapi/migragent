@@ -167,8 +167,22 @@ class Registry:
         rows = [Source(**d.to_dict()) for d in query.stream()]
         return sorted(rows, key=lambda s: (s.kind != "government", s.rank_position or 0, s.url))
 
+    def total_sources(self) -> int:
+        """The one number the product shows: every page and subpage we hold.
+
+        Set on 18 August 2026. The surface carries a single total rather than a
+        breakdown, because a visitor is asking how much ground this covers and
+        four numbers do not answer that better than one.
+
+        It is still the real number, read live, per rule 5. The breakdown has not
+        gone anywhere: `counts()` keeps it for the runs, the logs and the docs,
+        and a blocked or unverified source is still a source we know about and
+        still counted here rather than dropped to make the figure prettier.
+        """
+        return len(self.all())
+
     def counts(self) -> dict[str, int]:
-        """The real numbers, for the count shown on screen.
+        """The full breakdown, for runs and logs rather than for the page.
 
         Rule 5. On the day it is nine it says nine. `readable` is reported apart
         from `total` because a source we are not allowed to read is still a
