@@ -23,31 +23,30 @@ is rounder, looser and warmer. Someone flipping the toggle should feel the produ
 
 ## The mark
 
-Three candidates are drawn and sitting in `web/brand/`. Open `web/brand/preview.html` in a browser
-and judge them at sixteen pixels, because that is the size that actually decides it.
+The first three candidates were minimal and meant nothing, which was the correct verdict on them.
+Minimal is the constraint, not the idea. These three each carry one.
 
-**A. The gate.** An M whose middle stops short, so the space underneath it is a doorway. A dot
-stands in the doorway, and that dot is a footnote marker. It says the two things the product is: you
-are going through a door, and nothing gets said without a source. One colour, no gradient, no
-lettering to break at small sizes.
+**A. The citation bracket.** A square bracket is the universal mark for a source. Every cited claim
+ever written ends inside one. It is also two posts with a gap, so the same shape is the passage you
+are trying to get through, and the dot between them is the claim being held. Two true readings, one
+shape, no lettering to break at small sizes.
 
-**B. The stamp.** An entry stamp landed slightly crooked, with a chevron for the crossing. The
-warmest and the fastest to read. The problem is that it is crowded: every immigration brand already
-owns a stamp, and a judge who has seen ten submissions will have seen four stamps.
+**B. The moved line.** Three lines of a rule with the bottom one shifted. A diff. It means the one
+thing a competitor cannot copy without doing the same work: the requirement moved, and we caught the
+day it moved. This is the mark for the country watch screen rather than for the guide.
 
-**C. The footnote.** Three lines of a claim and the raised marker that proves it. The most honest of
-the three, and the least obvious. It says nothing about travel at all, which is either the weakness
-or the whole point.
+**C. The hollow seal.** The milled edge of an official seal with nothing in the middle. The source is
+official, and the empty centre says we are not the ones issuing it and will never wear a crest.
+Checked at 16px and it fills in, so if this one is chosen the small size needs a solid variant.
 
-**The recommendation is A.** It is the only one that carries the citation rule in the shape itself,
-and it is the only one that stays clearly itself at favicon size. This has not been tested on anyone
-but me, so it is a recommendation and not a finding.
+**The recommendation is A**, and the favicon follows it. It is the only one that carries the
+product's single rule in the shape itself, and it holds at 16 pixels without help.
 
 ### Favicon
 
 `web/brand/favicon.svg`. An SVG favicon can answer `prefers-color-scheme`, which a `.ico` cannot, so
-the icon is deep green on warm paper by day and raised green on near black by night. A PNG fallback
-gets generated when the web app exists and not before.
+the icon is navy on cool paper by day and raised blue on near black by night. A PNG fallback gets
+generated when the web app exists and not before.
 
 ---
 
@@ -58,35 +57,40 @@ contrast ratio against the paper it sits on.
 
 Those ratios came from `python tools/contrast.py`, which was written and run before the numbers were
 written down. This is the rule from `INHERITED.md` applied to design: no claim in a document before
-the test that proves it. A palette that says "accessible" without a measurement is exactly the kind
-of untested claim that went wrong last time.
+the test that proves it.
+
+### Why not green
+
+The first palette was green, argued as "cleared", chosen mostly because blue is what everyone else
+uses. That is a reason to look different rather than a reason to be right, and the brief is trust.
+
+Navy won on the measurements too, which settled it rather than taste doing the settling:
+
+| | green | navy |
+| --- | --- | --- |
+| primary on paper | 6.00 | **9.19** |
+| the hot tone on paper | 3.17, fills only | **6.23, safe for text** |
+
+The green needed a rule saying its bright tone could never carry a word. The navy does not. Paper
+also went from warm to cool, because trust reads cooler.
 
 **Measured on 18 August 2026, light:**
 
 | Pair | Ratio | What that permits |
 | --- | --- | --- |
-| ink on paper | 16.93 | body text anywhere |
-| ink soft on paper | 5.75 | body text |
-| primary on paper | 6.00 | body text, buttons, the mark |
-| primary hot on paper | 3.17 | **large text and fills only, never body** |
-| link on paper | 5.62 | body text, and it is the colour of a real source |
-| warn on paper | 5.30 | body text, marks an open question |
-| accent on paper | 1.51 | **decoration only, never text of any size** |
+| ink on paper | 17.24 | body text anywhere |
+| ink soft on paper | 5.94 | body text |
+| primary on paper | 9.19 | body text, buttons, the mark |
+| primary hot on paper | 6.23 | body text and hover |
+| link on paper | 5.70 | body text, and it is the colour of a real source |
+| warn on paper | 6.24 | body text, marks an open question |
+| accent on paper | 1.52 | **decoration only, never text of any size** |
 
-**Measured the same day, dark:** every pair clears 6.40 and most clear 9.00, because a dark ground
-gives contrast away cheaply. The lowest is warn at 6.40. The full table is the output of the script.
+**Measured the same day, dark:** the lowest pair is warn at 6.48, and primary reaches 8.81. Dark
+pairs the navy with an aged gold, which is the oldest trustworthy pairing there is.
 
-Two rules fall out of the numbers rather than out of taste. The light amber is a highlighter and can
-never carry a word. The light bright green is a hover and a fill, not a paragraph.
-
-The mature move in dark is dropping the amber to an aged gold and letting the green rise. Same two
-roles, ten years older.
-
-### Why green
-
-The obvious choices are blue for trust and red for flags, and both are taken by every government
-portal and every visa consultant. Green here means cleared, which is the feeling the product is
-selling, and it reads as approval on a document without shouting.
+One rule still falls out of the numbers rather than out of taste: the amber at 1.52 is a highlighter
+and can never carry a word.
 
 ---
 
@@ -158,7 +162,16 @@ closed passport. A bank counter from behind the queue. An empty embassy waiting 
 - Every generated image is labelled as an illustration in the repo, so nobody can later mistake one
   for evidence of anything.
 
-Not generated yet. Waiting on the mark being chosen, because the grade follows the palette.
+**Six are shot**, in `web/brand/images/`, generated on Vertex AI in the same Google Cloud project
+the app runs in, so no key leaves the project and no second vendor is involved. The working model is
+`gemini-2.5-flash-image`; every Imagen endpoint 404s here, see D3.
+
+The set: hands on a paper form at a kitchen table, a stack of printed pages on a desk, a bank
+counter seen from back in the queue, an empty row of waiting room chairs, a person at a laptop late
+at night, an envelope on a doormat. The night desk shot is the dark mode hero.
+
+Every one was looked at individually rather than filed. One broke the rules above and was reshot,
+see D4. `tools/make_images.py` regenerates the set and carries the prompts.
 
 ---
 
@@ -226,11 +239,14 @@ the 31st. The brand pack carries the pricing so the design is right, and the plu
 ## Where the files are
 
 ```
-web/brand/tokens.css        both palettes, both geometries, ratios in the comments
-web/brand/logo-a-gate.svg   candidate A, recommended
-web/brand/logo-b-stamp.svg  candidate B
-web/brand/logo-c-footnote.svg candidate C
-web/brand/favicon.svg       theme aware, follows whichever mark is chosen
-web/brand/preview.html      open this in a browser, toggle it, judge the marks at 16px
-tools/contrast.py           the measurement behind every ratio quoted above
+web/brand/tokens.css          both palettes, both geometries, ratios in the comments
+web/brand/logo-a-bracket.svg  the citation bracket, recommended
+web/brand/logo-b-moved.svg    the moved line
+web/brand/logo-c-seal.svg     the hollow seal
+web/brand/favicon.svg         theme aware, follows the bracket
+web/brand/images/             six photographs, all looked at
+web/brand/preview.html        the marks at 60, 28 and 16 pixels, and both themes
+tools/contrast.py             the measurement behind every ratio quoted above
+tools/make_images.py          the photography, prompts and working endpoint
+docs/SOURCES.md               what gets read, and how a page becomes a citation
 ```
