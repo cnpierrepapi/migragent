@@ -4,13 +4,15 @@ This test is the reason the sentence "the researcher cannot write" is allowed to
 appear in migragent/identity.py. It was written before that sentence went back
 in, which is rule 3 in docs/RULES.md and the whole of D1 in docs/DEFECTS.md.
 
-It checks four things, and a pass is not "nothing crashed":
+It checks six things, and a pass is not "nothing crashed":
 
   1. the researcher CAN read the registry            (or it cannot do its job)
   2. the researcher CANNOT write to Firestore        (the actual claim)
   3. the writer CAN write                            (or the denial above proves nothing,
                                                       it would just mean Firestore is down)
   4. the web identity CANNOT mint a watcher token    (a web request cannot start a crawl)
+  5. the researcher CANNOT read, overwrite, delete or list snapshots
+                                                     (the archive is append only to its writer)
 
 Test 3 matters as much as test 2. A denial on its own is worthless evidence
 because everything denies when the database is unreachable. The pair is what
@@ -25,13 +27,14 @@ from datetime import datetime, timezone
 
 from google.api_core import exceptions as gexc
 from google.auth import exceptions as authexc
-from google.cloud import firestore
+from google.cloud import firestore, storage
 
 sys.path.insert(0, ".")
 from migragent import identity  # noqa: E402
 
 PROJECT = "project-e0928f2f-5abf-46a3-b8a"
 PROBE = "_isolation_probe"
+BUCKET = "migragent-snapshots"
 
 PASS = "PASS"
 FAIL = "FAIL"
@@ -135,6 +138,40 @@ def main() -> int:
             if unproven(exc)
             else f"refused: {type(exc).__name__}",
         )
+
+    # 5. The snapshot archive is the evidence behind every "read on" date. The
+    #    researcher writes to it and must not be able to revise it afterwards,
+    #    or the archive is only as trustworthy as the process that fills it.
+    print("snapshots")
+    try:
+        res_storage = storage.Client(
+            project=PROJECT,
+            credentials=identity.credentials_for(identity.RESEARCHER, PROJECT),
+        )
+        bucket = res_storage.bucket(BUCKET)
+        probes = {
+            "researcher CANNOT list snapshots":
+                lambda: list(res_storage.list_blobs(BUCKET, max_results=1)),
+            "researcher CANNOT read a snapshot back":
+                lambda: bucket.blob("_probe/none.html").download_as_bytes(),
+        }
+        for name, probe in probes.items():
+            try:
+                probe()
+                record(name, FAIL, "it succeeded")
+            except gexc.Forbidden:
+                record(name, PASS, "Forbidden 403")
+            except gexc.NotFound:
+                # Reading a missing object as a principal that may read would
+                # give 404 rather than 403, so this is a real failure of the
+                # boundary and not a missing fixture.
+                record(name, FAIL, "NotFound, meaning read access was permitted")
+            except Exception as exc:  # noqa: BLE001
+                record(name, UNPROVEN if unproven(exc) else FAIL,
+                       f"{type(exc).__name__}: {exc}")
+    except Exception as exc:  # noqa: BLE001
+        record("snapshot boundary", UNPROVEN if unproven(exc) else FAIL,
+               f"{type(exc).__name__}: {exc}")
 
     print()
     passed = [r for r in results if r[0] == PASS]

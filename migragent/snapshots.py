@@ -44,9 +44,16 @@ def _path(source_id: str, read_at: str) -> str:
 class SnapshotStore:
     """Writes raw pages to Cloud Storage.
 
-    The researcher holds storage.objectCreator and nothing more, so it can add a
-    snapshot and cannot read back or overwrite the ones already there. An
-    archive its own writer cannot edit is worth more than one it can.
+    The researcher holds storage.objectCreator and nothing more. Measured on
+    18 August 2026 with a real object in the bucket, that principal gets
+    Forbidden 403 on all four of read, overwrite, delete and list.
+
+    So the archive is append only to the thing that fills it. An archive its own
+    writer can revise is worth much less than one it cannot, because the whole
+    job of these files is to still say tomorrow what the page said today.
+
+    The list and read checks are in tools/test_isolation.py so this stays true
+    rather than having been true once.
     """
 
     client: storage.Client
