@@ -1,113 +1,129 @@
 # The plan
 
-Four builds. Each one ends with something that works on a live URL, not with a half-finished layer.
-Deadline is 31 August, 5pm PDT, so finishing the four builds around the 22nd leaves real buffer for
-the video and for the things that always go wrong.
+Three builds. Everything that has been asked for is in one of them. Each ends with something working
+on a live URL.
 
-**Where it lives:** Cloud Run, service named `migragent`, so the URL carries the name. The backend
-has to be on Google Cloud because the video must show it running there, and the app holds user
-documents and a service account, so it stays inside the same project rather than exporting a key to
-another provider.
+Standing rules are in `docs/RULES.md`. What gets read and how is in `docs/SOURCES.md`. How it feels
+to use is in `docs/HOW_IT_WORKS.md`.
+
+**Where it lives:** Cloud Run, service `migragent`, at `migragent.onenept.com`. Firestore, Pub/Sub,
+Cloud Scheduler, Cloud Storage. The app holds passports and a service account, so nothing is
+exported to another provider.
 
 ---
 
-## Build 1 — The working guide
+## Build 1 — The guide, end to end
 
-**Ends with:** fill in the form on a live URL, and get back a PDF with real requirements and real
-citations.
+**Ends with:** fill in the form on the live URL, get a PDF with real requirements and real citations.
 
-This is the checkpoint. Everything after it makes the guide better; nothing after it is needed for
-the guide to exist.
+**Foundation**
+- Least privilege roles on `migragent-researcher`, `migragent-writer`, `migragent-watcher`,
+  `migragent-web`, and a test that shows the researcher refused a write. Closes D1.
+- Cloud Run service, deploy path, `/health`, domain mapping to `migragent.onenept.com`.
 
-- Cloud Run service, deploy path, one page that serves
-- The intake form. Three lanes offered, **Canada study permit built deep first** because there is a
-  real blocked case behind it
-- **The source reader.** Fetch the official page, extract the requirements with Gemini, attach the
-  link and the date read. The citation comes from the fetch, never from the model, so it cannot be
-  invented
-- ADK on the researcher, and only there: deciding a source needs a sibling page, fetching it, and
-  stopping when the requirement is complete is real multi-step work. The fetching, hashing and
-  rendering around it stays plain code on purpose
-- The guide: ordered steps, dependencies, cost, duration, sources on every line, open questions at
-  the back for anything that could not be sourced
-- Rendered as a document and downloadable as PDF
+**The registry, as data**
+- Firestore collection, one row per source. Seeded with seven jurisdictions times two lanes:
+  UK, US, Canada, Australia, France, Spain, UAE, each with work and study.
+- Row carries URL, language, discovery, robots state, last read, hash, snapshot location,
+  provenance.
 
-## Build 2 — Documents and gaps
+**The reader**
+- Fetcher in plain code: robots.txt gate, fetch, hash, snapshot to Cloud Storage, stamp the date
+  read. Identifies itself, one request per host at a time, backs off.
+- Researcher on ADK: reads the page, decides whether a sibling page is needed, fetches it, stops when
+  the requirement is complete. This is the only place ADK appears.
+- Extraction with Gemini. The citation is attached from the fetch, never from the model.
+- Translation path: extract from the original language, keep the original sentence verbatim, store
+  the translation as a translation.
 
-**Ends with:** uploading a transcript changes what the guide says you still need.
+**The output**
+- Intake form: jurisdiction, lane, situation. Says plainly which lanes are extracted deep and which
+  are only watched.
+- Guide: ordered steps, dependencies, cost, duration, source and date read on every line, provenance
+  label, open questions at the back.
+- Rendered as a document and downloadable as PDF, with self-hosted fonts.
+- Live source count on screen, read from the registry.
 
-- Upload passport, transcript, degree, English test, registration
-- Gemini reads them. This is the multimodal work, and it is also what the Best Multimodal UX
-  category is for
-- Match uploads against requirements: what is satisfied, what is missing, what is expiring
-- **Routes for every gap.** No English test yet means the accepted tests, their cost and their
-  booking lead time. A second class lower degree means the programmes and bridging routes that
-  accept one, and the ones that do not. A missing route is still an answer
-- Second lane built deep: nursing registration in Canada
-- **Data protection from the start, not retrofitted:** a stated retention window, encryption, and a
-  delete-my-data path that works. People are uploading passports
+---
 
-## Build 3 — The watcher
+## Build 2 — Documents, the score, and the fillable form
 
-**Ends with:** a daily round runs by itself, catches a real change, and the change line shows it.
+**Ends with:** uploading a transcript changes the guide, moves a real number, and returns a form
+built for your case.
 
-- **The source registry is data, not code.** Adding site 101 is a row in Firestore, not a deploy.
-  That is what makes a count of sources a real claim
-- Cloud Scheduler fires daily, Pub/Sub fans out, Cloud Run jobs fetch
-- Raw snapshots to Cloud Storage, because "the date it was read" needs the page behind it and
-  because tomorrow has to diff against today
-- **Hash first.** If the page is byte-identical, stop. No model call, no cost. Most government pages
-  do not change most days, so the daily bill is fetches, not inference
+**Uploads**
+- Passport, transcript, degree, English test, registration, employment letters.
+- Gemini reads them. This is the multimodal work.
+- Data protection from the start: stated retention window, encryption, a delete-my-data path that
+  actually deletes.
+
+**The score**
+- Coverage matching: which extracted requirements each uploaded document actually addresses.
+- The readiness score is that coverage, not the upload count. Tapping it opens the breakdown.
+- Documents listed by what they are worth, because a passport unlocks more than a school transcript.
+- Threshold crossing fires the confetti and lights **GO**. Nothing fires under reduced motion.
+
+**Gaps and routes**
+- What is satisfied, what is missing, what is expiring.
+- Every gap gets routes: accepted alternatives, cost, booking lead time, and which ones this
+  regulator actually accepts.
+
+**The school registry**
+- Ranked by percentage of international students. Top fifty, or the top ten per cent of every
+  registered institution where there are not fifty to take.
+- Publisher and data year stored on every row, walking back from 2025 until real data exists.
+- Three step route to a readable page: the institution's own site, then the course portal page, then
+  drop and take the next one down. Dropped institutions recorded with the reason.
+
+**The fillable form**
+- Generated per case, asking only what is still unknown now that the lane and the gaps are known.
+- Filling it feeds straight back into the guide.
+
+---
+
+## Build 3 — The watcher, the board, and the applications
+
+**Ends with:** a daily round catches a real change, the board updates itself, and the drafts are
+waiting.
+
+**The watcher**
+- Cloud Scheduler fires, Pub/Sub fans out, Cloud Run jobs fetch.
+- Hash first. Byte-identical stops there.
 - On a change: diff, Gemini explains what moved, both versions and both dates recorded with the
-  source
-- **The change line**, seeded from published government change history with their dates. Real
-  changes only. No agent run is ever backdated
-- **The country watch screen.** Where policy has loosened and where it has tightened, from the
-  observed record. This is the part nobody else is building and it is the reason someone renews
-- Politeness: robots.txt respected, the crawler identifies itself, backs off, and caches
+  source.
+- The change line, seeded from published government change history with their dates.
+- The country watch screen: where policy has loosened and where it has tightened, from the observed
+  record. Read only first, personalised after.
 
-## Build 4 — Accounts, notifications, submission
+**Accounts and memory**
+- Firebase Auth.
+- Per user in Firestore: case, documents, guide, watchlist, and what they have already been told so
+  they are not told twice.
 
-**Ends with:** sign in, get told when your guide moves, and the entry is submitted.
+**The board**
+- Kanban columns, populated from the guide's steps and from what the watcher finds.
+- The agent drafts what it can: cover letters per job, CVs per school or role, one per application
+  rather than one for everything.
+- Every draft says it is a draft. Nothing is ticked off on the user's behalf.
+- New tasks appear and stale ones are marked when a source moves.
 
-- Firebase Auth for accounts
-- Persistent memory per user in Firestore: their case, their documents, their guide, their
-  watchlist, and what they have already been told so they are not told twice
-- Routing a change to the people it affects, using embeddings and vector search rather than running
-  every source against every user
-- Browser notification permission, asked for properly, fired when a guide changes
-- Architecture diagram, README a stranger can follow, the four minute video
+**Notifications**
+- Changes routed to the users they affect with embeddings and vector search, rather than running
+  every source against every user.
+- Browser push permission asked for properly, fired when a guide moves.
 
----
-
-## What gets cut if it tightens, decided now rather than on the 30th
-
-**Lane depth, never rigour.** Two lanes done properly beats three done shallowly. The third lane
-stays in the form and says plainly that it is not covered yet.
-
-**The country watch screen ships read-only before it ships personalised.**
-
-**What does not get cut:** nothing is stated without a source, no run is ever backdated, and the
-source count shown is the real one. If 40 sources are verified on submission day, it says 40.
+**Submission**
+- Architecture diagram, README a stranger can follow, the video.
 
 ---
 
-## The three mandatory requirements, and where each one lives
+## The three mandatory requirements
 
 | Required | Where |
 | --- | --- |
-| Gemini 3.5 or newer | Extracting requirements, reading uploaded documents, explaining a diff |
+| Gemini 3.5 or newer | requirement extraction, document reading, diff explanation |
 | A Google agent framework | ADK, on the researcher only |
-| A Google Cloud infrastructure service | Cloud Run, Firestore, Pub/Sub, Cloud Scheduler, Cloud Storage |
+| Google Cloud infrastructure | Cloud Run, Firestore, Pub/Sub, Cloud Scheduler, Cloud Storage |
 
-There are no marks for touching more Google products. The rubric is Innovation and Utility 40%,
-Architectural Discipline 30%, Demo and Readiness 30%. Every service above earns its place or it does
-not go in, and the restraint gets said out loud because a judge can tell the difference.
-
-## Prize lanes worth aiming at
-
-- **Taskmaster** track: a complete workflow, not a chatbot
-- **Individual/Hobbyist**, two prizes of $10,000, which rewards nothing about enterprise credibility
-- **Startup Excellence**, $20,000, needs an incorporated organisation with a corporate email. The US
-  C-Corp and the onenept.com address qualify, and nobody had checked this category
-- **Best Multimodal UX**, $5,000, which Build 2 aims at directly
+No marks exist for touching more Google products. Every service above earns its place, and the
+restraint gets said out loud because a judge can tell the difference.

@@ -217,23 +217,8 @@ produces that has not been checked by you says so on its face.
 
 ### Where these land in the build order
 
-Stage one and stage three are a lot more product than the four builds currently describe, so this is
-the honest mapping rather than a promise that all of it arrives at once.
-
-| Piece | Where it belongs |
-| --- | --- |
-| Details form, guide, PDF | Build 1, unchanged |
-| Uploads, the readiness score, confetti and GO | Build 2, since the score depends on reading documents |
-| Corpus search and profile matching | Build 1 for one lane, widened in Build 3 |
-| The generated fillable form | Build 2 |
-| The kanban board | new, and it sits after Build 4 |
-| Cover letters and per-application CVs | new, and the largest single piece of work here |
-| Board updated from the watcher | Build 3 and Build 4 together |
-
-**The board and the written applications are not in the hackathon entry.** They are the product, and
-they are the reason somebody pays $14 a month, but the entry is due on 31 August and the entry is
-the guide, the documents and the watcher working properly. Saying that now is cheaper than
-discovering it on the 30th.
+Build 1 is the guide. Build 2 is uploads, the score, the confetti and the fillable form. Build 3 is
+the watcher, the board, the drafted applications and notifications. Detail in `docs/PLAN.md`.
 
 ## Build log
 
