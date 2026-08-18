@@ -157,13 +157,26 @@ class Cases:
         return removed
 
     def expired(self, limit: int = 500) -> list[str]:
-        """Cases past their retention date.
-
-        The sweeper that acts on this is not built yet, which
-        docs/DATA_PROTECTION.md says plainly rather than implying the window
-        enforces itself.
-        """
+        """Cases past their retention date."""
         now = _now().isoformat(timespec="seconds")
         query = self._db.collection(CASES).where(
             filter=firestore.FieldFilter("expires_at", "<", now)).limit(limit)
         return [s.id for s in query.stream()]
+
+    def sweep(self, limit: int = 500) -> dict[str, int]:
+        """Delete every case past its retention date, and report the numbers.
+
+        This is what turns the retention window from a date written on a row
+        into something that happens. Before it existed, docs/DATA_PROTECTION.md
+        said so in as many words rather than letting a promise stand on nothing.
+
+        It reuses `delete`, so a swept case goes the same way a person's own
+        delete goes and cannot leave a different set of orphans.
+        """
+        swept = {"cases": 0, "documents": 0, "coverage": 0}
+        for case_id in self.expired(limit):
+            removed = self.delete(case_id)
+            swept["cases"] += removed["case"]
+            swept["documents"] += removed["documents"]
+            swept["coverage"] += removed["coverage"]
+        return swept

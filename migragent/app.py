@@ -229,6 +229,22 @@ def delete_case() -> Response:
     return response
 
 
+@app.post("/tasks/sweep")
+def sweep() -> Response:
+    """Delete cases past their retention date.
+
+    Called by Cloud Scheduler. Cloud Run requires an authenticated invoker for
+    this path, so an anonymous request never reaches this function; the check
+    below is the second lock rather than the only one.
+    """
+    expected = os.environ.get("MIGRAGENT_TASK_TOKEN", "")
+    if not expected or request.headers.get("X-Migragent-Task") != expected:
+        return jsonify({"error": "not authorised"}), 403
+
+    swept = Cases(_db()).sweep()
+    return jsonify({"swept": swept, "retention_days": RETENTION_DAYS})
+
+
 @app.get("/data")
 def data_protection() -> Response:
     """What happens to an uploaded document, served from the doc itself.

@@ -103,11 +103,14 @@ real pieces of work and none of them exists yet.
 | --- | --- |
 | The file is never written to disk or a bucket | true in code |
 | Only fields are stored | true in code |
-| 30 day retention with a restarting countdown | field is written; the sweeper is not built yet |
+| 30 day retention with a restarting countdown | true; the sweeper runs and is tested |
 | Delete removes everything and reports counts | built, and tested by counting rows |
 | Encrypted at rest and in transit, Google managed keys | true, by default, nothing configured |
 
-**The retention sweeper is the outstanding one.** Until it runs on a schedule, the expiry is a date
-stored on the case and nothing enforces it. That is stated here rather than glossed, because a
-retention promise nothing enforces is exactly the sort of claim `docs/RULES.md` rule 3 exists to
-stop.
+**The sweeper now exists**, and `tools/test_retention.py` proves it in the direction that matters.
+Any sweeper deletes expired cases; the test also writes a case that has NOT expired and fails if the
+sweep touches it, because a sweeper that takes everything would pass the easy half of that test.
+
+It runs on a schedule through Cloud Scheduler against an authenticated endpoint. Between runs, a
+case past its date still exists, so the honest wording is that a case is deleted within a day of its
+expiry rather than at the instant of it.
