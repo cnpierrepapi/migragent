@@ -1,0 +1,227 @@
+"""Fetching official pages, politely, and stamping what was actually read.
+
+This is plain code on purpose and there is no model anywhere in this file. It is
+the part of the system that produces evidence, so it has to be boring and it has
+to be inspectable. A model decides what a requirement means. It never decides
+where the requirement came from.
+
+The date on a citation is written here, from the clock, at the moment the bytes
+arrived. It is never asked for, never inferred and never passed through a
+prompt, which is what makes "read on 18 August 2026" a fact rather than a
+plausible sentence.
+"""
+from __future__ import annotations
+
+import hashlib
+import re
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+import urllib.robotparser
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from typing import Literal
+
+# The crawler says who it is and how to complain. Rule 10 in docs/RULES.md is
+# that robots.txt is a gate, and identifying honestly is the other half of that
+# bargain: a site owner who wants us gone must be able to act on it.
+USER_AGENT = (
+    "MIGRAGENT/0.1 (+https://migragent.onenept.com/crawler; immigration guidance; "
+    "contact: crawler@onenept.com)"
+)
+
+# One request at a time per host, with a gap. Government sites are not our
+# infrastructure and a guide is not worth degrading one.
+DEFAULT_DELAY_SECONDS = 2.0
+TIMEOUT_SECONDS = 30
+
+Outcome = Literal["fetched", "blocked_by_robots", "unreachable", "not_html"]
+
+# Hashing the raw bytes does not work, and this was measured rather than
+# assumed. Two fetches of the same canada.ca study permit page, seconds apart,
+# produce different sha256 digests. The diff is one line: an Akamai mPulse
+# beacon script carrying a per request nonce.
+#
+# If the hash never matches, rule 14 never fires, every daily round calls the
+# model on every page, and the cost model of the watcher collapses. So the
+# digest is taken over the page with the volatile parts removed. See D6.
+#
+# This stays plain code. It is a text substitution, not an understanding of the
+# page, and it deliberately does not try to identify "the main content", because
+# a heuristic that guesses which part of a page matters is exactly the mistake
+# recorded in docs/INHERITED.md.
+_SCRIPT = re.compile(rb"<script\b[^>]*>.*?</script\s*>", re.I | re.S)
+_STYLE = re.compile(rb"<style\b[^>]*>.*?</style\s*>", re.I | re.S)
+_COMMENT = re.compile(rb"<!--.*?-->", re.S)
+_NONCE_ATTR = re.compile(rb'\s(?:nonce|data-nonce|csrf[-_]token)="[^"]*"', re.I)
+_WHITESPACE = re.compile(rb"\s+")
+
+
+def stable_digest(body: bytes) -> str:
+    """A digest that survives per request noise but not a real edit.
+
+    Scripts, styles, comments and nonce attributes come out, then whitespace is
+    collapsed. What is left is the markup and the words, which is what a change
+    to a requirement actually touches.
+    """
+    cleaned = _SCRIPT.sub(b"", body)
+    cleaned = _STYLE.sub(b"", cleaned)
+    cleaned = _COMMENT.sub(b"", cleaned)
+    cleaned = _NONCE_ATTR.sub(b"", cleaned)
+    cleaned = _WHITESPACE.sub(b" ", cleaned).strip()
+    return hashlib.sha256(cleaned).hexdigest()
+
+
+@dataclass(frozen=True)
+class Fetched:
+    """What came back, and everything a citation needs.
+
+    `read_at` is the moment the bytes arrived, taken from the clock here. It is
+    the field the whole product's honesty rests on.
+
+    `sha256` is the stable digest and is what change detection compares.
+    `raw_sha256` is the digest of the exact bytes stored in the snapshot, so the
+    stored file can still be proved untampered.
+    """
+
+    url: str
+    outcome: Outcome
+    read_at: str
+    status: int | None = None
+    body: bytes | None = None
+    sha256: str | None = None
+    raw_sha256: str | None = None
+    content_type: str | None = None
+    final_url: str | None = None
+    reason: str | None = None
+
+    @property
+    def ok(self) -> bool:
+        return self.outcome == "fetched"
+
+    def unchanged_from(self, previous_sha256: str | None) -> bool:
+        """Hash first, per rule 14.
+
+        A byte-identical page stops the round right here: no diff, no model
+        call, no cost. Most government pages do not change most days, so this is
+        the difference between a fetch bill and an inference bill.
+        """
+        return bool(self.sha256 and previous_sha256 and self.sha256 == previous_sha256)
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+@dataclass
+class Fetcher:
+    """Fetches pages, respecting robots.txt and pacing itself per host."""
+
+    user_agent: str = USER_AGENT
+    delay_seconds: float = DEFAULT_DELAY_SECONDS
+    timeout: int = TIMEOUT_SECONDS
+
+    _robots: dict[str, urllib.robotparser.RobotFileParser | None] = field(default_factory=dict)
+    _last_hit: dict[str, float] = field(default_factory=dict)
+
+    # -- politeness ------------------------------------------------------
+
+    def _robots_for(self, url: str) -> urllib.robotparser.RobotFileParser | None:
+        """Fetch and cache robots.txt for the host.
+
+        Returns None when robots.txt could not be read at all. That is treated
+        as permissive, which is the documented convention, and the caller
+        records that it was unreadable rather than pretending it said yes.
+        """
+        parts = urllib.parse.urlsplit(url)
+        host = f"{parts.scheme}://{parts.netloc}"
+        if host in self._robots:
+            return self._robots[host]
+
+        parser = urllib.robotparser.RobotFileParser()
+        parser.set_url(f"{host}/robots.txt")
+        try:
+            parser.read()
+        except Exception:  # noqa: BLE001
+            self._robots[host] = None
+            return None
+        self._robots[host] = parser
+        return parser
+
+    def allowed(self, url: str) -> tuple[bool, str]:
+        """May we fetch this? Checked before every request, never skipped."""
+        parser = self._robots_for(url)
+        if parser is None:
+            return True, "robots.txt could not be read, treated as permissive"
+        if parser.can_fetch(self.user_agent, url):
+            return True, "allowed by robots.txt"
+        return False, "disallowed by robots.txt"
+
+    def _wait_turn(self, url: str) -> None:
+        """One request per host at a time, with a gap, honouring crawl-delay."""
+        host = urllib.parse.urlsplit(url).netloc
+        delay = self.delay_seconds
+        parser = self._robots.get(f"{urllib.parse.urlsplit(url).scheme}://{host}")
+        if parser is not None:
+            try:
+                declared = parser.crawl_delay(self.user_agent)
+                if declared:
+                    delay = max(delay, float(declared))
+            except Exception:  # noqa: BLE001
+                pass
+
+        last = self._last_hit.get(host)
+        if last is not None:
+            waited = time.monotonic() - last
+            if waited < delay:
+                time.sleep(delay - waited)
+        self._last_hit[host] = time.monotonic()
+
+    # -- fetching --------------------------------------------------------
+
+    def fetch(self, url: str) -> Fetched:
+        allowed, why = self.allowed(url)
+        if not allowed:
+            # Rule 10. No fetching anyway, no swapping the user agent. The row
+            # records the refusal so the source does not silently vanish.
+            return Fetched(url=url, outcome="blocked_by_robots", read_at=_now(), reason=why)
+
+        self._wait_turn(url)
+
+        request = urllib.request.Request(url, headers={
+            "User-Agent": self.user_agent,
+            "Accept": "text/html,application/xhtml+xml",
+            "Accept-Language": "en,fr;q=0.8,es;q=0.8,ar;q=0.8",
+        })
+
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                body = response.read()
+                read_at = _now()
+                content_type = response.headers.get("Content-Type", "")
+                final_url = response.geturl()
+                status = response.status
+        except urllib.error.HTTPError as exc:
+            return Fetched(url=url, outcome="unreachable", read_at=_now(),
+                           status=exc.code, reason=f"HTTP {exc.code}")
+        except Exception as exc:  # noqa: BLE001
+            return Fetched(url=url, outcome="unreachable", read_at=_now(),
+                           reason=f"{type(exc).__name__}: {exc}")
+
+        if "html" not in content_type.lower() and "xml" not in content_type.lower():
+            return Fetched(url=url, outcome="not_html", read_at=read_at, status=status,
+                           content_type=content_type, final_url=final_url,
+                           reason=f"content type was {content_type or 'absent'}")
+
+        return Fetched(
+            url=url,
+            outcome="fetched",
+            read_at=read_at,
+            status=status,
+            body=body,
+            sha256=stable_digest(body),
+            raw_sha256=hashlib.sha256(body).hexdigest(),
+            content_type=content_type,
+            final_url=final_url,
+        )

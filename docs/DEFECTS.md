@@ -137,3 +137,57 @@ exit code is zero only when something actually passed and nothing failed and not
 
 **Still open behind it:** the isolation itself is unproven until the test runs with credentials.
 D1 stays open until then.
+
+---
+
+## D6. Hash-first would never have fired
+
+**Found:** 18 August 2026, testing the fetcher against real pages rather than a fixture.
+
+**What happened.** Two fetches of the same canada.ca study permit page, seconds apart, produced
+different sha256 digests. Every time.
+
+**Why it matters.** Rule 14 says a byte-identical page stops the round: no diff, no model call, no
+cost. That rule is the entire cost model of the watcher, because most government pages do not change
+most days. A digest that never matches means the watcher calls the model on every page every day
+forever, and the daily bill becomes an inference bill instead of a fetch bill. The feature would
+have looked like it worked, because nothing errors. It would just have been silently paying.
+
+**Cause, found by diffing rather than guessing.** The two responses differ by exactly one line out
+of 544: an Akamai mPulse beacon `<script>` carrying a per request nonce.
+
+**Fix.** `stable_digest()` strips script blocks, style blocks, HTML comments and nonce style
+attributes, collapses whitespace, then hashes. Both digests are kept on the result: `sha256` is the
+stable one that change detection compares, and `raw_sha256` is the digest of the exact bytes written
+to the snapshot, so the stored file can still be shown untampered.
+
+It deliberately does not try to find "the main content". A heuristic that guesses which part of a
+page matters is the mistake recorded in `INHERITED.md`, and a stripped-and-collapsed page is a text
+substitution rather than an opinion.
+
+**Verified both directions**, because only checking that the digest stabilises would have been half
+a test:
+- two consecutive fetches now produce the same stable digest, while the raw digests still differ
+- editing one phrase in the body changes the stable digest
+
+**Status:** closed.
+
+---
+
+## D7. Australia blocks the crawler even though robots.txt allows it
+
+**Found:** 18 August 2026, on the first real fetch of three government pages.
+
+**What happened.** `immi.homeaffairs.gov.au` returned **HTTP 403** to a polite, identified request.
+Its robots.txt allows the path. canada.ca and gov.uk both returned 200 for the same fetcher.
+
+**What it is not.** Not a bug, and not something to work around. Rule 10 stands: we do not disguise
+the crawler to get past a server that does not want it.
+
+**What it means for the build.** This is the "official site cannot be read" branch in
+`docs/SOURCES.md` firing on a government source rather than a school, on day one, for a jurisdiction
+we committed to. The Australia study lane needs another readable official source, and if there is
+not one the lane says so plainly in the form rather than being quietly listed as covered.
+
+**Status:** open. It is a source problem, not a code problem, and it is recorded so the Australia
+lane is not marked deep on the strength of a page nobody could read.
