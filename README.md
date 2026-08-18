@@ -1,6 +1,6 @@
-# PASSAGE
+# MIGRAGENT
 
-You are applying to move country, or to get licensed to work in one. PASSAGE asks about your
+You are applying to move country, or to get licensed to work in one. MIGRAGENT asks about your
 situation once, reads the official sources itself, and gives you a guide you can save as a PDF.
 
 It is not a chatbot. You fill in a form, you upload what you already have, and an agent goes away

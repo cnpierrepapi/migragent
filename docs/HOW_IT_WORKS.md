@@ -1,4 +1,4 @@
-# PASSAGE, in plain words
+# MIGRAGENT, in plain words
 
 Written before the code, and kept current as it is built. If the build ever contradicts this
 document, the document gets fixed rather than ignored.
@@ -13,7 +13,7 @@ registration, a skilled work visa.
 Today you either pay a consultant around two thousand pounds, or you spend six weekends reading
 government websites that contradict each other, and you still get something wrong.
 
-PASSAGE asks you about your situation once, reads the official sources itself, and hands you a
+MIGRAGENT asks you about your situation once, reads the official sources itself, and hands you a
 document. Not a chat window. A guide you can save as a PDF, print, and take to the bank.
 
 ## What it is not
