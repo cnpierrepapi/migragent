@@ -11,19 +11,36 @@ find on the previous build and is rule 31.
 """
 from __future__ import annotations
 
+import html as html_module
 import os
 from pathlib import Path
 
-from flask import Flask, Response, redirect, request, send_from_directory
+from flask import (Flask, Response, jsonify, make_response, redirect, request,
+                   send_from_directory)
 
 from . import identity
+from .cases import RETENTION_DAYS, Cases
 from .corpus import Corpus
+from .coverage import Matcher, document_worth
+from .documents import KINDS, MIME_BY_SUFFIX, DocumentReader, extract_text
 from .guide import build, to_html
 from .registry import JURISDICTIONS, Registry
+from .upload_page import upload_html
 
 BRAND_DIR = Path(__file__).resolve().parent.parent / "web" / "brand"
 
+MODEL = os.environ.get("MIGRAGENT_MODEL", "gemini-3.5-flash")
+MODEL_LOCATION = os.environ.get("MIGRAGENT_MODEL_LOCATION", "global")
+
+# Where the confetti fires. This is a chosen line, not a computed one, and it is
+# described that way on the page. What is computed is the score itself, which is
+# the part that has to be true. Nothing is gated on it: you can take a guide with
+# nothing uploaded at all, because a guide with no documents is still a guide and
+# holding it hostage would be a worse product and a dishonest one.
+CELEBRATE_AT = 50
+
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 24 * 1024 * 1024
 
 
 def _project() -> str:
@@ -102,6 +119,139 @@ def home() -> Response:
                     mimetype="text/html")
 
 
+def _case_or_none(cases: Cases):
+    cid = request.cookies.get("migragent_case")
+    return cases.get(cid) if cid else None
+
+
+@app.get("/start")
+def start() -> Response:
+    jurisdiction = (request.args.get("jurisdiction") or "").upper()
+    lane = (request.args.get("lane") or "").lower()
+    if jurisdiction not in JURISDICTIONS or lane not in ("study", "work"):
+        return redirect("/")
+
+    db = _db()
+    cases = Cases(db)
+    case = cases.create(jurisdiction, lane)
+    response = make_response(redirect("/documents"))
+    # Session cookie. No account exists in this build, so this is deliberately
+    # the weakest link between a person and their data: nobody can guess it and
+    # nobody can recover it.
+    response.set_cookie("migragent_case", case.case_id, httponly=True,
+                        samesite="Lax", secure=True, max_age=RETENTION_DAYS * 86400)
+    return response
+
+
+@app.get("/documents")
+def documents() -> Response:
+    db = _db()
+    cases, corpus, registry = Cases(db), Corpus(db), Registry(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/")
+
+    near = {s.url.rstrip("/") for s in registry.near_lane(case.jurisdiction, case.lane)}
+    requirements = corpus.requirements_for(case.jurisdiction, case.lane, allowed_urls=near)
+    worth = document_worth(requirements)
+    uploaded = cases.documents(case.case_id)
+    cov = cases.coverage(case.case_id) or {}
+
+    return Response(upload_html(case, worth, uploaded, cov, len(requirements),
+                                CELEBRATE_AT, KINDS),
+                    mimetype="text/html")
+
+
+@app.post("/upload")
+def upload() -> Response:
+    db = _db()
+    cases, corpus, registry = Cases(db), Corpus(db), Registry(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return jsonify({"error": "no case"}), 400
+
+    uploaded = request.files.get("file")
+    if uploaded is None or not uploaded.filename:
+        return jsonify({"error": "no file"}), 400
+
+    suffix = Path(uploaded.filename).suffix.lower()
+    mime = MIME_BY_SUFFIX.get(suffix)
+    if mime is None:
+        return jsonify({"error": f"{suffix or 'that file type'} cannot be read. "
+                                 f"PDF, PNG, JPG or WEBP."}), 400
+
+    data = uploaded.read()
+
+    # The bytes live in this variable and nowhere else. Nothing writes them to
+    # disk or to a bucket. See docs/DATA_PROTECTION.md.
+    reader = DocumentReader(_project(), MODEL, MODEL_LOCATION,
+                            identity.credentials_for(identity.RESEARCHER, _project()))
+    doc = reader.read(uploaded.filename, data, mime, extract_text(data, mime))
+    del data
+
+    if doc.error:
+        return jsonify({"error": doc.error}), 502
+
+    cases.add_document(case.case_id, doc)
+
+    near = {s.url.rstrip("/") for s in registry.near_lane(case.jurisdiction, case.lane)}
+    requirements = corpus.requirements_for(case.jurisdiction, case.lane, allowed_urls=near)
+    matcher = Matcher(_project(), MODEL, MODEL_LOCATION,
+                      identity.credentials_for(identity.RESEARCHER, _project()))
+    coverage = matcher.match(case.jurisdiction, case.lane, requirements,
+                             cases.documents(case.case_id))
+    cases.save_coverage(case.case_id, coverage.to_dict())
+
+    return jsonify({
+        "kind": doc.kind,
+        "filename": doc.filename,
+        "fields": len(doc.fields),
+        "verified_fields": len(doc.verified_fields),
+        "text_layer": doc.text_layer,
+        "dropped": len(doc.dropped),
+        "score": coverage.score,
+        "covered": coverage.covered,
+        "of": coverage.document_requirements,
+        "celebrate": coverage.score >= CELEBRATE_AT,
+    })
+
+
+@app.post("/delete")
+def delete_case() -> Response:
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return jsonify({"error": "no case"}), 400
+    removed = cases.delete(case.case_id)
+    response = make_response(jsonify({"removed": removed}))
+    response.delete_cookie("migragent_case")
+    return response
+
+
+@app.get("/data")
+def data_protection() -> Response:
+    """What happens to an uploaded document, served from the doc itself.
+
+    The page a person reads and the document the build is held to are the same
+    file, so they cannot drift apart into a promise and a practice.
+    """
+    path = Path(__file__).resolve().parent.parent / "docs" / "DATA_PROTECTION.md"
+    text = path.read_text(encoding="utf-8") if path.exists() else "Not available."
+    body = html_module.escape(text)
+    return Response(
+        f'<!doctype html><html lang="en"><head><meta charset="utf-8">'
+        f'<meta name="viewport" content="width=device-width, initial-scale=1">'
+        f'<title>What happens to your documents</title>'
+        f'<link rel="icon" href="/brand/favicon.svg">'
+        f'<link rel="stylesheet" href="/brand/tokens.css">'
+        f'<style>body{{margin:0;padding:48px 24px 96px}}'
+        f'pre{{max-width:820px;margin:0 auto;white-space:pre-wrap;line-height:1.65;'
+        f'font-family:var(--font-mono);font-size:.86rem;color:var(--ink)}}</style>'
+        f'</head><body><pre>{body}</pre></body></html>',
+        mimetype="text/html")
+
+
 @app.get("/guide")
 def guide() -> Response:
     jurisdiction = (request.args.get("jurisdiction") or "").upper()
@@ -125,7 +275,7 @@ def _home_html(options: list, total_sources: int, totals: dict) -> str:
     rows = []
     for code, name, lane, state, note, _count in options:
         disabled = "" if state == "ready" else " aria-disabled=\"true\""
-        href = f"/guide?jurisdiction={code}&lane={lane}" if state == "ready" else "#"
+        href = f"/start?jurisdiction={code}&lane={lane}" if state == "ready" else "#"
         rows.append(f'''
       <a class="opt {state}" href="{href}"{disabled}>
         <span class="place">{name}</span>

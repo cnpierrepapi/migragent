@@ -527,3 +527,58 @@ is displayed permanently for that reason. If it goes back to a flat zero for tho
 right response is to suspect the check rather than to congratulate the model.
 
 **Status:** working as designed, and now demonstrated on real pages.
+
+---
+
+## D18. One bad page ended a whole extraction run
+
+**Found:** 18 August 2026, reading the shells after a UK extraction over 60 pages.
+
+**What happened.** Two thirds of the way through, Firestore returned
+`503 ... Network is unreachable`, the exception escaped the loop, and the run died taking every
+remaining page with it. The same transient flakiness is already recorded as D8.
+
+**Why it matters.** These runs are long and they run over somebody else's network. A run that cannot
+survive one bad minute will meet one, and losing forty pages of work to a blip that cleared by itself
+is avoidable.
+
+**Fix.** Each page is now attempted inside its own try, a failure is recorded and skipped rather than
+raised, and the run prints what it lost at the end instead of the summary quietly describing fewer
+pages than were asked for.
+
+**Status:** closed.
+
+---
+
+## D19. The quote check shredded seven correct fields, because the haystack was noise
+
+**Found:** 18 August 2026, on the first real document upload.
+
+**What happened.** A specimen letter of acceptance uploaded as a PDF. The model read it correctly,
+identified it as an `offer_letter`, and returned seven fields. **All seven were dropped** for having
+quotes that were not in the document, and the score came back 0%.
+
+**The cause was not the model.** `extract_text` pulled everything between round brackets out of the
+raw PDF bytes. Chromium writes its content streams compressed, so that regex returned **12,146
+characters of binary**. The code then saw a long non-empty string, set `text_layer = True`, and
+checked every true quote against garbage.
+
+**Why this is the worst kind of failure in this build.** Every other defect here has been a claim
+that was not true. This one is the opposite: the guard against untrue claims, working perfectly, on
+evidence that was itself wrong. A check with a corrupt haystack is not a check, it is a shredder,
+and it destroys exactly the correct answers it exists to protect. It also fails silently and looks
+like diligence: seven dropped fields reads as the model misbehaving.
+
+**Fix, in two parts, because either alone leaves the trap open.**
+
+1. Real extraction, with `pypdf`, which returns 437 characters of actual words for the same file.
+2. `looks_like_text()`, which the extracted text has to pass before it counts as a text layer:
+   at least 20 characters, at least 90% printable, at least 35% letters. Anything else is treated as
+   no text layer at all, which sends the fields down the honest unverified path rather than the
+   shredder.
+
+**Verified both ways.** The guard rejects the exact binary string that caused this, and accepts
+ordinary prose. The same upload now returns seven fields, all seven verified against the text layer,
+nothing dropped.
+
+**Status:** closed.

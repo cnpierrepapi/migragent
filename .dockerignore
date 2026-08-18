@@ -1,7 +1,7 @@
 .git/
 out/
 tools/
-docs/
+
 __pycache__/
 *.pyc
 .venv/

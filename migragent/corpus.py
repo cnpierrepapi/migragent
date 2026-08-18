@@ -141,7 +141,10 @@ class Corpus:
             .where(filter=firestore.FieldFilter("jurisdiction", "==", jurisdiction))
             .where(filter=firestore.FieldFilter("lane", "==", lane))
         )
-        rows = [d.to_dict() for d in query.stream()]
+        # The document id is the requirement's identity and the matcher needs
+        # it, so it travels with the row rather than being left behind in the
+        # key.
+        rows = [{**d.to_dict(), "id": d.id} for d in query.stream()]
         if allowed_urls is not None:
             rows = [r for r in rows if r.get("source_url", "").rstrip("/") in allowed_urls]
         order = {"eligibility": 0, "document": 1, "requirement": 2, "cost": 3, "timing": 4}
@@ -155,7 +158,10 @@ class Corpus:
             .where(filter=firestore.FieldFilter("jurisdiction", "==", jurisdiction))
             .where(filter=firestore.FieldFilter("lane", "==", lane))
         )
-        rows = [d.to_dict() for d in query.stream()]
+        # The document id is the requirement's identity and the matcher needs
+        # it, so it travels with the row rather than being left behind in the
+        # key.
+        rows = [{**d.to_dict(), "id": d.id} for d in query.stream()]
         if allowed_urls is not None:
             rows = [r for r in rows if r.get("source_url", "").rstrip("/") in allowed_urls]
         return sorted(rows, key=lambda r: r.get("question", ""))
