@@ -148,12 +148,22 @@ class Corpus:
         return sorted((d.to_dict() for d in query.stream()),
                       key=lambda r: r.get("question", ""))
 
+    def _count(self, query) -> int:
+        return int(query.count().get()[0][0].value)
+
+    def _sum(self, field: str) -> int:
+        """Server-side sum, so the totals do not get slower as the corpus grows."""
+        result = self._db.collection(READS).sum(field, alias="total").get()
+        return int(result[0][0].value or 0)
+
     def totals(self) -> dict[str, int]:
-        reads = [d.to_dict() for d in self._db.collection(READS).stream()]
+        """Counted on the server. Rule 5 says the number is real, not that it is
+        expensive: dragging every read row back to add up two integers costs a
+        document read per page ever read."""
         return {
-            "requirements": sum(1 for _ in self._db.collection(REQUIREMENTS).stream()),
-            "open_questions": sum(1 for _ in self._db.collection(OPEN_QUESTIONS).stream()),
-            "pages_read": len(reads),
-            "kept": sum(r.get("kept", 0) for r in reads),
-            "dropped": sum(r.get("dropped", 0) for r in reads),
+            "requirements": self._count(self._db.collection(REQUIREMENTS)),
+            "open_questions": self._count(self._db.collection(OPEN_QUESTIONS)),
+            "pages_read": self._count(self._db.collection(READS)),
+            "kept": self._sum("kept"),
+            "dropped": self._sum("dropped"),
         }

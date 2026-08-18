@@ -167,6 +167,17 @@ class Registry:
         rows = [Source(**d.to_dict()) for d in query.stream()]
         return sorted(rows, key=lambda s: (s.kind != "government", s.rank_position or 0, s.url))
 
+    def _count(self, query) -> int:
+        """Count on the server rather than by dragging every row back.
+
+        Streaming a collection to call len() on it costs one document read per
+        row and gets slower every time the registry grows, which for a product
+        whose whole point is a growing registry is the wrong direction. The
+        aggregation returns a number.
+        """
+        result = query.count().get()
+        return int(result[0][0].value)
+
     def total_sources(self) -> int:
         """The one number the product shows: every page and subpage we hold.
 
@@ -179,7 +190,7 @@ class Registry:
         and a blocked or unverified source is still a source we know about and
         still counted here rather than dropped to make the figure prettier.
         """
-        return len(self.all())
+        return self._count(self._db.collection(COLLECTION))
 
     def counts(self) -> dict[str, int]:
         """The full breakdown, for runs and logs rather than for the page.
