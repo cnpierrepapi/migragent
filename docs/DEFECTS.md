@@ -274,3 +274,47 @@ a government site is not a shortcut worth taking to make a seed script look tidi
 store cannot be used, Spain fails loudly rather than being silently downgraded.
 
 **Status:** closed. `exteriores.gob.es` now returns 200 and 163,798 bytes.
+
+---
+
+## D10. The registry held front doors and called them sources
+
+**Found:** 18 August 2026, on being asked how fourteen sources could possibly cover seven
+jurisdictions. It cannot, and the number was indefensible.
+
+**What was wrong.** The seed registered one entry page per jurisdiction and lane. The seeder's own
+docstring said "the researcher follows the site's own links from there", and that following had
+never been built. So the registry held fourteen front doors while describing itself as a source
+registry.
+
+The requirements for a single study permit are spread across eligibility, funds, biometrics, medical
+exams, fees, processing times, work rights and dependants. Each is a separate page with its own
+last-updated date, which is exactly what a watcher needs to be watching.
+
+**The first fix was also wrong, and measurably.** Discovery kept links that were on the same host and
+either under the entry page's section path or linked directly from the entry page. On
+`gov.uk/student-visa` that kept 55 of 68 links, nearly all of it global navigation: benefits,
+driving, childcare, births and deaths. The section rule collapsed to the whole site because the
+entry path has one segment, and the direct-link rule caught every menu item.
+
+**Why the obvious repair was refused.** Filtering link text for words like visa, fees or eligibility
+would have worked on that page and is a heuristic over names, which `INHERITED.md` records as the
+mistake that once reported survey answers as decisions about people. It fails both ways: it misses a
+page called "Before you apply" and collects a press release that mentions a visa.
+
+**What works.** Navigation appears on every page of a site. Content does not. Intersecting the links
+of two pages from the same host gives the furniture, and what survives is what makes a page
+different from its neighbours. Measured:
+
+- gov.uk: 68 links, 42 shared with a sibling page, **26 unique**, including `/student-visa/money`,
+  `/student-visa/knowledge-of-english`, `/student-visa/documents-you-must-provide`
+- canada.ca: 43 links, 33 shared, **10 unique**, including eligibility, get-documents, prepare, apply
+
+**The cost, stated rather than hidden.** A host needs at least two known pages before anything on it
+can be walked, so hosts with one entry point are skipped and the run prints which. Also, a walk this
+wide picks up genuine tail pages that carry no requirement, such as customs and duty free pages
+linked from the foot of a visa page. Those are recorded as pages read and simply yield no citations.
+The registry counts pages read; the guide cites only what produced something. A wide walk therefore
+cannot inflate the number of claims, only the number of pages we looked at.
+
+**Status:** closed.
