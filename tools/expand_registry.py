@@ -28,7 +28,12 @@ from migragent.registry import Registry, Source  # noqa: E402
 
 PROJECT = "project-e0928f2f-5abf-46a3-b8a"
 MAX_DEPTH = 2
-MAX_PAGES = 45
+
+# The first run used 45 and six of the eight lanes came back with exactly 44,
+# which is the cap and not a result. A number that is really the ceiling is a
+# number that says nothing, and reporting it as coverage would have been the
+# same class of mistake as counting front doors. See D13.
+MAX_PAGES = 150
 
 
 def source_id(jurisdiction: str, lane: str, url: str) -> str:
@@ -40,6 +45,26 @@ def source_id(jurisdiction: str, lane: str, url: str) -> str:
 
 def main() -> int:
     dry_run = "--dry-run" in sys.argv
+    purge = "--purge" in sys.argv
+
+    writer_db = firestore.Client(
+        project=PROJECT,
+        credentials=identity.credentials_for(identity.WRITER, PROJECT),
+    )
+    if purge:
+        # Rows written by an earlier walk are re-derivable, and leaving results
+        # from code that has since been fixed would mean the count describes two
+        # different methods at once.
+        stale = [s for s in Registry(writer_db).all()
+                 if s.discovered_via.startswith("walked from")]
+        batch = writer_db.batch()
+        for i, s in enumerate(stale, 1):
+            batch.delete(writer_db.collection("sources").document(s.source_id))
+            if i % 400 == 0:
+                batch.commit()
+                batch = writer_db.batch()
+        batch.commit()
+        print(f"purged {len(stale)} rows from earlier walks\n")
 
     reader = firestore.Client(
         project=PROJECT,
@@ -74,7 +99,7 @@ def main() -> int:
             print(f"  skipped  {entry.jurisdiction} {entry.lane}  ({host}, no navigation learned)")
             continue
 
-        found, pages = expander.walk(entry.url)
+        found, pages = expander.walk(entry.url, jurisdiction=entry.jurisdiction)
         kept = 0
         for d in found:
             page = pages.get(d.url)
@@ -116,13 +141,9 @@ def main() -> int:
         print("\ndry run, nothing written")
         return 0
 
-    writer = firestore.Client(
-        project=PROJECT,
-        credentials=identity.credentials_for(identity.WRITER, PROJECT),
-    )
-    written = Registry(writer).bulk_put(discovered)
+    written = Registry(writer_db).bulk_put(discovered)
     print(f"\nwrote {written} rows")
-    print(f"registry now: {Registry(writer).counts()}")
+    print(f"registry now: {Registry(writer_db).counts()}")
     return 0
 
 

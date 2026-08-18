@@ -63,6 +63,27 @@ _LANG_SEGMENT = re.compile(r"^/(en|fr|es|ar|de|it|pt|zh)(/|$)", re.I)
 _HREF = re.compile(rb'<a\b[^>]*?href="([^"#][^"]*)"', re.I)
 
 
+# A jurisdiction's official web estate is not one hostname. France publishes the
+# same procedure across service-public.gouv.fr, france-visas.gouv.fr and
+# legifrance.gouv.fr, while the page we seeded sits on the older
+# service-public.fr. A strict same-host rule discarded all of that and returned
+# nothing at all for France, which is D12.
+#
+# So the boundary is the jurisdiction's official government domain suffix. That
+# is structural: it is a fact about who operates the domain, readable from the
+# name itself, and it is not an opinion about the words on the page. Anything
+# outside these suffixes is a lead and never a source, per rule 9.
+OFFICIAL_SUFFIXES = {
+    "UK": (".gov.uk",),
+    "US": (".gov",),
+    "CA": (".gc.ca", "canada.ca"),
+    "AU": (".gov.au",),
+    "FR": (".gouv.fr", "service-public.fr"),
+    "ES": (".gob.es",),
+    "AE": (".gov.ae", "u.ae"),
+}
+
+
 @dataclass(frozen=True)
 class Discovered:
     """A page found by walking out from an entry point.
@@ -123,17 +144,24 @@ class Expander:
     # host -> links that appear on more than one page of that host
     _chrome: dict[str, set[str]] = field(default_factory=dict)
     _seen: set[str] = field(default_factory=set)
+    _late_pages: dict[str, Fetched] = field(default_factory=dict)
 
     def learn_chrome(self, sample_urls: list[str]) -> dict[str, int]:
-        """Learn each host's navigation from two or more of its pages.
+        """Learn each host's navigation from two or more DISTINCT pages.
 
         A link that appears on more than one page of a site is part of the
         furniture. With only one sample for a host nothing can be learned, and
         the caller is told so rather than being given an empty set that looks
         like a result.
+
+        The sample is de-duplicated first, and this is not a tidiness measure.
+        Spain was seeded with the same consular URL for both its lanes, so the
+        sample held that page twice, every one of its links appeared "on two
+        pages", the whole page was classified as navigation and Spain returned
+        zero sources while looking like it had been walked. That is D11.
         """
         by_host: dict[str, list[str]] = {}
-        for url in sample_urls:
+        for url in dict.fromkeys(sample_urls):
             by_host.setdefault(urllib.parse.urlsplit(url).netloc, []).append(url)
 
         learned: dict[str, int] = {}
@@ -149,12 +177,36 @@ class Expander:
             learned[host] = len(chrome)
         return learned
 
-    def worth_reading(self, url: str, entry_url: str, depth: int) -> tuple[bool, str]:
+    def _within_scope(
+        self, url: str, entry_url: str, jurisdiction: str | None
+    ) -> tuple[bool, str]:
+        """Is this page inside the estate we are allowed to walk at all?
+
+        Separate from worth_reading because the walk has to know a page is in
+        scope before it can learn that page's host well enough to say whether
+        the link is navigation.
+        """
+        parts = urllib.parse.urlsplit(url)
+        host = parts.netloc.lower()
+        suffixes = OFFICIAL_SUFFIXES.get(jurisdiction or "", ())
+        if suffixes:
+            if not any(host == s.lstrip(".") or host.endswith(s) for s in suffixes):
+                return False, "outside this jurisdiction's official domains"
+            return True, "an official domain for this jurisdiction"
+        if host != urllib.parse.urlsplit(entry_url).netloc:
+            return False, "different host"
+        return True, "same host"
+
+    def worth_reading(
+        self, url: str, entry_url: str, depth: int, jurisdiction: str | None = None
+    ) -> tuple[bool, str]:
         parts = urllib.parse.urlsplit(url)
         entry_parts = urllib.parse.urlsplit(entry_url)
+        host = parts.netloc.lower()
 
-        if parts.netloc != entry_parts.netloc:
-            return False, "different host"
+        in_scope, why = self._within_scope(url, entry_url, jurisdiction)
+        if not in_scope:
+            return False, why
         if parts.path.lower().endswith(_SKIP_SUFFIXES):
             return False, "not a web page"
         if _ALTERNATE_VIEW.search(parts.path):
@@ -174,7 +226,48 @@ class Expander:
 
         return True, f"unique to this page at depth {depth}"
 
-    def walk(self, entry_url: str) -> tuple[list[Discovered], dict[str, Fetched]]:
+    def _ensure_chrome(self, host: str, candidates: list[str]) -> None:
+        """Learn a host's navigation the first time we need to judge one of its pages.
+
+        Opening the walk to a jurisdiction's whole official estate means meeting
+        hosts that were never in the seed sample. France reaches
+        service-public.gouv.fr from a page on service-public.fr, and with no
+        navigation learned for the new host its menus came back looking like
+        content: the site root, the sign-in page, the news index.
+
+        So chrome is learned on demand, from two pages of that host, using
+        candidates we were going to fetch anyway.
+        """
+        if host in self._chrome or len(candidates) < 2:
+            return
+
+        # Which pages to learn from matters. The first attempt took the first two
+        # candidates in document order, which on service-public.gouv.fr were the
+        # site root and the sign-in page. Those two share almost no links, so
+        # almost nothing was classified as navigation and the menus came back
+        # looking like requirements.
+        #
+        # Deep paths are leaf content and shallow ones are menus. That is a fact
+        # about how URLs are built, not about what the words in them mean, so
+        # the sample is the deepest candidates available.
+        by_depth = sorted(
+            candidates,
+            key=lambda u: (-urllib.parse.urlsplit(u).path.count("/"), u),
+        )
+        sample = by_depth[:3]
+        if len(sample) < 2:
+            return
+
+        counts: Counter[str] = Counter()
+        for url in sample:
+            page = self.fetcher.fetch(url)
+            self._late_pages[url] = page
+            counts.update(set(links_on(page)))
+        self._chrome[host] = {link for link, n in counts.items() if n >= 2}
+
+    def walk(
+        self, entry_url: str, jurisdiction: str | None = None
+    ) -> tuple[list[Discovered], dict[str, Fetched]]:
         found: list[Discovered] = []
         pages: dict[str, Fetched] = {}
 
@@ -183,9 +276,19 @@ class Expander:
         if not entry.ok:
             return found, pages
 
+        # Group the entry page's links by host, so any host we have not sampled
+        # can have its navigation learned before we judge its pages.
+        by_host: dict[str, list[str]] = {}
+        for url in links_on(entry):
+            allowed, _ = self._within_scope(url, entry_url, jurisdiction)
+            if allowed:
+                by_host.setdefault(urllib.parse.urlsplit(url).netloc, []).append(url)
+        for host, candidates in by_host.items():
+            self._ensure_chrome(host, candidates)
+
         queue: list[tuple[str, str, int]] = []
         for url in links_on(entry):
-            ok, why = self.worth_reading(url, entry_url, depth=1)
+            ok, why = self.worth_reading(url, entry_url, depth=1, jurisdiction=jurisdiction)
             if ok and url not in self._seen:
                 self._seen.add(url)
                 queue.append((url, entry_url, 1))
@@ -204,7 +307,9 @@ class Expander:
             for candidate in links_on(page):
                 if len(pages) + (len(queue) - head) >= self.max_pages:
                     break
-                ok, why = self.worth_reading(candidate, entry_url, depth=depth + 1)
+                ok, why = self.worth_reading(
+                    candidate, entry_url, depth=depth + 1, jurisdiction=jurisdiction
+                )
                 if ok and candidate not in self._seen:
                     self._seen.add(candidate)
                     queue.append((candidate, url, depth + 1))

@@ -63,9 +63,13 @@ CANDIDATES = [
     ("ES", "study",
      "https://www.exteriores.gob.es/es/ServiciosAlCiudadano/Paginas/Servicios-consulares.aspx",
      "Servicios consulares, visados", "es"),
+    # Deliberately a different page from the study entry. Seeding both lanes
+    # with the same URL made the navigation sample hold that page twice, so
+    # every link counted as appearing "on two pages" and the entire page was
+    # classified as navigation. Spain returned zero. See D11.
     ("ES", "work",
-     "https://www.exteriores.gob.es/es/ServiciosAlCiudadano/Paginas/Servicios-consulares.aspx",
-     "Servicios consulares, visados", "es"),
+     "https://www.exteriores.gob.es/es/Paginas/index.aspx",
+     "Portada, Ministerio de Asuntos Exteriores", "es"),
 
     ("AE", "study", "https://u.ae/en/information-and-services/visa-and-emirates-id",
      "Visa and Emirates ID", "en"),

@@ -318,3 +318,80 @@ The registry counts pages read; the guide cites only what produced something. A 
 cannot inflate the number of claims, only the number of pages we looked at.
 
 **Status:** closed.
+
+---
+
+## D11. Seeding both Spanish lanes with one URL made the whole page look like navigation
+
+**Found:** 18 August 2026, when Spain and France both returned zero pages from a walk that reported
+no error.
+
+**What happened.** Navigation is learned by keeping links that appear on two or more pages of a host.
+Spain's study lane and work lane were seeded with the same consular URL, because I could only find
+one Spanish page that fetched. So the sample held that page twice, every link on it appeared "on two
+pages", the entire page was classified as furniture, and nothing survived.
+
+**Why it is worse than returning nothing.** The run printed `9 navigation links learned` for that
+host and then `0 new`, which reads like a site with nothing on it rather than a broken measurement.
+
+**Fix.** Two parts, because either alone would leave the trap open.
+- `learn_chrome` de-duplicates its sample and needs two *distinct* pages, not two entries.
+- The Spanish work lane is seeded with a genuinely different page. The first replacement I chose
+  404ed, so it was checked before it was kept.
+
+**Status:** closed.
+
+---
+
+## D12. France was thrown away by a same-host rule
+
+**Found:** 18 August 2026, same run.
+
+**What happened.** France returned zero, and its navigation had been learned correctly. The reason
+was the scope rule: candidates had to be on the same host as the entry page. France's entry page is
+on `service-public.fr`, and everything it links to lives on `service-public.gouv.fr`,
+`france-visas.gouv.fr`, `legifrance.gouv.fr` and `diplomatie.gouv.fr`. The site moved domains and
+the old host mostly links forward to the new one.
+
+Stripping navigation from the French page had actually worked and left 29 real links. The scope rule
+then discarded every one of them.
+
+**Fix.** Scope is now the jurisdiction's official government domain suffix rather than one hostname:
+`.gouv.fr` for France, `.gov.uk`, `.gob.es`, `.gc.ca` and so on. That is structural, since it is a
+fact about who operates the domain and is readable from the name, and it is not an opinion about the
+words on the page. Anything outside those suffixes stays a lead and never becomes a source.
+
+**Two follow-on bugs this created, both caught before the run:**
+
+1. Widening scope means meeting hosts that were never in the seed sample, and an unsampled host has
+   no navigation learned, so its menus came back looking like content. Chrome is now learned lazily,
+   the first time a host's pages need judging.
+2. The lazy sample first took the two candidates in document order, which on
+   `service-public.gouv.fr` were the site root and the sign-in page. Those two share almost no links,
+   so almost nothing was classified as navigation. The sample now takes the three deepest paths
+   available, because deep paths are leaf content and shallow ones are menus, which again is a fact
+   about how URLs are built rather than about what they say.
+
+France went 0 to 83 with the scope fix, to 57 with lazy learning, and to 19 once the sample was
+chosen properly. 19 is the honest number and the earlier two were menus.
+
+**Status:** closed.
+
+---
+
+## D13. Six lanes reported exactly 44, which was the ceiling
+
+**Found:** 18 August 2026, reading the first successful expansion.
+
+**What happened.** The walk was capped at 45 pages. Six of the eight lanes that ran returned exactly
+44 pages. That is not a measurement of anything, it is the cap with one page subtracted, and
+reporting it as coverage would be the same class of mistake as counting front doors and calling them
+sources.
+
+**Why it matters here.** The count shown in this product is supposed to be real, per rule 5. A number
+that is silently the ceiling is a number that means nothing while looking like it means something.
+
+**Fix.** The cap is raised to 150 and exists only to stop a runaway walk. Any lane that reaches it is
+reported as having hit the cap, rather than having its ceiling quietly presented as its size.
+
+**Status:** closed.
