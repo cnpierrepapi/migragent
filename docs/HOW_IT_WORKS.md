@@ -144,6 +144,97 @@ Canada and needs a licensed third party.
 goes in before 31 August. The design carries the prices so the interface is right. The plumbing
 waits.
 
+---
+
+## How it actually feels to use, in three stages
+
+Set on 18 August 2026. This replaces "a short form and then a document" with something with more
+shape to it, and it is written here before any of it is built.
+
+### Stage one. You tell it about yourself, and you watch a number go up
+
+You fill in your details, and you upload the documents you already have.
+
+**Uploading is not a gate.** You can get a guide with nothing uploaded at all. It will just be a
+more general guide, and the product should say so rather than pretending otherwise.
+
+**There is a readiness score on screen, and it climbs as you add things.** When it crosses the
+threshold the confetti fires and the **GO** button lights up.
+
+**The documents are listed by how much they are worth**, because they are genuinely not worth the
+same. A passport moves the number a lot. A high school transcript moves it a little. That ordering
+is not a gamification trick, it is the truth about which documents actually unlock requirements, and
+showing it saves somebody hunting for a certificate that was never going to matter much.
+
+**The score has to be real, and this is the part that can go wrong.** A number that climbs because
+you uploaded *something* is a progress bar pretending to be an assessment, and this product cannot
+afford one of those. So the score is computed from actual coverage: how many of the requirements
+we have actually extracted for your lane are addressed by what you have actually uploaded. If the
+lane has forty requirements and your uploads speak to twelve of them, the number says so. When you
+tap the score it opens and shows which requirements each document covered.
+
+The confetti is then honest, because it is celebrating a real threshold rather than the act of
+clicking. Under `prefers-reduced-motion` it does not fire.
+
+### Stage two. The agent goes and builds your guide
+
+It searches the corpus and the registry, and matches what it finds against your profile: your
+jurisdiction, your lane, your documents, your gaps.
+
+This is the stage where the run animation lives. One line per source as it lands, with the address
+and the moment it was read, and a counter showing the real number.
+
+### Stage three. A guide, a form to fill in, and a board of work
+
+Two things come back rather than one.
+
+**The guide**, as before. Ordered steps, dependencies, cost, duration, the source and the date read
+on every line, and open questions at the back.
+
+**A fillable form**, generated for your case. Filling it in gives the agent the context that a
+generic intake could never ask for, because by now it knows which lane you are in and what is
+missing from your file. This is the second pass, and it is where a general guide becomes yours.
+
+**Then your dashboard fills up with a board of tasks**, in columns you can move things between.
+
+**The agent does the parts it can do.** It writes the cover letter for a specific job. It builds the
+CV for a specific school or role, per application rather than one CV for everything. What lands on
+your board is a piece of work that is already done, waiting for you to check it and send it.
+
+**You submit, and you come back and tick it off.** The agent does not claim to have submitted
+anything on your behalf, and it does not tick anything off for you. The board reflects what has
+really happened.
+
+**And it keeps going**, because the corpus is being re-read on a schedule. When something moves that
+touches your case, new tasks appear on the board and stale ones are marked, rather than you holding
+a document that quietly went wrong.
+
+### What has to stay true in all of this
+
+The board is a record of real state. A task is not marked done because an agent thinks it went well,
+and a drafted cover letter is labelled a draft until a person has read it. Anything the agent
+produces that has not been checked by you says so on its face.
+
+### Where these land in the build order
+
+Stage one and stage three are a lot more product than the four builds currently describe, so this is
+the honest mapping rather than a promise that all of it arrives at once.
+
+| Piece | Where it belongs |
+| --- | --- |
+| Details form, guide, PDF | Build 1, unchanged |
+| Uploads, the readiness score, confetti and GO | Build 2, since the score depends on reading documents |
+| Corpus search and profile matching | Build 1 for one lane, widened in Build 3 |
+| The generated fillable form | Build 2 |
+| The kanban board | new, and it sits after Build 4 |
+| Cover letters and per-application CVs | new, and the largest single piece of work here |
+| Board updated from the watcher | Build 3 and Build 4 together |
+
+**The board and the written applications are not in the hackathon entry.** They are the product, and
+they are the reason somebody pays $14 a month, but the entry is due on 31 August and the entry is
+the guide, the documents and the watcher working properly. Saying that now is cheaper than
+discovering it on the 30th.
+
 ## Build log
 
 Started 18 August 2026. Nothing here is claimed as working until it has been checked.

@@ -23,24 +23,18 @@ is rounder, looser and warmer. Someone flipping the toggle should feel the produ
 
 ## The mark
 
-The first three candidates were minimal and meant nothing, which was the correct verdict on them.
-Minimal is the constraint, not the idea. These three each carry one.
+**The M, with a smile under it. Both elements in one colour, so it reads as a single shape rather
+than a logo with a decoration attached.**
 
-**A. The citation bracket.** A square bracket is the universal mark for a source. Every cited claim
-ever written ends inside one. It is also two posts with a gap, so the same shape is the passage you
-are trying to get through, and the dot between them is the claim being held. Two true readings, one
-shape, no lettering to break at small sizes.
+Decided on 18 August 2026 after three earlier attempts. The first three were minimal but meant
+nothing. The second three each carried an idea and were colder than the product should be. This one
+is warm, which is the correct answer for a thing people come to when they are anxious, and the
+warmth is in the shape rather than in a colour or an exclamation mark.
 
-**B. The moved line.** Three lines of a rule with the bottom one shifted. A diff. It means the one
-thing a competitor cannot copy without doing the same work: the requirement moved, and we caught the
-day it moved. This is the mark for the country watch screen rather than for the guide.
-
-**C. The hollow seal.** The milled edge of an official seal with nothing in the middle. The source is
-official, and the empty centre says we are not the ones issuing it and will never wear a crest.
-Checked at 16px and it fills in, so if this one is chosen the small size needs a solid variant.
-
-**The recommendation is A**, and the favicon follows it. It is the only one that carries the
-product's single rule in the shape itself, and it holds at 16 pixels without help.
+The M sits high enough that its legs and the smile never share a horizontal band. That clearance is
+deliberate: an earlier mark of this exact shape failed at 16 pixels because the two elements
+overlapped and merged, which is D2 in the defect log. Checked in Chrome at 60, 28 and 16 pixels
+before this paragraph was written.
 
 ### Favicon
 
@@ -134,9 +128,16 @@ The most persuasive sentence available is a true one with a link on it.
 
 ## Motion
 
-One animation earns its place: **the run**. One line lands per source, carrying the address and the
-moment it was read, and a counter ticks the real number. It is the whole product made visible in
-four seconds, and it is what the hackathon video opens on.
+**The run.** One line lands per source, carrying the address and the moment it was read, and a
+counter ticks the real number. It is the whole product made visible in four seconds, and it is what
+the hackathon video opens on.
+
+**The confetti**, when the readiness score crosses its threshold. This is the second animation and
+it earns its place on one condition: the threshold has to be real. The score is computed from how
+many extracted requirements your uploads actually cover, so crossing it is a genuine event and the
+confetti is marking something true. A score that climbed just because you uploaded any file would
+make this a slot machine, and the animation would be the least of the problem. It does not fire
+under `prefers-reduced-motion`.
 
 Everything else is 120ms to 200ms on one easing curve. No parallax, no scroll hijacking, no counting
 up to a number that is not the real number, no skeleton shimmer pretending to be work. Every

@@ -27,7 +27,7 @@
   .toggle:hover { border-color: var(--primary) }
   .toggle:focus-visible { outline: none; box-shadow: var(--ring) }
 
-  .marks { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px }
+  .marks { display: grid; grid-template-columns: minmax(240px, 420px); gap: 20px }
   .mark { background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius);
           padding: 26px; box-shadow: var(--shadow) }
   .mark .row { display: flex; align-items: flex-end; gap: 18px; color: var(--primary); margin-bottom: 18px }
@@ -85,7 +85,7 @@
 
 <section>
   <div class="lockup" style="margin-bottom:26px">
-    <svg viewBox="0 0 64 64"><path d="M24 12 H12 V52 H24" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="M40 12 H52 V52 H40" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="32" r="5" fill="currentColor"/></svg>
+    <svg viewBox="0 0 64 64"><path d="M10 36 V8 L32 28 L54 8 V36" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 50 Q32 61 45 50" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linecap="round"/></svg>
     <span>MIGRAGENT</span>
   </div>
   <h1>Nothing is stated<br>without a source.</h1>
@@ -93,34 +93,16 @@
 </section>
 
 <section>
-  <h2>Three marks, each one meaning something</h2>
+  <h2>The mark</h2>
   <div class="marks">
     <div class="mark">
       <div class="row">
-        <svg class="lg" viewBox="0 0 64 64"><path d="M24 12 H12 V52 H24" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="M40 12 H52 V52 H40" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="32" r="5" fill="currentColor"/></svg>
-        <svg class="md" viewBox="0 0 64 64"><path d="M24 12 H12 V52 H24" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="M40 12 H52 V52 H40" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="32" r="5" fill="currentColor"/></svg>
-        <svg class="sm" viewBox="0 0 64 64"><path d="M24 12 H12 V52 H24" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="M40 12 H52 V52 H40" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="32" r="5" fill="currentColor"/></svg>
+        <svg class="lg" viewBox="0 0 64 64"><path d="M10 36 V8 L32 28 L54 8 V36" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 50 Q32 61 45 50" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linecap="round"/></svg>
+        <svg class="md" viewBox="0 0 64 64"><path d="M10 36 V8 L32 28 L54 8 V36" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 50 Q32 61 45 50" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linecap="round"/></svg>
+        <svg class="sm" viewBox="0 0 64 64"><path d="M10 36 V8 L32 28 L54 8 V36" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 50 Q32 61 45 50" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linecap="round"/></svg>
       </div>
-      <b>A. The citation bracket</b>
-      <small>A square bracket is the universal mark for a source. Every cited claim ever written ends in one. It is also two posts with a gap, so the same shape is the passage you are trying to get through, and the dot is the claim being held.</small>
-    </div>
-    <div class="mark">
-      <div class="row">
-        <svg class="lg" viewBox="0 0 64 64"><rect x="11" y="15" width="42" height="8" rx="4" fill="currentColor"/><rect x="11" y="28" width="26" height="8" rx="4" fill="currentColor"/><rect x="25" y="41" width="28" height="8" rx="4" fill="currentColor" opacity=".55"/></svg>
-        <svg class="md" viewBox="0 0 64 64"><rect x="11" y="15" width="42" height="8" rx="4" fill="currentColor"/><rect x="11" y="28" width="26" height="8" rx="4" fill="currentColor"/><rect x="25" y="41" width="28" height="8" rx="4" fill="currentColor" opacity=".55"/></svg>
-        <svg class="sm" viewBox="0 0 64 64"><rect x="11" y="15" width="42" height="8" rx="4" fill="currentColor"/><rect x="11" y="28" width="26" height="8" rx="4" fill="currentColor"/><rect x="25" y="41" width="28" height="8" rx="4" fill="currentColor" opacity=".55"/></svg>
-      </div>
-      <b>B. The moved line</b>
-      <small>Three lines of a rule, and the bottom one has shifted. A diff. It means the thing nobody else is selling: the requirement moved, and we caught the day it moved.</small>
-    </div>
-    <div class="mark">
-      <div class="row">
-        <svg class="lg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="25" fill="none" stroke="currentColor" stroke-width="6" stroke-dasharray="3.5 5.58" stroke-linecap="round"/><circle cx="32" cy="32" r="12" fill="none" stroke="currentColor" stroke-width="6"/></svg>
-        <svg class="md" viewBox="0 0 64 64"><circle cx="32" cy="32" r="25" fill="none" stroke="currentColor" stroke-width="6" stroke-dasharray="3.5 5.58" stroke-linecap="round"/><circle cx="32" cy="32" r="12" fill="none" stroke="currentColor" stroke-width="6"/></svg>
-        <svg class="sm" viewBox="0 0 64 64"><circle cx="32" cy="32" r="25" fill="none" stroke="currentColor" stroke-width="6" stroke-dasharray="3.5 5.58" stroke-linecap="round"/><circle cx="32" cy="32" r="12" fill="none" stroke="currentColor" stroke-width="6"/></svg>
-      </div>
-      <b>C. The hollow seal</b>
-      <small>The milled edge of an official seal with nothing in the middle. The source is official, and the empty centre says we are not the ones issuing it and will never wear a crest.</small>
+      <b>The mark</b>
+      <small>The M, and a smile under it, both in one colour so it reads as a single shape. Shown at 60, 28 and 16 pixels, because 16 is the size that decides whether a mark works.</small>
     </div>
   </div>
 </section>

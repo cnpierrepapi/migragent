@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="MIGRAGENT">
+  <title>MIGRAGENT</title>
+  <!-- The M, and a smile under it. One colour, both elements, so it reads as a
+       single mark rather than a logo with a decoration attached.
+
+       The M sits high enough that its legs and the smile never share a band.
+       The first mark of this shape failed exactly that way at 16 pixels, see
+       D2 in docs/DEFECTS.md, so the clearance here is deliberate and it was
+       checked rather than assumed. -->
+  <path d="M10 36 V8 L32 28 L54 8 V36"
+        fill="none" stroke="currentColor" stroke-width="9"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M19 50 Q32 61 45 50"
+        fill="none" stroke="currentColor" stroke-width="7.5"
+        stroke-linecap="round"/>
+</svg>

@@ -43,40 +43,72 @@ dressed up as finished. That is the same cut rule as before: lane depth flexes, 
 
 ## Schools
 
-For each jurisdiction, the fifty institutions with the highest international student enrolment.
+For each jurisdiction, the institutions with the **highest percentage of international students**.
 
-### Picking the fifty, and citing the pick
+### Percentage, not ranking and not headcount
 
-"The top fifty" is itself a claim, so it carries a source and a year like every other claim.
+This is a share, not a league table and not a raw count. A small institution where 40% of the
+students are international ranks above a huge one where 8% are, even though the huge one has more
+international students in absolute terms.
 
-1. Look for the most recent published international enrolment data. Start at 2025.
+That is the right measure for this product. Somebody choosing where to apply cares whether a place
+is used to people like them: whether the admissions office has seen their kind of transcript before,
+whether the visa letters go out on time, whether they will be the only one. Share answers that.
+Headcount just finds the biggest campus, and ranking answers a question nobody here is asking.
+
+### How many, per jurisdiction
+
+**The top fifty by international share**, except where there are not fifty to take.
+
+**Where a jurisdiction has too few registered institutions for fifty to be meaningful, take the top
+ten per cent of every registered institution in that jurisdiction.** The UAE is the case that
+prompted this rule. The denominator is every registered institution, so the ten per cent is a real
+proportion of a real list rather than ten per cent of whatever we happened to find.
+
+Both the number taken and the size of the list it came from are stored, so the product can say
+"the top 12 of 118 registered institutions" rather than an unexplained number.
+
+### Citing the pick
+
+The share is itself a claim, so it carries a source and a year like everything else.
+
+1. Look for the most recent published international student share. Start at 2025.
 2. **If 2025 is not published, step back one year and look again. Repeat until data is found.**
 3. Record the year found and the publisher, and store both on every school row.
-4. Take the top fifty by international enrolment from that data.
+4. Rank by share and take the top fifty, or the top ten per cent where that rule applies.
 
 The guide never says "the top fifty universities". It says the top fifty by international student
-enrolment, according to a named publisher, for a named year. If the newest data available is 2023,
-it says 2023. **The year is never rounded forward and never left off.**
+share, according to a named publisher, for a named year. If the newest data available is 2023, it
+says 2023. **The year is never rounded forward and never left off.**
 
-### Finding the official page
+### Getting to a readable page, in order
 
-The target is always the institution's own site, because a third party page is somebody's summary
-and a summary is where invented requirements come from.
+1. **The institution's own website and its subpages.** This is always tried first and it is always
+   preferred. Check robots.txt before fetching; if it disallows the path, that is the end of that
+   path.
+2. **If the official site cannot be read, go to the course portals** (MScPortal, BScPortal,
+   PhDPortal) and find that institution's own page on the portal, of the form
+   `.../school/University-of-East-London`. **That page becomes the source.**
+3. **If the portal page cannot be read either, drop that institution and take the next one down the
+   list.** The list is ranked by international share, so the next one down is the next best fit, and
+   the swap is recorded with the reason.
 
-1. Go to the institution's own domain and find the admissions or international requirements page.
-2. **Check robots.txt before fetching. If it disallows the path, that is the end of it.** No
-   fetching anyway, no pretending a rule is advisory, no changing the user agent to get around it.
-3. If the official site cannot be read, the school is recorded as **not readable, with the reason**,
-   and it does not silently vanish from the count.
-4. Where a school is first discovered through an aggregator, the aggregator is a **lead, never a
-   citation.** For example a course found on a portal site is used only to work out which university
-   and which programme, and then the university's own page is located and read. The portal never
-   appears as the source of a requirement.
-5. Inside a readable official site, follow the institution's own links to the pages that carry the
-   detail: entry requirements, English language requirements, fees, deadlines.
+A dropped institution is recorded as dropped, with which step failed and why. It does not silently
+disappear, and the replacement is not passed off as an original choice.
 
-**A lead is how we found it. A source is what we read.** Those are two different fields on the row
-and they are never collapsed into one.
+### Saying which of the three it was
+
+A requirement read off the university's own admissions page and the same requirement read off a
+portal are not equally good, even when they agree. So every requirement carries **where it was read
+from**, in the guide, in words:
+
+- **Official**, meaning the institution's own site.
+- **Portal**, meaning a course portal page for that institution, named.
+
+Nothing is hidden and nothing is blocked by this. It costs one short line per requirement, and it
+means a reader who wants to double check the second-hand ones can see which those are without
+opening anything. A portal citation is still a real citation with a real link and a real date read.
+It is just honest about being one step further from the registrar.
 
 ---
 
@@ -116,7 +148,10 @@ Every source in the registry carries at least this:
 - what robots.txt said, and when that was checked
 - the date and time it was last read, and the hash of what came back
 - where the snapshot is stored
-- for a school: the enrolment data publisher and the data year behind its place in the fifty
+- for a school: its international student share, the publisher of that figure, the data year, the
+  size of the list it was ranked within, and how many were taken from it
+- whether the requirement was read from the official site or from a portal, and which portal
+- if the institution was dropped: which step failed, and which institution replaced it
 - if it is not readable: the reason, in words
 
 ---

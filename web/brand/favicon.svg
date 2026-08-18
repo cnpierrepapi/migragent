@@ -2,18 +2,13 @@
   <!-- An SVG favicon can answer prefers-color-scheme, which a .ico cannot. -->
   <style>
     .bg { fill: #FAFBFD }
-    .fg { fill: none; stroke: #16467D }
-    .dot { fill: #16467D }
+    .fg { fill: none; stroke: #16467D; stroke-linecap: round; stroke-linejoin: round }
     @media (prefers-color-scheme: dark) {
       .bg { fill: #080B12 }
       .fg { stroke: #7FB0F2 }
-      .dot { fill: #7FB0F2 }
     }
   </style>
   <rect class="bg" width="64" height="64" rx="14"/>
-  <path class="fg" d="M25 16 H16 V48 H25" stroke-width="7"
-        stroke-linecap="round" stroke-linejoin="round"/>
-  <path class="fg" d="M39 16 H48 V48 H39" stroke-width="7"
-        stroke-linecap="round" stroke-linejoin="round"/>
-  <circle class="dot" cx="32" cy="32" r="4.5"/>
+  <path class="fg" d="M16 37 V15 L32 31 L48 15 V37" stroke-width="7.5"/>
+  <path class="fg" d="M22 47 Q32 56 42 47" stroke-width="6.5"/>
 </svg>
