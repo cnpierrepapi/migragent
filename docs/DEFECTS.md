@@ -446,3 +446,55 @@ snapshot. It is not a blanket replacement, because on three of four hosts it cos
 the same page or less.
 
 **Status:** closed as investigated. Australia and the United States both remain blocked, honestly.
+
+---
+
+## D15. Spain walked to zero three times, and the cause was never where I looked
+
+**Found:** 18 August 2026, after the third consecutive run in which Spain reported zero pages.
+
+**The two earlier explanations were both real bugs and neither was this one.** D11 was the duplicated
+seed URL, which was genuinely broken and genuinely fixed. Fixing it did not move Spain off zero. The
+run then said `9 navigation links learned` for `exteriores.gob.es` and `0 new`, which I read as a
+thin site rather than as a measurement that could not possibly work.
+
+**The actual cause.** That page serves **9 links** to a plain HTTP client and **117** to a browser.
+Its navigation and its content links are written by scripts. With nine links total, and navigation
+learned by keeping links that appear on two pages, essentially every link was classified as
+furniture and nothing could survive. The site was never thin. We were never seeing it.
+
+**Why it took three runs.** Each time there was a real bug in front of it that explained the symptom
+well enough to stop the search. A plausible cause that is also true is the hardest kind to look past.
+
+**Fix.** The expander decides per host whether pages have to be rendered, by measuring: if a plain
+fetch yields fewer than 25 links, it renders one page and compares. Spain crosses that by a wide
+margin, gov.uk and canada.ca never trigger it. The decision is cached per host, so a site is tested
+once rather than on every URL, and rendering stays the exception.
+
+Verified on the next run: `exteriores.gob.es` learned **113** navigation links, up from 9.
+
+**What this changes about D14's conclusion.** That entry said the browser unblocked neither blocked
+lane, which is still true for Australia and the United States. It missed a third case entirely: a
+site that fetches fine, returns 200, and hides its links behind scripts. That case does not look
+blocked at all, which is what makes it worse. The browser earns its place on Spain, not on the two
+lanes it was built for.
+
+**Status:** closed.
+
+---
+
+## D16. A moved seed URL left an orphan that walked as an extra entry point
+
+**Found:** 18 August 2026, in the same run: `11 readable entry points` where fourteen candidates
+minus four blocked is ten.
+
+**What happened.** Spain's work lane was re-seeded onto a different page. Rows are keyed by a stable
+id derived from the URL, so the new URL wrote a new row and the old one stayed. The purge before a
+re-walk removed rows discovered by walking and left seed rows alone, so the orphan survived, was
+counted as readable, and walked as an eleventh entry point reporting its own zero.
+
+**Fix.** The purge now also removes seed rows whose id is not in the current seed list, so the
+registry holds the seed that exists rather than every seed that ever existed. Verified: the next run
+purged 857 rows and reported ten entry points.
+
+**Status:** closed.

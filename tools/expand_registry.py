@@ -24,6 +24,7 @@ from google.cloud import firestore  # noqa: E402
 from migragent import identity  # noqa: E402
 from migragent.expand import Expander  # noqa: E402
 from migragent.fetcher import Fetcher  # noqa: E402
+from migragent.render import BrowserFetcher  # noqa: E402
 from migragent.registry import Registry, Source  # noqa: E402
 
 PROJECT = "project-e0928f2f-5abf-46a3-b8a"
@@ -33,7 +34,7 @@ MAX_DEPTH = 2
 # which is the cap and not a result. A number that is really the ceiling is a
 # number that says nothing, and reporting it as coverage would have been the
 # same class of mistake as counting front doors. See D13.
-MAX_PAGES = 150
+MAX_PAGES = 600
 
 
 def source_id(jurisdiction: str, lane: str, url: str) -> str:
@@ -55,8 +56,21 @@ def main() -> int:
         # Rows written by an earlier walk are re-derivable, and leaving results
         # from code that has since been fixed would mean the count describes two
         # different methods at once.
-        stale = [s for s in Registry(writer_db).all()
-                 if s.discovered_via.startswith("walked from")]
+        # Rows from an earlier walk, plus seed rows whose URL is no longer in
+        # the seed list. Spain left an orphan behind when its work entry moved
+        # to a different page, and that orphan walked as an eleventh entry point
+        # and reported its own zero.
+        current_seed_ids = set()
+        try:
+            from tools.seed_registry import CANDIDATES, source_id as seed_id
+            current_seed_ids = {seed_id(j, lane, url) for j, lane, url, _t, _l in CANDIDATES}
+        except Exception:  # noqa: BLE001
+            pass
+        stale = [
+            s for s in Registry(writer_db).all()
+            if s.discovered_via.startswith("walked from")
+            or (s.discovered_via == "seed" and current_seed_ids and s.source_id not in current_seed_ids)
+        ]
         batch = writer_db.batch()
         for i, s in enumerate(stale, 1):
             batch.delete(writer_db.collection("sources").document(s.source_id))
@@ -75,67 +89,70 @@ def main() -> int:
     print(f"{len(entries)} readable entry points\n")
 
     fetcher = Fetcher(delay_seconds=0.6)
-    expander = Expander(fetcher, max_depth=MAX_DEPTH, max_pages=MAX_PAGES)
 
     # Navigation has to be learned per host before anything can be told apart,
     # and it needs two pages of a host to learn from. Hosts with only one entry
     # get nothing walked, and the run says so rather than quietly returning
     # everything or nothing.
-    learned = expander.learn_chrome([s.url for s in entries])
-    print("navigation links learned per host:")
-    for host, n in sorted(learned.items()):
-        note = "" if n else "   ONLY ONE PAGE ON THIS HOST, nothing can be told apart"
-        print(f"  {n:>4}  {host}{note}")
-    print()
+    with BrowserFetcher(fetcher) as browser:
+        expander = Expander(fetcher, max_depth=MAX_DEPTH, max_pages=MAX_PAGES,
+                            browser=browser)
+        learned = expander.learn_chrome([s.url for s in entries])
+        print("navigation links learned per host:")
+        for host, n in sorted(learned.items()):
+            note = "" if n else "   ONLY ONE PAGE ON THIS HOST, nothing can be told apart"
+            print(f"  {n:>4}  {host}{note}")
+        print()
 
-    discovered: list[Source] = []
-    per_lane: dict[tuple[str, str], int] = defaultdict(int)
-    skipped_hosts = set()
+        discovered: list[Source] = []
+        per_lane: dict[tuple[str, str], int] = defaultdict(int)
+        skipped_hosts = set()
 
-    for entry in entries:
-        host = entry.url.split("//", 1)[-1].split("/", 1)[0]
-        if not learned.get(host):
-            skipped_hosts.add(host)
-            print(f"  skipped  {entry.jurisdiction} {entry.lane}  ({host}, no navigation learned)")
-            continue
-
-        found, pages = expander.walk(entry.url, jurisdiction=entry.jurisdiction)
-        kept = 0
-        for d in found:
-            page = pages.get(d.url)
-            if page is None or not page.ok:
+        for entry in entries:
+            host = entry.url.split("//", 1)[-1].split("/", 1)[0]
+            if not learned.get(host):
+                skipped_hosts.add(host)
+                print(f"  skipped  {entry.jurisdiction} {entry.lane}  ({host}, no navigation learned)")
                 continue
-            discovered.append(Source(
-                source_id=source_id(entry.jurisdiction, entry.lane, d.url),
-                jurisdiction=entry.jurisdiction,
-                lane=entry.lane,
-                kind="government",
-                url=d.url,
-                title=d.url.rstrip("/").rsplit("/", 1)[-1].replace("-", " ").replace(".html", ""),
-                language=entry.language,
-                provenance="official",
-                discovered_via=f"walked from {entry.source_id}",
-                lead_url=d.lead_url,
-                robots_allowed=True,
-                robots_checked_at=page.read_at,
-                last_read_at=page.read_at,
-                last_status=page.status,
-                stable_sha256=page.sha256,
-                raw_sha256=page.raw_sha256,
-            ))
-            kept += 1
-            per_lane[(entry.jurisdiction, entry.lane)] += 1
-        print(f"  {kept:>3} new  {entry.jurisdiction} {entry.lane}  from {entry.url[:70]}")
 
-    print(f"\n{len(discovered)} pages discovered and read")
-    print("\nper lane:")
-    for (j, lane), n in sorted(per_lane.items()):
-        print(f"  {j} {lane:<5} {n:>4}")
+            found, pages = expander.walk(entry.url, jurisdiction=entry.jurisdiction)
+            kept = 0
+            for d in found:
+                page = pages.get(d.url)
+                if page is None or not page.ok:
+                    continue
+                discovered.append(Source(
+                    source_id=source_id(entry.jurisdiction, entry.lane, d.url),
+                    jurisdiction=entry.jurisdiction,
+                    lane=entry.lane,
+                    kind="government",
+                    url=d.url,
+                    title=d.url.rstrip("/").rsplit("/", 1)[-1].replace("-", " ").replace(".html", ""),
+                    language=entry.language,
+                    provenance="official",
+                    discovered_via=f"walked from {entry.source_id}",
+                    lead_url=d.lead_url,
+                    robots_allowed=True,
+                    robots_checked_at=page.read_at,
+                    last_read_at=page.read_at,
+                    last_status=page.status,
+                    stable_sha256=page.sha256,
+                    raw_sha256=page.raw_sha256,
+                ))
+                kept += 1
+                per_lane[(entry.jurisdiction, entry.lane)] += 1
+            print(f"  {kept:>3} new  {entry.jurisdiction} {entry.lane}  from {entry.url[:70]}")
 
-    if skipped_hosts:
-        print("\nHosts with a single entry page, so nothing could be walked:")
-        for h in sorted(skipped_hosts):
-            print(f"  {h}")
+        print(f"\n{len(discovered)} pages discovered and read")
+        print("\nper lane:")
+        for (j, lane), n in sorted(per_lane.items()):
+            print(f"  {j} {lane:<5} {n:>4}")
+
+        if skipped_hosts:
+            print("\nHosts with a single entry page, so nothing could be walked:")
+            for h in sorted(skipped_hosts):
+                print(f"  {h}")
+
 
     if dry_run:
         print("\ndry run, nothing written")

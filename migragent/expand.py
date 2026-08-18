@@ -141,10 +141,60 @@ class Expander:
     max_depth: int = 2
     max_pages: int = 80
 
+    # Optional. When present, hosts whose links only exist after scripts run get
+    # rendered instead of plainly fetched. See _decide_render.
+    browser: object | None = None
+
     # host -> links that appear on more than one page of that host
     _chrome: dict[str, set[str]] = field(default_factory=dict)
     _seen: set[str] = field(default_factory=set)
     _late_pages: dict[str, Fetched] = field(default_factory=dict)
+    _render_host: dict[str, bool] = field(default_factory=dict)
+
+    # A page whose links are written by scripts hands a plain fetcher almost
+    # nothing. Spain's ministry site returns 9 links to urllib and 117 to a
+    # browser, which is why Spain walked to zero three runs in a row while
+    # looking like a site with nothing on it. The floor is deliberately low, so
+    # that rendering is the exception and not the default.
+    LINK_FLOOR = 25
+    RENDER_GAIN = 2.0
+
+    def _decide_render(self, host: str, url: str, plain: Fetched) -> bool:
+        """Decide once per host whether its pages have to be rendered.
+
+        Measured rather than assumed, and measured per host rather than per
+        page, so a site is not re-tested on every URL. A page that already
+        yields plenty of links is never rendered, because rendering costs
+        seconds and usually returns the same page.
+        """
+        if host in self._render_host:
+            return self._render_host[host]
+        if self.browser is None:
+            self._render_host[host] = False
+            return False
+
+        plain_links = len(links_on(plain))
+        if plain_links >= self.LINK_FLOOR:
+            self._render_host[host] = False
+            return False
+
+        rendered = self.browser.fetch(url)  # type: ignore[attr-defined]
+        gain = len(links_on(rendered))
+        needed = gain >= max(self.LINK_FLOOR, plain_links * self.RENDER_GAIN)
+        self._render_host[host] = needed
+        if needed:
+            self._late_pages[url] = rendered
+        return needed
+
+    def fetch_page(self, url: str) -> Fetched:
+        """Fetch a page the way this host needs to be fetched."""
+        host = urllib.parse.urlsplit(url).netloc
+        if self._render_host.get(host) and self.browser is not None:
+            return self.browser.fetch(url)  # type: ignore[attr-defined]
+        plain = self.fetcher.fetch(url)
+        if plain.ok and self._decide_render(host, url, plain):
+            return self._late_pages.get(url) or self.browser.fetch(url)  # type: ignore[attr-defined]
+        return plain
 
     def learn_chrome(self, sample_urls: list[str]) -> dict[str, int]:
         """Learn each host's navigation from two or more DISTINCT pages.
@@ -171,7 +221,7 @@ class Expander:
                 continue
             counts: Counter[str] = Counter()
             for url in urls:
-                counts.update(set(links_on(self.fetcher.fetch(url))))
+                counts.update(set(links_on(self.fetch_page(url))))
             chrome = {link for link, n in counts.items() if n >= 2}
             self._chrome[host] = chrome
             learned[host] = len(chrome)
@@ -260,7 +310,7 @@ class Expander:
 
         counts: Counter[str] = Counter()
         for url in sample:
-            page = self.fetcher.fetch(url)
+            page = self.fetch_page(url)
             self._late_pages[url] = page
             counts.update(set(links_on(page)))
         self._chrome[host] = {link for link, n in counts.items() if n >= 2}
@@ -271,7 +321,7 @@ class Expander:
         found: list[Discovered] = []
         pages: dict[str, Fetched] = {}
 
-        entry = self.fetcher.fetch(entry_url)
+        entry = self.fetch_page(entry_url)
         pages[entry_url] = entry
         if not entry.ok:
             return found, pages
@@ -299,7 +349,7 @@ class Expander:
             url, _lead, depth = queue[head]
             head += 1
 
-            page = self.fetcher.fetch(url)
+            page = self.fetch_page(url)
             pages[url] = page
             if not page.ok or depth >= self.max_depth:
                 continue
