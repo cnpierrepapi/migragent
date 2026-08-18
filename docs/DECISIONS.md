@@ -72,3 +72,44 @@ everything or nothing and calling it a result.
 **No model takes any part in choosing what to read.** A model reads a page afterwards to say what a
 requirement is. Which pages exist, and which were read, and when, stays plain code all the way
 through, because that is the part that has to be checkable.
+
+---
+
+## 3. A model may say what a requirement means, never that one exists
+
+**Decided:** 18 August 2026, building `migragent/extract.py`.
+
+Two different failures hide under "the model made it up", and only one of them was covered.
+
+**Invented sources** are handled structurally. The citation is assembled from the `Fetched` object,
+the URL that was actually requested and the timestamp taken from the clock when the bytes arrived.
+Neither ever enters a prompt or comes back out of a response, so no arrangement of words from a
+model can produce a source that was not fetched.
+
+**Invented requirements** are the likelier failure and were not covered at all. A model that has
+read a thousand immigration pages will tell you a study permit needs a police certificate whether or
+not the page in front of it says so, and it will be right often enough to be believed.
+
+**So every requirement must carry a verbatim quote, and every quote is checked against the page text
+before the requirement is allowed to exist.** No match, no requirement.
+
+**Tested in both directions**, because a check that only ever accepts is not a check:
+
+| given | verdict |
+| --- | --- |
+| a real quote from the page | accepted |
+| the same quote with curly apostrophes and odd spacing | accepted |
+| a plausible invented requirement | rejected |
+| a real sentence with one number changed | rejected |
+| two real fragments stitched together | rejected |
+
+The middle row matters as much as the rest. Comparison folds whitespace, quote marks and dashes, so
+a true quote is not thrown away over a curly apostrophe, which would make the check look stricter
+than it is while quietly losing good requirements. Case and accents are kept, because they carry
+meaning in French and Spanish.
+
+**What this costs.** Anything the page implies but never states is lost. That is the intended trade,
+and the implied things are exactly what "open questions" at the back of the guide is for.
+
+**Dropped requirements are returned and reported, never swallowed.** A run that drops nine of ten
+has to say so, because a silent drop rate is how a check like this stops being a check.

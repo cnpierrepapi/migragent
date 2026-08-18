@@ -15,9 +15,11 @@ kept because it is not specific to any domain.
 
 These each cost real time to find and none of them are obvious.
 
-- **Gemini 3.5 returns 404 in `us-central1`.** Every 3.5 model does. They resolve at
-  `location="global"`, so model calls are pinned to a different location from everything else.
-  `gemini-3.5-pro` was unavailable in both, so treat only Flash as reliable.
+- **~~Gemini 3.5 returns 404 in `us-central1`.~~ CHECKED AGAIN 18 August 2026 and no longer true.**
+  `gemini-3.5-flash` now returns 200 at both `us-central1` and `global`. Calls stay pinned to
+  `global` because it costs nothing and the setting is already there. **`gemini-3.5-pro` is still
+  404 in both**, as is `gemini-3-flash`, so Flash remains the only 3.5 model available here. The
+  probe is four lines of curl and is worth re-running rather than trusting this line.
 - **A new Google Cloud project's default compute service account has no roles at all.** Editor is no
   longer granted by default. This produced a 403 on the first Vertex call and again on the first
   Cloud Build. It needs `storage.objectUser`, `artifactregistry.writer` and `logging.logWriter` for
