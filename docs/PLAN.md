@@ -10,7 +10,7 @@ wrapping it first would mean wrapping a tool that a laptop runs by hand.
 Standing rules are in `docs/RULES.md`. What gets read and how is in `docs/SOURCES.md`. How it feels
 to use is in `docs/HOW_IT_WORKS.md`. Every defect found so far is in `docs/DEFECTS.md`.
 
-**Where it lives:** Cloud Run, service `migragent`, at `migragent.onenept.com`. Firestore, Pub/Sub,
+**Where it lives:** Cloud Run, service `migragent`, at `https://migragent-ba5o2l34rq-uc.a.run.app`. **`migragent.onenept.com` is not mapped yet** and answers 404; checked 19 August 2026. The mapping is a Build 6 item and this line said otherwise for long enough to be worth correcting rather than quietly fixing. Firestore, Pub/Sub,
 Cloud Scheduler, Cloud Storage. The app holds passports and a service account, so nothing is exported
 to another provider. A push to `main` deploys, and the job fails unless the new revision answers.
 
