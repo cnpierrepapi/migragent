@@ -200,24 +200,44 @@ class Fetcher:
         request = urllib.request.Request(
             f"{host}/robots.txt", headers={"User-Agent": self.user_agent},
         )
-        try:
-            with urllib.request.urlopen(request, timeout=self.timeout,
-                                        context=_tls_context()) as response:
-                body = response.read().decode("utf-8", "ignore")
-            parser = urllib.robotparser.RobotFileParser()
-            parser.set_url(f"{host}/robots.txt")
-            parser.parse(body.splitlines())
-            state = (parser, "the host stated its rules", True)
-        except urllib.error.HTTPError as exc:
-            if exc.code in (404, 410):
-                state = (None, f"no robots.txt on this host (HTTP {exc.code}), "
-                               "which is permission", True)
-            else:
-                state = (None, f"the host would not serve its robots.txt "
-                               f"(HTTP {exc.code}), so we do not crawl it", False)
-        except Exception as exc:  # noqa: BLE001
-            state = (None, f"robots.txt could not be reached "
-                           f"({type(exc).__name__}), so we do not crawl it", False)
+        # Retried, because pages are. Without this the gate was strictly less
+        # forgiving than the thing it guards: bamf.de drops a robots.txt request
+        # every so often, and one dropped request was enough to skip the whole
+        # of Germany for a run, while the page fetcher next to it would have
+        # tried three times for the same page.
+        #
+        # An HTTP answer is an answer and is never retried. Only silence is.
+        state: tuple[urllib.robotparser.RobotFileParser | None, str, bool] | None = None
+        last_error: Exception | None = None
+
+        for attempt in range(1, TRANSPORT_ATTEMPTS + 1):
+            try:
+                with urllib.request.urlopen(request, timeout=self.timeout,
+                                            context=TLS) as response:
+                    body = response.read().decode("utf-8", "ignore")
+                parser = urllib.robotparser.RobotFileParser()
+                parser.set_url(f"{host}/robots.txt")
+                parser.parse(body.splitlines())
+                state = (parser, "the host stated its rules", True)
+                break
+            except urllib.error.HTTPError as exc:
+                if exc.code in (404, 410):
+                    state = (None, f"no robots.txt on this host (HTTP {exc.code}), "
+                                   "which is permission", True)
+                else:
+                    state = (None, f"the host would not serve its robots.txt "
+                                   f"(HTTP {exc.code}), so we do not crawl it", False)
+                break
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+                if attempt < TRANSPORT_ATTEMPTS:
+                    time.sleep(BACKOFF_SECONDS * attempt)
+
+        if state is None:
+            state = (None, f"robots.txt could not be reached after "
+                           f"{TRANSPORT_ATTEMPTS} attempts "
+                           f"({type(last_error).__name__}), so we do not crawl it",
+                     False)
 
         self._robots[host] = state
         return state
