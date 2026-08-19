@@ -17,6 +17,8 @@ URL was added here on the strength of looking plausible.
 """
 from __future__ import annotations
 
+import hashlib
+import re
 import sys
 
 sys.path.insert(0, ".")
@@ -103,10 +105,10 @@ CANDIDATES = [
     # Both Italian lanes on the visa portal, which publishes a page per visa
     # type including study and every category of work. The labour ministry was
     # the first choice for work and is a news site with a ministry attached.
-    ("IT", "study", "https://vistoperitalia.esteri.it/infovisto",
-     "Tipologie di visto", "it"),
-    ("IT", "work", "https://vistoperitalia.esteri.it/home.aspx",
-     "Visti per l'Italia", "it"),
+    ("IT", "study", "https://vistoperitalia.esteri.it/infovisto?code=17_0_D",
+     "Visto per studio, lunga permanenza", "it"),
+    ("IT", "work", "https://vistoperitalia.esteri.it/infovisto?code=12_0_D",
+     "Visto per lavoro subordinato, lunga permanenza", "it"),
 
     ("DE", "study",
      "https://www.bamf.de/EN/Themen/MigrationAufenthalt/ZuwandererDrittstaaten/Bildung/bildung-node.html",
@@ -129,7 +131,7 @@ CANDIDATES = [
     # host teaches the walk nothing about what is navigation. The education
     # ministry's front page carries no links a crawler can follow at all, even
     # rendered, so the higher education page is what makes the pair possible.
-    ("SA", "study", "https://moe.gov.sa/en/Pages/default.aspx",
+    ("SA", "study", "https://www.moe.gov.sa/en/Pages/default.aspx",
      "Ministry of Education", "en"),
     ("SA", "study", "https://www.moe.gov.sa/en/education/highereducation/Pages/default.aspx",
      "Higher education", "en"),
@@ -139,9 +141,27 @@ CANDIDATES = [
 
 
 def source_id(jurisdiction: str, lane: str, url: str) -> str:
-    host = url.split("//", 1)[-1].split("/", 1)[0].replace(".", "-")
-    tail = url.rstrip("/").rsplit("/", 1)[-1].split(".")[0][:40]
-    return f"{jurisdiction.lower()}-{lane}-{host}-{tail}"
+    """Stable per URL, and different for URLs that are different.
+
+    The tail used to be the last path segment only, which is not an identity.
+    Saudi Arabia was seeded with two education ministry pages,
+    `/en/Pages/default.aspx` and `/en/education/highereducation/Pages/default.aspx`,
+    and both reduced to "default". They got the same id, the second silently
+    overwrote the first, and the host was left with one page, which is exactly
+    the condition that makes the walk skip it. Two pages were seeded, one
+    existed, and nothing said so. See D28.
+
+    The whole path takes part now, and a digest keeps the id short and stable
+    without throwing away what distinguishes it.
+    """
+    parts = url.split("//", 1)[-1]
+    host = parts.split("/", 1)[0].replace(".", "-")
+    path = parts[len(parts.split("/", 1)[0]):]
+    tail = re.sub(r"[^a-z0-9]+", "-", path.lower()).strip("-")[-48:] or "root"
+    # Two different URLs can still tail-match after that squeeze, so the id
+    # carries a short digest of the whole URL as well.
+    digest = hashlib.sha256(url.encode()).hexdigest()[:8]
+    return f"{jurisdiction.lower()}-{lane}-{host}-{tail}-{digest}"
 
 
 def main() -> int:

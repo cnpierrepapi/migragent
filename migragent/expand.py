@@ -295,6 +295,28 @@ class Expander:
             for url in urls:
                 counts.update(set(links_on(self.fetch_page(url))))
             chrome = {link for link, n in counts.items() if n >= 2}
+
+            # A link to the same path as one of the sample pages, differing only
+            # by query, is a sibling record rather than furniture.
+            #
+            # Italy publishes one page per visa type at a single path, and every
+            # one of them carries the list of all the others. So the list IS the
+            # navigation and it is ALSO the content, and counting appearances
+            # cannot tell those apart: with the whole catalogue on every page,
+            # each visa type looks exactly like a menu item. Italy walked to
+            # zero twice for this reason. See D28.
+            #
+            # This does not weaken the heuristic anywhere else. It only applies
+            # to a path we deliberately seeded, so a site cannot enlarge its own
+            # crawl by linking sideways.
+            sample_paths = {urllib.parse.urlsplit(u).path.rstrip("/") for u in urls}
+            siblings = {
+                link for link in chrome
+                if urllib.parse.urlsplit(link).query
+                and urllib.parse.urlsplit(link).path.rstrip("/") in sample_paths
+            }
+            chrome -= siblings
+
             self._chrome[host] = chrome
             learned[host] = len(chrome)
         return learned

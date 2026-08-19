@@ -918,3 +918,52 @@ The measurement took one command and was worth more than the theory. It also mea
 which would have been work spent weakening the strongest guarantee in the product.
 
 **Status:** closed.
+
+---
+
+## D28. Two seeded pages, one row, and a catalogue mistaken for a menu
+
+**Found:** 19 August 2026, when Italy and Saudi Arabia walked to zero for the second and third time.
+
+Two faults, unrelated, both hiding behind the same symptom, and both of them made a page disappear
+without anything saying so.
+
+### 28a. Two different URLs, one source id
+
+Seed ids were built from the host plus **the last path segment only**. Saudi Arabia was seeded with
+two education ministry pages:
+
+    /en/Pages/default.aspx
+    /en/education/highereducation/Pages/default.aspx
+
+Both reduce to `default`. Both got the id `sa-study-www-moe-gov-sa-default`, the second write
+overwrote the first, and the host was left holding one page. One page on a host is exactly the
+condition that makes the walk skip it, so the two entries added to fix a skip caused the skip.
+
+**Two pages were seeded, one existed, and no count anywhere was wrong.** The registry said what it
+held; nothing said what it had been given.
+
+**Fix.** The whole path takes part in the id, and a digest of the full URL rides along, so URLs that
+differ anywhere get ids that differ. Existing seed rows were migrated: 23 written under the new
+scheme, 25 old ones pruned, which also cleared three genuine orphans left by earlier reseeds.
+
+### 28b. When the catalogue is the navigation
+
+The walk learns furniture by counting: a link on two or more sample pages of a host is navigation.
+That works when a site has a menu and content, and it fails completely on a site whose content **is**
+the menu.
+
+Italy's visa portal publishes one page per visa type, and every one of those pages carries the list of
+all the others. So each visa type appears on every sample page and is classified as furniture. The
+whole catalogue was excluded as navigation, which is why Italy walked to zero even with two distinct
+entries on one host and navigation learned successfully.
+
+**Fix.** A link to the same path as one of the sample pages, differing only by query, is a sibling
+record rather than furniture. It is narrow on purpose: it only applies to a path we deliberately
+seeded, so a site cannot widen its own crawl by linking sideways.
+
+**The lesson from both:** three separate attempts read "Italy has no content", and the answer was
+never in Italy. A walk that finds nothing needs the sample it learned from inspected, not the
+destination.
+
+**Status:** closed.
