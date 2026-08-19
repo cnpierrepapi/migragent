@@ -1,0 +1,65 @@
+# Push to main, and the running service becomes this commit.
+#
+# There is no service account key anywhere in this file or in the repository's
+# secrets. GitHub proves who it is with a short lived OIDC token, Google checks
+# that the token names this repository, and only then hands back a credential
+# that lasts minutes. A key in a secret would outlive the job, the laptop and
+# the person who made it; this cannot be copied out and reused.
+#
+# The deploy identity is migragent-deployer. It can build an image and move a
+# Cloud Run revision. It cannot read Firestore, so it cannot see a case or a
+# document, and it cannot become the watcher.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT: project-e0928f2f-5abf-46a3-b8a
+  REGION: us-central1
+  SERVICE: migragent
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: project-e0928f2f-5abf-46a3-b8a
+          workload_identity_provider: projects/158351874494/locations/global/workloadIdentityPools/github/providers/migragent
+          service_account: migragent-deployer@project-e0928f2f-5abf-46a3-b8a.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --source . \
+            --project "$PROJECT" \
+            --region "$REGION" \
+            --service-account "migragent-web@$PROJECT.iam.gserviceaccount.com" \
+            --allow-unauthenticated \
+            --quiet
+
+      # A deploy that reports success while the service returns 500 is a deploy
+      # that lies. The job fails unless the new revision answers.
+      - name: Check the service answers
+        run: |
+          url=$(gcloud run services describe "$SERVICE" --project "$PROJECT" \
+                  --region "$REGION" --format='value(status.url)')
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$url/health")
+          echo "$url/health -> $code"
+          test "$code" = "200"
