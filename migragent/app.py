@@ -22,7 +22,13 @@ from . import identity
 from .cases import RETENTION_DAYS, Cases
 from .corpus import Corpus
 from .coverage import Matcher, document_worth
+from .detect import agreement, detect
 from .documents import KINDS, MIME_BY_SUFFIX, DocumentReader, extract_text
+from .form import FormBuilder
+from .intake_page import intake_html, working_html
+from .result_page import result_html
+from .routes import RouteFinder
+from .run import Run, sse_done
 from .guide import build, to_html
 from .registry import JURISDICTIONS, Registry
 from .upload_page import upload_html
@@ -68,54 +74,42 @@ def brand(name: str) -> Response:
 
 @app.get("/")
 def home() -> Response:
+    """Two questions and a drop zone. The lane is derived behind it.
+
+    The first version of this page listed fourteen jurisdiction and lane rows
+    labelled ready, watched and uncovered. That is our filing system. Nobody
+    arrives thinking "CA study", they arrive thinking about a master's in Canada,
+    so coverage now appears only where it changes what they can expect.
+    """
     db = _db()
-    registry = Registry(db)
-    corpus = Corpus(db)
+    registry, corpus = Registry(db), Corpus(db)
 
-    # The real numbers, read live. On the day it is nine it says nine.
-    total_sources = registry.total_sources()
-
-    # A lane is only offered as covered if requirements have actually been
-    # extracted for it. A lane with sources but no extraction is listed as being
-    # watched and says so, rather than being quietly offered as finished.
-    #
-    # Both scans project only the fields they use. Firestore bills and delivers
-    # whole documents otherwise, and a source row carries a snapshot path, two
-    # digests and a blocked reason that this page never looks at. With a registry
-    # meant to grow into the thousands, pulling all of that to colour fourteen
-    # labels is the wrong shape.
     extracted: set[tuple[str, str]] = set()
     for row in db.collection("reads").select(["jurisdiction", "lane", "kept"]).stream():
         d = row.to_dict()
         if d.get("kept", 0) > 0:
             extracted.add((d.get("jurisdiction", ""), d.get("lane", "")))
 
-    have_sources: dict[tuple[str, str], int] = {}
-    blocked: dict[tuple[str, str], str] = {}
+    found: dict[tuple[str, str], int] = {}
     for row in db.collection("sources").select(
-        ["jurisdiction", "lane", "last_read_at", "blocked", "blocked_reason"]
-    ).stream():
+            ["jurisdiction", "lane", "last_read_at", "blocked"]).stream():
         d = row.to_dict()
-        key = (d.get("jurisdiction", ""), d.get("lane", ""))
         if d.get("blocked") is None and d.get("last_read_at"):
-            have_sources[key] = have_sources.get(key, 0) + 1
-        elif d.get("blocked") and key not in have_sources:
-            blocked[key] = d.get("blocked_reason") or d.get("blocked") or "not readable"
+            key = (d.get("jurisdiction", ""), d.get("lane", ""))
+            found[key] = found.get(key, 0) + 1
 
-    options = []
-    for code, meta in JURISDICTIONS.items():
+    coverage_by_lane = {}
+    for code in JURISDICTIONS:
         for lane in ("study", "work"):
             key = (code, lane)
-            count = have_sources.get(key, 0)
             if key in extracted:
-                state, note = "ready", f"{count} pages read"
-            elif count:
-                state, note = "watched", f"{count} pages found, not read yet"
+                coverage_by_lane[key] = ("ready", f"{found.get(key, 0)} pages read")
+            elif found.get(key):
+                coverage_by_lane[key] = ("watched", f"{found[key]} pages found")
             else:
-                state, note = "uncovered", blocked.get(key, "no readable official source")
-            options.append((code, meta["name"], lane, state, note, count))
+                coverage_by_lane[key] = ("uncovered", "no readable official source")
 
-    return Response(_home_html(options, total_sources, corpus.totals()),
+    return Response(intake_html(coverage_by_lane, registry.total_sources()),
                     mimetype="text/html")
 
 
@@ -124,17 +118,38 @@ def _case_or_none(cases: Cases):
     return cases.get(cid) if cid else None
 
 
-@app.get("/start")
-def start() -> Response:
-    jurisdiction = (request.args.get("jurisdiction") or "").upper()
-    lane = (request.args.get("lane") or "").lower()
+@app.post("/begin")
+def begin() -> Response:
+    """One submit: the two choices, and whatever files came with them.
+
+    Documents are read here rather than on the working screen, because a file
+    has to arrive before anything can read it. Their read times are real and the
+    working screen replays them with the counts they actually produced.
+    """
+    jurisdiction = (request.form.get("place") or "").upper()
+    lane = (request.form.get("lane") or "").lower()
     if jurisdiction not in JURISDICTIONS or lane not in ("study", "work"):
-        return redirect("/")
+        return jsonify({"error": "Pick what you are doing and where."}), 400
 
     db = _db()
     cases = Cases(db)
     case = cases.create(jurisdiction, lane)
-    response = make_response(redirect("/documents"))
+
+    reader = DocumentReader(_project(), MODEL, MODEL_LOCATION,
+                            identity.credentials_for(identity.RESEARCHER, _project()))
+    for uploaded in request.files.getlist("file"):
+        if not uploaded.filename:
+            continue
+        mime = MIME_BY_SUFFIX.get(Path(uploaded.filename).suffix.lower())
+        if mime is None:
+            continue
+        data = uploaded.read()
+        doc = reader.read(uploaded.filename, data, mime, extract_text(data, mime))
+        del data
+        if not doc.error:
+            cases.add_document(case.case_id, doc)
+
+    response = make_response(jsonify({"ok": True, "case": case.case_id[:8]}))
     # Session cookie. No account exists in this build, so this is deliberately
     # the weakest link between a person and their data: nobody can guess it and
     # nobody can recover it.
@@ -143,77 +158,53 @@ def start() -> Response:
     return response
 
 
-@app.get("/documents")
-def documents() -> Response:
-    db = _db()
-    cases, corpus, registry = Cases(db), Corpus(db), Registry(db)
+@app.get("/working")
+def working() -> Response:
+    cases = Cases(_db())
     case = _case_or_none(cases)
     if case is None:
         return redirect("/")
-
-    near = {s.url.rstrip("/") for s in registry.near_lane(case.jurisdiction, case.lane)}
-    requirements = corpus.requirements_for(case.jurisdiction, case.lane, allowed_urls=near)
-    worth = document_worth(requirements)
-    uploaded = cases.documents(case.case_id)
-    cov = cases.coverage(case.case_id) or {}
-
-    return Response(upload_html(case, worth, uploaded, cov, len(requirements),
-                                CELEBRATE_AT, KINDS),
+    return Response(working_html(case, len(cases.documents(case.case_id))),
                     mimetype="text/html")
 
 
-@app.post("/upload")
-def upload() -> Response:
+@app.get("/run-stream")
+def run_stream() -> Response:
+    """Server sent events, one per real step, as each one finishes."""
     db = _db()
-    cases, corpus, registry = Cases(db), Corpus(db), Registry(db)
+    cases = Cases(db)
     case = _case_or_none(cases)
     if case is None:
-        return jsonify({"error": "no case"}), 400
+        return Response(sse_done(), mimetype="text/event-stream")
 
-    uploaded = request.files.get("file")
-    if uploaded is None or not uploaded.filename:
-        return jsonify({"error": "no file"}), 400
+    creds = identity.credentials_for(identity.RESEARCHER, _project())
+    run = Run(
+        cases=cases,
+        corpus=Corpus(db),
+        registry=Registry(db),
+        matcher=Matcher(_project(), MODEL, MODEL_LOCATION, creds),
+        finder=RouteFinder(_project(), MODEL, MODEL_LOCATION, creds),
+        builder=FormBuilder(_project(), MODEL, MODEL_LOCATION, creds),
+        detect_fn=detect,
+        agreement_fn=agreement,
+    )
+    return Response(run.stream(case), mimetype="text/event-stream",
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
-    suffix = Path(uploaded.filename).suffix.lower()
-    mime = MIME_BY_SUFFIX.get(suffix)
-    if mime is None:
-        return jsonify({"error": f"{suffix or 'that file type'} cannot be read. "
-                                 f"PDF, PNG, JPG or WEBP."}), 400
 
-    data = uploaded.read()
-
-    # The bytes live in this variable and nowhere else. Nothing writes them to
-    # disk or to a bucket. See docs/DATA_PROTECTION.md.
-    reader = DocumentReader(_project(), MODEL, MODEL_LOCATION,
-                            identity.credentials_for(identity.RESEARCHER, _project()))
-    doc = reader.read(uploaded.filename, data, mime, extract_text(data, mime))
-    del data
-
-    if doc.error:
-        return jsonify({"error": doc.error}), 502
-
-    cases.add_document(case.case_id, doc)
-
-    near = {s.url.rstrip("/") for s in registry.near_lane(case.jurisdiction, case.lane)}
-    requirements = corpus.requirements_for(case.jurisdiction, case.lane, allowed_urls=near)
-    matcher = Matcher(_project(), MODEL, MODEL_LOCATION,
-                      identity.credentials_for(identity.RESEARCHER, _project()))
-    coverage = matcher.match(case.jurisdiction, case.lane, requirements,
-                             cases.documents(case.case_id))
-    cases.save_coverage(case.case_id, coverage.to_dict())
-
-    return jsonify({
-        "kind": doc.kind,
-        "filename": doc.filename,
-        "fields": len(doc.fields),
-        "verified_fields": len(doc.verified_fields),
-        "text_layer": doc.text_layer,
-        "dropped": len(doc.dropped),
-        "score": coverage.score,
-        "covered": coverage.covered,
-        "of": coverage.document_requirements,
-        "celebrate": coverage.score >= CELEBRATE_AT,
-    })
+@app.get("/result")
+def result() -> Response:
+    """The guide, the routes, and the form only you can answer."""
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/")
+    return Response(
+        result_html(case, cases.coverage(case.case_id) or {},
+                    cases.result(case.case_id) or {},
+                    cases.documents(case.case_id)),
+        mimetype="text/html")
 
 
 @app.post("/delete")

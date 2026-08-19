@@ -582,3 +582,68 @@ ordinary prose. The same upload now returns seven fields, all seven verified aga
 nothing dropped.
 
 **Status:** closed.
+
+---
+
+## D20. One rate limit, three symptoms that looked like three different bugs
+
+**Found:** 19 August 2026, on the first end to end run of the new flow.
+
+**What it looked like.** Three unrelated failures in one run:
+
+- the uploaded document read back with zero fields and `error: HTTPError`
+- two of four route searches reported "the route search failed: HTTPError"
+- the form generator returned one question where it had produced twelve before
+
+Three features, three shapes of failure. It read like the model behaving badly.
+
+**What it was.** Every one of them was **HTTP 429, Too Many Requests.** A single run
+fires five model calls back to back and none of them retried.
+
+**Why it hid.** Five files each carried their own copy of the same twenty lines of
+`urllib` plumbing, and each reported failures as `type(exc).__name__`, which for
+every one of these was the string `HTTPError`. The status code, which was the
+entire story, was thrown away before anybody could read it.
+
+**Fix.** One caller in `migragent/model.py`, used by extraction, document reading,
+coverage matching, route finding and form building. It retries 429, 500, 502,
+503 and 504 with full jitter backoff, and it does not retry 400 or 403, because
+those are answers rather than weather and retrying them just buries the message
+more slowly. `ModelError` carries the status code and the first part of the
+response body, so the next failure says what it was.
+
+**Verified:** the same run now completes with the document read (7 fields, 7
+verified), all four routes finding real options, and 11 questions generated.
+
+**The lesson is about the error text, not the retry.** Missing retries cost a
+failed run. An error message that discards the status code costs the next hour.
+
+---
+
+## D21. The word detector was reading the fields, not the document
+
+**Found:** 19 August 2026, immediately after D20, when the working screen showed
+"the words could not be checked: the strongest match only scored 1".
+
+**What was wrong.** The detector is supposed to weigh a document's own vocabulary
+against what the model called it. It was being run in `run.py`, on a string built
+from field names, values and quotes, because by then the document's text no
+longer exists. That is not the document. A letter of acceptance reduced to
+`institution Example University of Testing` has almost none of the phrases the
+detector looks for, so it scored 1 and declined to call anything, every time.
+
+**Why it happened.** The text is deliberately never stored, per
+`docs/DATA_PROTECTION.md`. So the only moment the words exist is inside
+`DocumentReader.read`, and the detector was placed outside it.
+
+**Fix.** Detection runs at read time on the real extracted text, and what is
+stored is the verdict rather than the text: the detected kind, the reason, and
+whether it agrees with the model. That keeps the data protection promise intact
+while making the check mean something.
+
+**Verified:** the same file now returns model `offer_letter`, words
+`offer_letter`, scored 7 on 5 phrases including "letter of acceptance",
+"designated learning institution" and "tuition fee", and the two agree.
+
+**Worth noting:** a check that never fires and a check that always says "cannot
+tell" fail the same way. Both look like caution and are silence.

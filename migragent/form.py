@@ -24,6 +24,8 @@ import json
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from .model import call_json
+
 ANSWER_TYPES = ("yes_no", "date", "text", "amount", "choice")
 
 # A question may not claim to settle more than this share of what is open.
@@ -107,28 +109,18 @@ class FormBuilder:
         self._location = location
         self._credentials = credentials
 
-    def _call(self, prompt: str) -> dict[str, Any]:
-        import urllib.request
+    def _call(self, prompt: str):
+        """Delegates to migragent.model, which retries and reports properly.
 
-        import google.auth.transport.requests
-
-        self._credentials.refresh(google.auth.transport.requests.Request())
-        url = (f"https://aiplatform.googleapis.com/v1/projects/{self._project}"
-               f"/locations/{self._location}/publishers/google/models/{self._model}"
-               f":generateContent")
-        body = {
-            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0, "responseMimeType": "application/json"},
-        }
-        request = urllib.request.Request(
-            url, data=json.dumps(body).encode(),
-            headers={"Authorization": f"Bearer {self._credentials.token}",
-                     "Content-Type": "application/json"},
+        Every caller used to carry its own copy of this and none of them
+        retried, so one run hitting the quota produced three unrelated
+        looking symptoms. See D20.
+        """
+        return call_json(
+            project=self._project, model=self._model,
+            location=self._location, credentials=self._credentials,
+            parts=[{"text": prompt}],
         )
-        with urllib.request.urlopen(request, timeout=180) as response:
-            payload = json.load(response)
-        parts = payload["candidates"][0]["content"]["parts"]
-        return json.loads("".join(p.get("text", "") for p in parts))
 
     def build(self, case_id: str, generated_at: str,
               gaps: list[dict[str, str]]) -> CaseForm:
@@ -144,7 +136,7 @@ class FormBuilder:
         try:
             parsed = self._call(PROMPT.format(gaps=listing))
         except Exception as exc:  # noqa: BLE001
-            form.dropped.append({"why": f"{type(exc).__name__}: {exc}"})
+            form.dropped.append({"why": str(exc)})
             return form
 
         seen: set[str] = set()

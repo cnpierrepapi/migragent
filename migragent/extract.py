@@ -32,6 +32,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from .fetcher import Fetched
+from .model import call_json
 
 _SCRIPT = re.compile(r"<script\b.*?</script\s*>", re.I | re.S)
 _STYLE = re.compile(r"<style\b.*?</style\s*>", re.I | re.S)
@@ -164,27 +165,18 @@ class Extractor:
         self._location = location
         self._credentials = credentials
 
-    def _call(self, prompt: str) -> str:
-        import google.auth.transport.requests
-        import urllib.request
+    def _call(self, prompt: str):
+        """Delegates to migragent.model, which retries and reports properly.
 
-        self._credentials.refresh(google.auth.transport.requests.Request())
-        url = (f"https://aiplatform.googleapis.com/v1/projects/{self._project}"
-               f"/locations/{self._location}/publishers/google/models/{self._model}"
-               f":generateContent")
-        body = {
-            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0, "responseMimeType": "application/json"},
-        }
-        request = urllib.request.Request(
-            url, data=json.dumps(body).encode(),
-            headers={"Authorization": f"Bearer {self._credentials.token}",
-                     "Content-Type": "application/json"},
+        Every caller used to carry its own copy of this and none of them
+        retried, so one run hitting the quota produced three unrelated
+        looking symptoms. See D20.
+        """
+        return call_json(
+            project=self._project, model=self._model,
+            location=self._location, credentials=self._credentials,
+            parts=[{"text": prompt}],
         )
-        with urllib.request.urlopen(request, timeout=120) as response:
-            payload = json.load(response)
-        parts = payload["candidates"][0]["content"]["parts"]
-        return "".join(p.get("text", "") for p in parts)
 
     def extract(
         self, page: Fetched, jurisdiction: str, lane: str, language: str,
@@ -200,10 +192,9 @@ class Extractor:
             return result
 
         try:
-            raw = self._call(PROMPT + text[:MAX_CHARS])
-            parsed = json.loads(raw)
+            parsed = self._call(PROMPT + text[:MAX_CHARS])
         except Exception as exc:  # noqa: BLE001
-            result.model_error = f"{type(exc).__name__}: {exc}"
+            result.model_error = str(exc)
             return result
 
         haystack = _normalise(text)

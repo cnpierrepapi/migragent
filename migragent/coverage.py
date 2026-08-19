@@ -41,6 +41,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from .documents import ReadDocument
+from .model import call_json
 
 # Requirements that no document can ever satisfy, because they describe
 # something you do rather than something you hold. Counted apart so they do not
@@ -147,28 +148,18 @@ class Matcher:
         self._location = location
         self._credentials = credentials
 
-    def _call(self, prompt: str) -> dict[str, Any]:
-        import urllib.request
+    def _call(self, prompt: str):
+        """Delegates to migragent.model, which retries and reports properly.
 
-        import google.auth.transport.requests
-
-        self._credentials.refresh(google.auth.transport.requests.Request())
-        url = (f"https://aiplatform.googleapis.com/v1/projects/{self._project}"
-               f"/locations/{self._location}/publishers/google/models/{self._model}"
-               f":generateContent")
-        body = {
-            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0, "responseMimeType": "application/json"},
-        }
-        request = urllib.request.Request(
-            url, data=json.dumps(body).encode(),
-            headers={"Authorization": f"Bearer {self._credentials.token}",
-                     "Content-Type": "application/json"},
+        Every caller used to carry its own copy of this and none of them
+        retried, so one run hitting the quota produced three unrelated
+        looking symptoms. See D20.
+        """
+        return call_json(
+            project=self._project, model=self._model,
+            location=self._location, credentials=self._credentials,
+            parts=[{"text": prompt}],
         )
-        with urllib.request.urlopen(request, timeout=180) as response:
-            payload = json.load(response)
-        parts = payload["candidates"][0]["content"]["parts"]
-        return json.loads("".join(p.get("text", "") for p in parts))
 
     def match(self, jurisdiction: str, lane: str,
               requirements: list[dict[str, Any]],
@@ -204,7 +195,7 @@ class Matcher:
                 requirements="\n".join(req_lines[:200]),
             ))
         except Exception as exc:  # noqa: BLE001
-            coverage.dropped_matches.append({"why": f"{type(exc).__name__}: {exc}"})
+            coverage.dropped_matches.append({"why": str(exc)})
             coverage.unmatched = [
                 {"requirement_id": r.get("id", ""), "text": r.get("text", "")}
                 for r in satisfiable

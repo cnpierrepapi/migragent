@@ -33,6 +33,9 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
+from .detect import Detection, agreement, detect
+from .model import call_json
+
 # What a document can be. The list is short on purpose: these are the documents
 # that actually appear in immigration and licensing requirements.
 KINDS = (
@@ -98,6 +101,14 @@ class ReadDocument:
     text_layer: bool = False
     error: str | None = None
 
+    # The words' own opinion of what this document is, and whether it agrees
+    # with the model. Computed here, at read time, because this is the only
+    # moment the document's text exists: it is deliberately never stored.
+    detected_kind: str | None = None
+    detected_reason: str = ""
+    agreement_state: str = "unchecked"
+    agreement_note: str = ""
+
     @property
     def verified_fields(self) -> list[Field]:
         return [f for f in self.fields if f.verified]
@@ -117,6 +128,10 @@ class ReadDocument:
             "fields": [f.to_dict() for f in self.fields],
             "dropped": self.dropped,
             "error": self.error,
+            "detected_kind": self.detected_kind,
+            "detected_reason": self.detected_reason,
+            "agreement_state": self.agreement_state,
+            "agreement_note": self.agreement_note,
         }
 
 
@@ -159,32 +174,22 @@ class DocumentReader:
         self._credentials = credentials
 
     def _call(self, data: bytes, mime: str) -> dict[str, Any]:
-        import urllib.request
+        """The file and the prompt, through the shared caller.
 
-        import google.auth.transport.requests
-
-        self._credentials.refresh(google.auth.transport.requests.Request())
-        url = (f"https://aiplatform.googleapis.com/v1/projects/{self._project}"
-               f"/locations/{self._location}/publishers/google/models/{self._model}"
-               f":generateContent")
+        Reading a document is one model call among five in a single run, and
+        before the shared caller existed a rate limit here came back as
+        `error: HTTPError` and the document silently produced no fields. See D20.
+        """
         prompt = PROMPT.replace("KINDS_LIST", ", ".join(KINDS))
-        body = {
-            "contents": [{"role": "user", "parts": [
+        return call_json(
+            project=self._project, model=self._model,
+            location=self._location, credentials=self._credentials,
+            parts=[
                 {"inlineData": {"mimeType": mime,
                                 "data": base64.b64encode(data).decode()}},
                 {"text": prompt},
-            ]}],
-            "generationConfig": {"temperature": 0, "responseMimeType": "application/json"},
-        }
-        request = urllib.request.Request(
-            url, data=json.dumps(body).encode(),
-            headers={"Authorization": f"Bearer {self._credentials.token}",
-                     "Content-Type": "application/json"},
+            ],
         )
-        with urllib.request.urlopen(request, timeout=180) as response:
-            payload = json.load(response)
-        parts = payload["candidates"][0]["content"]["parts"]
-        return json.loads("".join(p.get("text", "") for p in parts))
 
     def read(self, filename: str, data: bytes, mime: str,
              extractable_text: str = "") -> ReadDocument:
@@ -199,10 +204,20 @@ class DocumentReader:
         try:
             parsed = self._call(data, mime)
         except Exception as exc:  # noqa: BLE001
-            doc.error = f"{type(exc).__name__}: {exc}"
+            doc.error = str(exc)
             return doc
 
         doc.kind = parsed.get("kind") if parsed.get("kind") in KINDS else "other"
+
+        # The words get their vote here, on the document's actual text, which
+        # exists only inside this call. An earlier version ran the detector
+        # later on the field names and values, which is not the document and
+        # scored 1 on everything. See D21.
+        detection = detect(extractable_text)
+        doc.detected_kind = detection.kind
+        doc.detected_reason = detection.reason
+        doc.agreement_state, doc.agreement_note = agreement(doc.kind, detection)
+
         haystack = _normalise(extractable_text)
 
         for item in parsed.get("fields", []):

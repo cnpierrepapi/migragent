@@ -22,6 +22,7 @@ from .documents import ReadDocument
 CASES = "cases"
 CASE_DOCUMENTS = "case_documents"
 COVERAGE = "case_coverage"
+RESULTS = "case_results"
 
 # Long enough to come back and finish, short enough that nothing sits around for
 # a reason nobody could defend. docs/DATA_PROTECTION.md explains the choice.
@@ -109,6 +110,10 @@ class Cases:
                 fields=[Field(**f) for f in d.get("fields", [])],
                 dropped=d.get("dropped", []),
                 error=d.get("error"),
+                detected_kind=d.get("detected_kind"),
+                detected_reason=d.get("detected_reason", ""),
+                agreement_state=d.get("agreement_state", "unchecked"),
+                agreement_note=d.get("agreement_note", ""),
             ))
         return out
 
@@ -122,6 +127,15 @@ class Cases:
         snap = self._db.collection(COVERAGE).document(case_id).get()
         return snap.to_dict() if snap.exists else None
 
+    def save_result(self, case_id: str, result: dict[str, Any]) -> None:
+        """The routes and the generated form, from one run."""
+        self._db.collection(RESULTS).document(case_id).set(result)
+        self.touch(case_id)
+
+    def result(self, case_id: str) -> dict[str, Any] | None:
+        snap = self._db.collection(RESULTS).document(case_id).get()
+        return snap.to_dict() if snap.exists else None
+
     def delete(self, case_id: str) -> dict[str, int]:
         """Delete everything about a case, and report what went.
 
@@ -129,7 +143,7 @@ class Cases:
         "done" is not evidence of anything. A delete that leaves an orphan is a
         broken delete, so the numbers are the point and the test asserts on them.
         """
-        removed = {"documents": 0, "coverage": 0, "case": 0}
+        removed = {"documents": 0, "coverage": 0, "result": 0, "case": 0}
 
         query = self._db.collection(CASE_DOCUMENTS).where(
             filter=firestore.FieldFilter("case_id", "==", case_id))
@@ -148,6 +162,11 @@ class Cases:
         if cov.get().exists:
             cov.delete()
             removed["coverage"] = 1
+
+        res = self._db.collection(RESULTS).document(case_id)
+        if res.get().exists:
+            res.delete()
+            removed["result"] = 1
 
         case = self._db.collection(CASES).document(case_id)
         if case.get().exists:
@@ -173,10 +192,11 @@ class Cases:
         It reuses `delete`, so a swept case goes the same way a person's own
         delete goes and cannot leave a different set of orphans.
         """
-        swept = {"cases": 0, "documents": 0, "coverage": 0}
+        swept = {"cases": 0, "documents": 0, "coverage": 0, "results": 0}
         for case_id in self.expired(limit):
             removed = self.delete(case_id)
             swept["cases"] += removed["case"]
             swept["documents"] += removed["documents"]
             swept["coverage"] += removed["coverage"]
+            swept["results"] += removed["result"]
         return swept
