@@ -1,8 +1,12 @@
 """The web application: intake, guide, PDF.
 
-Runs as `migragent-web`, which can read and write Firestore and cannot call a
-model or become the watcher. So a request handler cannot start a crawl round or
-run up inference, which is checked in tools/test_isolation.py rather than
+Runs as `migragent-web`, which can read and write Firestore and cannot become
+the watcher, so a request handler cannot start a crawl round. It has no model
+access of its own; where a request genuinely needs the model, for reading a
+document or matching coverage, it borrows the researcher for the length of that
+call and the borrowing is visible in the code at the point of use. The watcher
+has no token creator binding at all, which is what makes the crawl unreachable
+from a request, and that is checked in tools/test_isolation.py rather than
 asserted here.
 
 Health is served at `/health` and not `/healthz`. Something in front of Cloud Run
