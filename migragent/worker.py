@@ -43,6 +43,7 @@ from google.cloud import firestore, storage
 
 from . import identity
 from .changes import Explainer
+from .occupations import ShortageReader, Shortages
 from .corpus import Corpus
 from .extract import Extractor
 from .fetcher import Fetcher
@@ -171,6 +172,8 @@ def main() -> int:
         extractor=Extractor(PROJECT, MODEL, MODEL_LOCATION, credentials),
         explainer=Explainer(PROJECT, MODEL, MODEL_LOCATION, credentials),
         changes_writer=ChangeWriter(db),
+        shortage_reader=ShortageReader(PROJECT, MODEL, MODEL_LOCATION, credentials),
+        shortages=Shortages(db),
         on_event=lambda line: print(line, flush=True),
     )
 

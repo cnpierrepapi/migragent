@@ -32,6 +32,7 @@ from migragent.changes import Explainer  # noqa: E402
 from migragent.corpus import Corpus  # noqa: E402
 from migragent.extract import Extractor  # noqa: E402
 from migragent.fetcher import Fetcher  # noqa: E402
+from migragent.occupations import ShortageReader, Shortages  # noqa: E402
 from migragent.registry import Registry  # noqa: E402
 from migragent.render import BrowserFetcher  # noqa: E402
 from migragent.round import ChangeWriter, Round, RunLog  # noqa: E402
@@ -87,6 +88,8 @@ def main() -> int:
             extractor=Extractor(PROJECT, MODEL, MODEL_LOCATION, reader),
             explainer=Explainer(PROJECT, MODEL, MODEL_LOCATION, reader),
             changes_writer=ChangeWriter(writer_db),
+            shortage_reader=ShortageReader(PROJECT, MODEL, MODEL_LOCATION, reader),
+            shortages=Shortages(writer_db),
             browser=browser,
             on_event=lambda line: print(line, flush=True),
         )

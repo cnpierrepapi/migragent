@@ -141,7 +141,10 @@ class Round:
 
     def __init__(self, *, registry, corpus, snapshots, fetcher, extractor,
                  explainer, changes_writer, browser=None,
+                 shortage_reader=None, shortages=None,
                  on_event: Callable[[str], None] | None = None) -> None:
+        self._shortage_reader = shortage_reader
+        self._shortages = shortages
         self._registry = registry
         self._corpus = corpus
         self._snapshots = snapshots
@@ -303,6 +306,28 @@ class Round:
         if mode == "watch":
             out = self._record_change(source, page, snapshot_path, jurisdiction, lane, out)
 
+        # What a page is read AS depends on what kind of source it is, and
+        # getting that wrong is not a small error.
+        #
+        # A shortage list sits in the registry with lane "work", because it is
+        # about work, which means the round picks it up alongside the visa pages.
+        # Run the requirement extractor over it and every occupation on it
+        # becomes a requirement in somebody's work guide: "you must be a welder",
+        # quoted correctly, linked correctly, dated correctly, and nonsense. That
+        # is D29's shape exactly, a true sentence filed under the wrong question,
+        # and the quote check cannot see it because nothing is invented.
+        #
+        # An institution register is a table parsed by its own tool. There is
+        # nothing here for a model to read, and it is watched rather than
+        # extracted so a change still gets noticed.
+        if source.kind == "shortage_list":
+            return self._read_shortage_list(source, page, snapshot_path, out)
+        if source.kind == "institution":
+            out.outcome = out.outcome or "watched only"
+            out.detail = "a register, parsed by tools/seed_institutions.py"
+            self._mark_read(source, page, snapshot_path)
+            return out
+
         extraction = self._extractor.extract(
             page, jurisdiction=jurisdiction, lane=lane,
             language=source.language, provenance=source.provenance,
@@ -326,6 +351,35 @@ class Round:
 
         out.kept = read.kept
         out.dropped = read.dropped
+        out.outcome = out.outcome or "extracted"
+        self._mark_read(source, page, snapshot_path)
+        return out
+
+    # ------------------------------------------------------------- shortages
+
+    def _read_shortage_list(self, source, page: Fetched, snapshot_path: str | None,
+                            out: SourceOutcome) -> SourceOutcome:
+        """Read a shortage list as a shortage list, into its own collection.
+
+        Occupations never touch the requirements collection. A guide is built
+        from requirements, so keeping them apart is what stops "shortage
+        occupation: welder" appearing in somebody's list of things they must do.
+        """
+        if self._shortage_reader is None or self._shortages is None:
+            out.outcome = out.outcome or "skipped"
+            out.detail = "no shortage reader was given to this round"
+            self._mark_read(source, page, snapshot_path)
+            return out
+
+        reading = self._shortage_reader.read(page, source.jurisdiction, source.language)
+        if reading.model_error:
+            out.outcome = out.outcome or "failed"
+            out.detail = reading.model_error[:200]
+            self._mark_read(source, page, snapshot_path)
+            return out
+
+        out.kept = self._shortages.record(reading, source.source_id)
+        out.dropped = len(reading.dropped)
         out.outcome = out.outcome or "extracted"
         self._mark_read(source, page, snapshot_path)
         return out
