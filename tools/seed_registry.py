@@ -100,10 +100,13 @@ CANDIDATES = [
     #
     # Both are refusals, and a refusal is not a puzzle to solve. We read the
     # ministries instead, which serve us without being asked twice.
-    ("IT", "study", "https://vistoperitalia.esteri.it/home.aspx",
+    # Both Italian lanes on the visa portal, which publishes a page per visa
+    # type including study and every category of work. The labour ministry was
+    # the first choice for work and is a news site with a ministry attached.
+    ("IT", "study", "https://vistoperitalia.esteri.it/infovisto",
+     "Tipologie di visto", "it"),
+    ("IT", "work", "https://vistoperitalia.esteri.it/home.aspx",
      "Visti per l'Italia", "it"),
-    ("IT", "work", "https://www.lavoro.gov.it/",
-     "Ministero del Lavoro e delle Politiche Sociali", "it"),
 
     ("DE", "study",
      "https://www.bamf.de/EN/Themen/MigrationAufenthalt/ZuwandererDrittstaaten/Bildung/bildung-node.html",
@@ -122,8 +125,14 @@ CANDIDATES = [
     ("PT", "work", "https://aima.gov.pt/pt/trabalhar",
      "Trabalhar em Portugal", "pt"),
 
+    # Two entries for the Saudi study lane, on one host, because one page on a
+    # host teaches the walk nothing about what is navigation. The education
+    # ministry's front page carries no links a crawler can follow at all, even
+    # rendered, so the higher education page is what makes the pair possible.
     ("SA", "study", "https://moe.gov.sa/en/Pages/default.aspx",
      "Ministry of Education", "en"),
+    ("SA", "study", "https://www.moe.gov.sa/en/education/highereducation/Pages/default.aspx",
+     "Higher education", "en"),
     ("SA", "work", "https://www.hrsd.gov.sa/en",
      "Ministry of Human Resources and Social Development", "en"),
 ]

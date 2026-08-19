@@ -881,3 +881,40 @@ and that line had been there, correct and unread, since the walk was written. A 
 reads is a diagnostic that does not exist.
 
 **Status:** 26a, 26b and 26c closed. Italy and Saudi Arabia open.
+
+---
+
+## D27. Italy publishes a page per visa type and we could only ever see one of them
+
+**Found:** 19 August 2026, after being asked to try a headless browser and OCR on Italy and Saudi
+Arabia. Neither was the problem, and finding that out took one measurement.
+
+**What was suspected.** That Italy's pages were rendered by JavaScript, or were images needing OCR.
+
+**What was measured.** Italy's visa portal serves **26,927 characters of real text to a plain client**,
+and rendering it in a browser returns the same five links. Saudi Arabia's labour ministry serves
+14,235 characters and 107 links, plain. The text was already text. OCR would have added a way for a
+misread character to become a verbatim quote, which is the one guarantee this product makes, and it
+would have bought nothing.
+
+**What was actually wrong.** `_normalise` discarded the query string from every link.
+
+That is a reasonable defence against infinite crawl spaces, and it made a country invisible. Italy's
+portal publishes **one page per visa type at a single path**, telling them apart only by a query
+parameter: `/infovisto?code=21_0_C`, `?code=2_0_C`, and so on for every category of study and work.
+With the query dropped, all of them collapsed onto one URL, so the walk saw a single page where there
+are dozens, and Italy looked like a country that publishes nothing.
+
+**Fix.** Query strings are kept, minus the parameters that identify a visitor rather than a page:
+session ids, and the usual campaign and click trackers. Sessions also appear in the path on this host,
+after a semicolon, and those are stripped too. Remaining parameters are sorted so that the same page
+linked two ways is one URL. The page cap still bounds the walk, so keeping meaningful parameters
+cannot run away.
+
+**Result:** the same page went from 5 same-host links to 41, each visa type now its own source.
+
+**The lesson:** two people can look at an empty country and both be sure it is a rendering problem.
+The measurement took one command and was worth more than the theory. It also meant not building OCR,
+which would have been work spent weakening the strongest guarantee in the product.
+
+**Status:** closed.

@@ -99,6 +99,39 @@ class Discovered:
     reason: str
 
 
+# Parameters that identify a visitor or a campaign rather than a page. Keeping
+# them would give the same page a different URL on every visit, and a session id
+# would give it a different source id on every walk.
+_NOISE_PARAMS = {
+    "jsessionid", "phpsessid", "sid", "sessionid", "aspxauth", "cfid", "cftoken",
+    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+    "gclid", "fbclid", "msclkid", "_ga", "ref", "referrer",
+}
+
+# Some servers put the session in the path rather than the query, after a
+# semicolon: /infovisto;jsessionid=B3313179C6DA723CECAC57D8EF290FF8
+_PATH_SESSION = re.compile(r";(?:jsessionid|phpsessid|sid)=[^/;?]*", re.I)
+
+
+def _clean_query(query: str) -> str:
+    """Drop the parameters that identify a visitor, keep the ones that identify a page.
+
+    The query string used to be discarded outright. That is safe against
+    infinite crawl spaces and it made a whole country invisible: Italy's visa
+    portal publishes a page per visa type at one path, telling them apart only
+    by query parameter, so every visa type collapsed onto the same URL and the
+    walk saw one page where there are dozens. See D27.
+
+    The page cap still bounds the walk, so keeping meaningful parameters cannot
+    run away.
+    """
+    if not query:
+        return ""
+    kept = [(k, v) for k, v in urllib.parse.parse_qsl(query, keep_blank_values=True)
+            if k.lower() not in _NOISE_PARAMS]
+    return urllib.parse.urlencode(sorted(kept))
+
+
 def _normalise(base: str, href: str) -> str | None:
     try:
         joined = urllib.parse.urljoin(base, href)
@@ -107,7 +140,8 @@ def _normalise(base: str, href: str) -> str | None:
     parts = urllib.parse.urlsplit(joined)
     if parts.scheme not in ("http", "https"):
         return None
-    path = parts.path.rstrip("/") or "/"
+    path = _PATH_SESSION.sub("", parts.path)
+    path = path.rstrip("/") or "/"
     # Hosts are case insensitive, and one site writing itself differently in two
     # places is enough to break everything downstream. BAMF's base tag says
     # www.BAMF.de while its seed URL says www.bamf.de, which would make the
@@ -116,7 +150,7 @@ def _normalise(base: str, href: str) -> str | None:
     # is left alone, because paths are case sensitive and changing one would
     # change which page we mean.
     return urllib.parse.urlunsplit(
-        (parts.scheme.lower(), parts.netloc.lower(), path, "", "")
+        (parts.scheme.lower(), parts.netloc.lower(), path, _clean_query(parts.query), "")
     )
 
 
