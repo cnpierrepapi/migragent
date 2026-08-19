@@ -1002,3 +1002,45 @@ therefore correct and thin, and the intake screen says which lanes are deep.
 them, because everything downstream would have reported success.
 
 **Status:** the wrong labelling is avoided. Per page lane detection is open.
+
+---
+
+## D30. Every page was decoded as UTF-8, whatever the page said it was
+
+**Found:** 19 August 2026, reading Portugal's higher education index, which is served as Latin-1.
+
+**What was wrong.** `page_text` did `body.decode("utf-8", "replace")`. Not the encoding the HTTP
+header declares, not the one the document declares. UTF-8, always.
+
+That is right for most of the web and wrong for a government site serving Latin-1, of which there are
+still plenty.
+
+**Why it is worse than mojibake.** The failure lands precisely on the thing this product sells, and it
+is silent the whole way through.
+
+1. An accented character becomes a replacement character in the extracted text.
+2. The model is given that text and returns a quote copied from it, containing the same replacement
+   character.
+3. The quote check looks for the quote in the page text. **Both sides are mangled identically, so it
+   matches, and the requirement is accepted.**
+4. The guide shows a "verbatim quote" that is not what the page says, next to an official link and a
+   date.
+
+The anti invention machinery cannot catch this, because nothing was invented. The page was misread,
+and the check compares the misreading against itself.
+
+**How bad it actually was.** Measured before fixing: **zero of 2,073 live requirements contained a
+replacement character.** Every page extracted so far happened to be UTF-8. Nothing was corrupted. It
+was one Latin-1 government page away, and Portugal's is one.
+
+**Fix.** `decode_body` tries the charset from the HTTP header, then the one declared in the document,
+then UTF-8, then Windows-1252, which decodes every byte and so always terminates. Used by `page_text`
+and by the institution register parsers.
+
+**Verified both ways:** Portugal's Latin-1 index now yields "Universitário" and "Politécnico" with
+zero replacement characters, and a UTF-8 Spanish page is unchanged.
+
+**The lesson:** a defect can be real, serious, and currently harmless all at once. It was found by
+reading an unrelated page, not by anything failing.
+
+**Status:** closed.

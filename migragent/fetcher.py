@@ -150,6 +150,52 @@ class Fetched:
         return bool(self.sha256 and previous_sha256 and self.sha256 == previous_sha256)
 
 
+_META_CHARSET = re.compile(
+    rb"""<meta[^>]+charset=["']?\s*([a-zA-Z0-9_\-]+)""", re.I)
+
+
+def decode_body(body: bytes | None, content_type: str | None = None) -> str:
+    """Decode a page using the encoding it declares, not the one we assume.
+
+    This used to be `body.decode("utf-8", "replace")` everywhere, which is right
+    for most of the web and wrong for a government site serving Latin-1, of which
+    there are still plenty: Portugal's higher education index is one.
+
+    The failure is quiet and it lands on the one thing this product sells. An
+    accented character becomes a replacement character in the extracted text, the
+    quote is taken from that same mangled text, and the check that a quote
+    appears on the page compares mangled against mangled and passes. So the guide
+    shows a "verbatim quote" that is not what the page says, with a government
+    link beside it, and nothing anywhere reports a problem.
+
+    Measured when this was written: zero of 2,073 live requirements contained a
+    replacement character, so nothing had been corrupted yet. It was one Latin-1
+    page away. See D30.
+
+    Order: what the HTTP header declares, then what the document declares, then
+    UTF-8, then Windows-1252, which decodes every byte and so always terminates.
+    """
+    if not body:
+        return ""
+
+    candidates: list[str] = []
+    if content_type and "charset=" in content_type.lower():
+        candidates.append(content_type.lower().split("charset=", 1)[1].split(";")[0].strip())
+    match = _META_CHARSET.search(body[:4096])
+    if match:
+        candidates.append(match.group(1).decode("ascii", "ignore"))
+    candidates += ["utf-8", "cp1252"]
+
+    for encoding in candidates:
+        if not encoding:
+            continue
+        try:
+            return body.decode(encoding)
+        except (UnicodeDecodeError, LookupError):
+            continue
+    return body.decode("utf-8", "replace")
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 

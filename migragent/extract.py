@@ -31,7 +31,7 @@ import unicodedata
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-from .fetcher import Fetched
+from .fetcher import Fetched, decode_body
 from .model import call_json
 
 _SCRIPT = re.compile(r"<script\b.*?</script\s*>", re.I | re.S)
@@ -56,7 +56,7 @@ def page_text(page: Fetched) -> str:
     """
     if not page.ok or page.body is None:
         return ""
-    html = page.body.decode("utf-8", "replace")
+    html = decode_body(page.body, page.content_type)
     html = _SCRIPT.sub(" ", html)
     html = _STYLE.sub(" ", html)
     html = _COMMENT.sub(" ", html)

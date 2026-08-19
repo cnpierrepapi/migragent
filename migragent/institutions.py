@@ -36,6 +36,8 @@ import re
 from dataclasses import asdict, dataclass, field
 from typing import Any, Iterable
 
+from .fetcher import decode_body
+
 _TAG = re.compile(r"<[^>]+>")
 _ROW = re.compile(rb"<tr[^>]*>(.*?)</tr>", re.S | re.I)
 _CELL = re.compile(rb"<t[dh][^>]*>(.*?)</t[dh]>", re.S | re.I)
@@ -80,8 +82,8 @@ class Institution:
         return {k: v for k, v in asdict(self).items() if v is not None}
 
 
-def _clean(raw: bytes | str) -> str:
-    text = raw.decode("utf-8", "ignore") if isinstance(raw, bytes) else raw
+def _clean(raw: bytes | str, content_type: str | None = None) -> str:
+    text = decode_body(raw, content_type) if isinstance(raw, bytes) else raw
     text = _TAG.sub(" ", text)
     text = (text.replace("&amp;", "&").replace("&nbsp;", " ")
                 .replace("&#39;", "'").replace("&quot;", '"'))
@@ -136,6 +138,7 @@ def from_csv(body: bytes, jurisdiction: str, *, name_column: str,
 
 
 def from_html_table(body: bytes, jurisdiction: str, *, name_index: int = 0,
+                    content_type: str | None = None,
                     location_index: int | None = None,
                     code_index: int | None = None,
                     min_cells: int = 2) -> list[Institution]:
@@ -149,7 +152,7 @@ def from_html_table(body: bytes, jurisdiction: str, *, name_index: int = 0,
     seen: set[str] = set()
 
     for raw_row in _ROW.findall(body):
-        cells = [_clean(c) for c in _CELL.findall(raw_row)]
+        cells = [_clean(c, content_type) for c in _CELL.findall(raw_row)]
         if len(cells) < min_cells:
             continue
         name = cells[name_index] if name_index < len(cells) else ""
