@@ -1044,3 +1044,77 @@ zero replacement characters, and a UTF-8 Spanish page is unchanged.
 reading an unrelated page, not by anything failing.
 
 **Status:** closed.
+
+---
+
+## D31 — The same page filed under two names, because three files each had their own rule
+
+**Found:** 19 August 2026, while wiring the agent, by asking which id it should give a page it
+discovers.
+
+`source_id` existed three times: in `tools/seed_registry.py`, in `tools/expand_registry.py` and in
+`tools/seed_shortages.py`. They disagreed. The seeder's rule takes the whole path and adds a digest;
+the walker's took the path segments joined and truncated, with no digest.
+
+So a page seeded by hand and then reached by the walk got two rows with two names:
+
+```
+sa-study-www-moe-gov-sa-en-Pages-default-aspx              (walked)
+sa-study-www-moe-gov-sa-en-pages-default-aspx-983160ea     (seeded)
+```
+
+**What it costs.** The page is fetched twice every round, extracted twice, and its requirements are
+recorded under two source ids, so retiring what one copy no longer says leaves the other copy still
+saying it. Six URLs in a registry of 1,220 held more than one row.
+
+**The shape.** Identical to D20: a rule copied into several files is a rule that will eventually be
+several rules, and nothing announces the day they diverge.
+
+**Fix.** The rule now lives once, in `migragent/registry.py`. The seeder imports it. The walker
+imports it **and looks the URL up first**, so rows written under the old scheme keep the names they
+already have. That second half matters more than the first: switching the rule without the lookup
+would have created a second copy of every walked page in the registry, which is D25c's mistake
+wearing a different hat. `tools/seed_shortages.py` keeps its own rule for exactly that reason, with a
+comment saying so.
+
+**Status:** closed.
+
+---
+
+## D32 — The study guide told people to get a job offer
+
+**Found:** 19 August 2026, by looking at the duplicate rows from D31 and asking what was in the
+corpus underneath them.
+
+The walk gives every page it discovers the lane of the entry page that found it. gov.uk links the
+Skilled Worker page from the Student visa page and the Student visa page from the Skilled Worker
+page, so each lane walked straight into the other one's front door and labelled it its own.
+
+**What was live, in the two biggest lanes, being shown to people:**
+
+- 11 requirements tagged **UK study**, taken from the Skilled Worker page: "you must work for a UK
+  employer that has been approved by the Home Office", "you must do a job that is on the list of
+  eligible occupations".
+- 12 requirements tagged **UK work**, taken from the Student visa page: "you must have been offered a
+  place on a course by a licensed student sponsor".
+
+Every one of them is true. Every one carries a correct verbatim quote, a correct link and a correct
+date. They are answers to the other question.
+
+**Why nothing caught it.** The quote check exists to stop invention, and nothing here was invented.
+This was written down as D29 after a near miss in Italy, in exactly these words: *the anti-invention
+machinery does not protect against a true sentence filed under the wrong question.* It was recorded
+as a risk while it had already happened, in the lane the product leads with.
+
+**Fix.** `tools/fix_lane_mismatch.py`. A page at, or underneath, another lane's hand seeded entry
+page is about that other lane, which needs no judgment because those entries were chosen by hand.
+Its requirements are retired rather than deleted, and the row is marked `other_lane` so it stays in
+the registry, stays counted, and is not read again under the wrong question. Ran: 4 sources marked,
+23 requirements retired, 2,073 live requirements to 2,050.
+
+**What is still open.** The narrow rule only catches pages sitting under another entry page. A page
+about the other route somewhere else in a site is still mislabelled and nothing here finds it. The
+real answer is the agent choosing pages for a stated question rather than a walk labelling whatever
+it reaches, which is Build 4 and is why the agent is worth having.
+
+**Status:** the 23 are fixed. The general case is open, and D29 stays open with it.

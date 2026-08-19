@@ -10,6 +10,9 @@ tried.
 """
 from __future__ import annotations
 
+import hashlib
+import re
+
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Iterable, Literal
@@ -35,6 +38,8 @@ Blocked = Literal[
     "gone",                  # the server answered 404 or 410, the page is not there
     "not_html",              # a PDF or a download, needs a different reader
     "duplicate_language",    # the same page in a language this jurisdiction does not publish in
+    "other_lane",            # a real page, about the other route, reached by a walk that
+                             # hands every discovered page the lane of the entry that found it
 ]
 
 # Hosts that serve one page many times, once per interface language, at URLs
@@ -84,6 +89,33 @@ JURISDICTIONS = {
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def source_id(jurisdiction: str, lane: str, url: str) -> str:
+    """The name a page is filed under. Stable per URL, and different for URLs
+    that are different.
+
+    THERE USED TO BE THREE OF THESE. `tools/seed_registry.py`, `tools/expand_registry.py`
+    and `tools/seed_shortages.py` each carried their own, and they disagreed, so
+    the same page seeded by hand and then reached by a walk was filed twice under
+    two names. That is D31, and it is the same shape as D20: a rule copied into
+    several files is a rule that will eventually be several rules.
+
+    The tail used to be the last path segment only, which is not an identity.
+    Saudi Arabia was seeded with `/en/Pages/default.aspx` and
+    `/en/education/highereducation/Pages/default.aspx`, both reduced to
+    "default", and the second silently overwrote the first. See D28. The whole
+    path takes part now, and a digest keeps the id short without throwing away
+    what distinguishes it.
+    """
+    parts = url.split("//", 1)[-1]
+    host = parts.split("/", 1)[0].replace(".", "-")
+    path = parts[len(parts.split("/", 1)[0]):]
+    tail = re.sub(r"[^a-z0-9]+", "-", path.lower()).strip("-")[-48:] or "root"
+    # Two different URLs can still tail-match after that squeeze, so the id
+    # carries a short digest of the whole URL as well.
+    digest = hashlib.sha256(url.encode()).hexdigest()[:8]
+    return f"{jurisdiction.lower()}-{lane}-{host}-{tail}-{digest}"
 
 
 @dataclass

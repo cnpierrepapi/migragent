@@ -189,3 +189,51 @@ internally is a lighter question than republishing them, and it is not no questi
 mostly language schools, private colleges and independent schools, which no ranking covers. So the
 share orders universities and says nothing about the rest, and anything built on it has to behave
 sensibly when the key is absent rather than treating unranked as worst.
+
+---
+
+## 7. The agent chooses what to read. It does not get to choose what is true
+
+**Decided:** 19 August 2026.
+
+A Google agent framework is mandatory for this event, which is exactly the condition under which a
+framework gets bolted on, does nothing, and is described in the submission as though it did. So the
+question was not whether to use ADK. It was which part of the work is genuinely a judgment, because
+that is the only part worth handing to an agent.
+
+**The judgment is which pages to open.** Until now a lane was read by walking every link a government
+publishes to depth one and running the same prompt over everything that came back. That works and it
+is indiscriminate: pages that matter and pages that do not arrive from the same index and get the
+same attention. Deciding that a page about fee schedules for people already resident is not worth a
+read, and that the eligibility page linked next to it is, is not something a rule expresses well.
+
+**Everything else stays in code, and the difference is enforced rather than requested.** The agent
+holds no ability to fetch, so it cannot fetch a page robots.txt disallows. It holds no ability to
+write a requirement, only to offer one to a tool that checks the quote against the page that was
+actually fetched in that session and refuses it otherwise. The citation is assembled from the fetch,
+as it already was. A rule an agent can decide to skip is not a rule, so none of these are in the
+prompt as instructions.
+
+**The refusals are counted and returned.** A session reports what it was refused and why, alongside
+what it kept. An agent that had nine of ten quotes rejected has told us something about the run, and
+swallowing that would hide it.
+
+**ADK's own model client is not used.** ADK ships a client that would open its own connection to
+Vertex with its own idea of what to do about a 429. Everything else in this product goes through
+`migragent/model.py` because of D20, where five callers each retrying differently turned one rate
+limit into three unrelated looking bugs. The agent is the chattiest caller in the system, so letting
+it out of that rule would have left the rule true of everything except the thing it matters most for.
+`migragent/agent_llm.py` is a `BaseLlm` that ADK drives and that calls the same retry loop.
+
+**That claim is checked rather than asserted.** `tools/test_agent.py` replaces ADK's client with one
+that raises if anything constructs it, runs a full session against a scripted model and a fake
+fetcher, and reports 11 checks: the model calls arrived through our caller, the tools survived the
+trip to the wire, a quote that is not on the page was refused, a real quote attributed to a page the
+agent never opened was refused, the disallowed page was never fetched, and the citation came from
+the fetch.
+
+**The cost accepted.** `google-adk` brings FastAPI, Uvicorn, OpenTelemetry and google-genai, and one
+`requirements.txt` builds both the web service and the ingestion job, so the web image now carries
+dependencies it does not use. Splitting them means a second Dockerfile and a second dependency set
+to keep in step, which is a standing cost to avoid a one time one. One image, and the reason is
+written here rather than left for somebody to wonder about.

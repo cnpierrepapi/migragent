@@ -226,6 +226,13 @@ framework is satisfied by something that does real work rather than by a wrapper
   preserve. Model calls stay behind that caller, and this is checked rather than assumed.
 - Same agent, same tools, later reused by the people finder in Build 5.
 
+**Where it is.** The agent, its tools and the model adapter are built:
+`migragent/researcher.py` holds the desk the agent works at and the five tools it may use,
+`migragent/agent_llm.py` puts ADK's traffic through `migragent/model.py`, and `tools/test_agent.py`
+runs a whole session against a scripted model and a fake fetcher with ADK's own client booby
+trapped, reporting 11 checks. What remains is the comparison on real pages, and then wiring the
+agent into the round as the reader for entry pages. The reasoning is Decision 7.
+
 ---
 
 ## Build 5 — The person, the board, and the work after arrival

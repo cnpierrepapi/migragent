@@ -27,7 +27,7 @@ from google.cloud import firestore  # noqa: E402
 
 from migragent import identity  # noqa: E402
 from migragent.fetcher import Fetcher  # noqa: E402
-from migragent.registry import Registry, Source  # noqa: E402
+from migragent.registry import Registry, Source, source_id  # noqa: E402
 
 PROJECT = "project-e0928f2f-5abf-46a3-b8a"
 
@@ -138,30 +138,6 @@ CANDIDATES = [
     ("SA", "work", "https://www.hrsd.gov.sa/en",
      "Ministry of Human Resources and Social Development", "en"),
 ]
-
-
-def source_id(jurisdiction: str, lane: str, url: str) -> str:
-    """Stable per URL, and different for URLs that are different.
-
-    The tail used to be the last path segment only, which is not an identity.
-    Saudi Arabia was seeded with two education ministry pages,
-    `/en/Pages/default.aspx` and `/en/education/highereducation/Pages/default.aspx`,
-    and both reduced to "default". They got the same id, the second silently
-    overwrote the first, and the host was left with one page, which is exactly
-    the condition that makes the walk skip it. Two pages were seeded, one
-    existed, and nothing said so. See D28.
-
-    The whole path takes part now, and a digest keeps the id short and stable
-    without throwing away what distinguishes it.
-    """
-    parts = url.split("//", 1)[-1]
-    host = parts.split("/", 1)[0].replace(".", "-")
-    path = parts[len(parts.split("/", 1)[0]):]
-    tail = re.sub(r"[^a-z0-9]+", "-", path.lower()).strip("-")[-48:] or "root"
-    # Two different URLs can still tail-match after that squeeze, so the id
-    # carries a short digest of the whole URL as well.
-    digest = hashlib.sha256(url.encode()).hexdigest()[:8]
-    return f"{jurisdiction.lower()}-{lane}-{host}-{tail}-{digest}"
 
 
 def main() -> int:

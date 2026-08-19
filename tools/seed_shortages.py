@@ -86,6 +86,14 @@ LISTS = [
 
 
 def source_id(jurisdiction: str, url: str) -> str:
+    """Its own rule, deliberately, and the only one left that is.
+
+    The canonical rule is migragent.registry.source_id and everything else
+    now uses it (D31). This one stays because the shortage rows already in
+    the registry are named by it, and renaming a row does not rename it: it
+    creates a second one and leaves the first behind, which is the defect
+    rather than the fix. Any new kind of source should use the canonical one.
+    """
     host = url.split("//", 1)[-1].split("/", 1)[0].replace(".", "-")
     tail = re.sub(r"[^a-z0-9]+", "-", url.split(host, 1)[-1].lower()).strip("-")[-40:] or "root"
     digest = hashlib.sha256(url.encode()).hexdigest()[:8]

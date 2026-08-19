@@ -25,7 +25,7 @@ from migragent import identity  # noqa: E402
 from migragent.expand import Expander  # noqa: E402
 from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.render import BrowserFetcher  # noqa: E402
-from migragent.registry import JURISDICTIONS, Registry, Source  # noqa: E402
+from migragent.registry import JURISDICTIONS, Registry, Source, source_id  # noqa: E402
 
 PROJECT = "project-e0928f2f-5abf-46a3-b8a"
 MAX_DEPTH = 2
@@ -37,11 +37,20 @@ MAX_DEPTH = 2
 MAX_PAGES = 600
 
 
-def source_id(jurisdiction: str, lane: str, url: str) -> str:
-    parts = url.split("//", 1)[-1].split("/")
-    host = parts[0].replace(".", "-")
-    tail = "-".join(p for p in parts[1:] if p)[-70:].replace(".", "-") or "root"
-    return f"{jurisdiction.lower()}-{lane}-{host}-{tail}"[:180]
+def id_for(existing: dict[tuple[str, str, str], str],
+           jurisdiction: str, lane: str, url: str) -> str:
+    """The id this page already has, or a new one in the canonical scheme.
+
+    This file used to mint its own ids with its own rule, which did not match
+    the one the seeder used, so a page seeded by hand and then reached by the
+    walk was filed twice under two names and read twice every round. That is
+    D31. The rule now lives in migragent/registry.py and there is one of it.
+
+    Looking the URL up first matters as much as sharing the rule: rows written
+    under the old scheme keep the name they already have, so fixing the rule
+    does not create a second copy of every page in the registry.
+    """
+    return existing.get((jurisdiction, lane, url)) or source_id(jurisdiction, lane, url)
 
 
 def _only() -> set[str]:
@@ -139,6 +148,11 @@ def main() -> int:
             print(f"  {n:>4}  {host}{note}")
         print()
 
+        # Every row already in the registry, by what it is a page of, so a
+        # page that already has a name keeps it. See id_for.
+        existing_ids = {(s.jurisdiction, s.lane, s.url): s.source_id
+                        for s in registry.all()}
+
         discovered: list[Source] = []
         per_lane: dict[tuple[str, str], int] = defaultdict(int)
         skipped_hosts = set()
@@ -157,7 +171,8 @@ def main() -> int:
                 if page is None or not page.ok:
                     continue
                 discovered.append(Source(
-                    source_id=source_id(entry.jurisdiction, entry.lane, d.url),
+                    source_id=id_for(existing_ids, entry.jurisdiction,
+                                     entry.lane, d.url),
                     jurisdiction=entry.jurisdiction,
                     lane=entry.lane,
                     kind="government",
