@@ -83,3 +83,22 @@ class SnapshotStore:
             content_type=result.content_type or "text/html; charset=utf-8",
         )
         return f"gs://{self.bucket_name}/{blob_path}"
+
+    def read(self, path: str) -> bytes | None:
+        """The stored bytes back, for diffing today against yesterday.
+
+        The researcher cannot call this and that is deliberate: it holds
+        objectCreator only, so the principal that fills the archive cannot read
+        it back. The watcher holds objectAdmin, because comparing today with
+        yesterday is the one job that genuinely needs yesterday.
+
+        A missing object returns None rather than raising. A snapshot can be
+        absent for an honest reason, most often that the page was first seen on
+        a run that could not store it, and a round that dies because history is
+        incomplete is worse than one that says so and reads the page fresh.
+        """
+        blob_path = path.split(f"gs://{self.bucket_name}/", 1)[-1]
+        blob = self.client.bucket(self.bucket_name).blob(blob_path)
+        if not blob.exists():
+            return None
+        return blob.download_as_bytes()

@@ -145,6 +145,12 @@ class Corpus:
         # it, so it travels with the row rather than being left behind in the
         # key.
         rows = [{**d.to_dict(), "id": d.id} for d in query.stream()]
+        # A requirement the page has stopped making never reaches a guide again.
+        # It stays in the collection with the date it was retired, because the
+        # record of what a government used to ask for is worth keeping and is
+        # what the change screen is built from. It is simply no longer something
+        # we tell somebody to go and do.
+        rows = [r for r in rows if not r.get("retired_at")]
         if allowed_urls is not None:
             rows = [r for r in rows if r.get("source_url", "").rstrip("/") in allowed_urls]
         order = {"eligibility": 0, "document": 1, "requirement": 2, "cost": 3, "timing": 4}
@@ -165,6 +171,52 @@ class Corpus:
         if allowed_urls is not None:
             rows = [r for r in rows if r.get("source_url", "").rstrip("/") in allowed_urls]
         return sorted(rows, key=lambda r: r.get("question", ""))
+
+    def live_ids_for_source(self, source_id: str) -> set[str]:
+        """Requirement ids currently standing from one page.
+
+        The watcher needs this before it re-extracts, so it can tell the
+        difference between a requirement the page still makes and one it has
+        stopped making.
+        """
+        query = self._db.collection(REQUIREMENTS).where(
+            filter=firestore.FieldFilter("source_id", "==", source_id)
+        )
+        return {d.id for d in query.stream() if not d.to_dict().get("retired_at")}
+
+    def retire(self, requirement_ids: set[str], at: str, reason: str) -> int:
+        """Stop a requirement being told to anybody, without deleting it.
+
+        Deleting would destroy the only evidence that the page used to say it,
+        which is exactly what the change screen is for. So the row stays, gains
+        the date we noticed and the reason, and drops out of every guide from
+        that moment.
+        """
+        if not requirement_ids:
+            return 0
+        batch = self._db.batch()
+        for i, rid in enumerate(sorted(requirement_ids), 1):
+            batch.set(self._db.collection(REQUIREMENTS).document(rid), {
+                "retired_at": at,
+                "retired_reason": reason,
+            }, merge=True)
+            if i % 400 == 0:
+                batch.commit()
+                batch = self._db.batch()
+        batch.commit()
+        return len(requirement_ids)
+
+    def has_been_read(self, source_id: str) -> bool:
+        """Whether this page has ever produced a read row.
+
+        A backfill uses this to skip pages already done, so a run that dies two
+        thirds through resumes rather than starting again and paying for every
+        page a second time.
+        """
+        query = self._db.collection(READS).where(
+            filter=firestore.FieldFilter("source_id", "==", source_id)
+        ).limit(1)
+        return any(True for _ in query.stream())
 
     def _count(self, query) -> int:
         return int(query.count().get()[0][0].value)

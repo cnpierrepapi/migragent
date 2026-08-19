@@ -113,3 +113,52 @@ and the implied things are exactly what "open questions" at the back of the guid
 
 **Dropped requirements are returned and reported, never swallowed.** A run that drops nine of ten
 has to say so, because a silent drop rate is how a check like this stops being a check.
+
+---
+
+## 4. Pub/Sub was planned into the pipeline and then left out
+
+**Decided:** 19 August 2026, while building the ingestion job.
+
+The plan said Cloud Scheduler to Pub/Sub to a Cloud Run job, fanning out one message per lane. The
+topic was written into the plan twice and into the memory of this project three times before anybody
+asked what it was carrying.
+
+**It was carrying an integer.** Cloud Run jobs already number their own parallel tasks and hand each
+one `CLOUD_RUN_TASK_INDEX`. The runtime already retries a task that fails, already reports which
+tasks died, and already limits how many run at once. A topic would have added a second thing to
+configure, a second identity to grant, a second subscription to get wrong, and a second place for a
+message to disappear, in order to deliver a number the platform hands over for free.
+
+**So there is no Pub/Sub in this build.** The fan-out is `--tasks 10` and a fixed list of lanes,
+where index 3 means the same lane on every run because the list is a list rather than a set.
+
+**What it costs.** A topic would let something other than the schedule start a round, which is
+exactly what we do not want: the whole isolation argument is that a web request cannot start a crawl.
+It would also decouple the trigger from the work, which matters when the work is spiky and unrelated
+to the trigger. Ingestion is neither.
+
+**Why this is written down rather than left as an absence.** The mandatory requirement is one Google
+Cloud service and this build uses five. There are no marks for a sixth, and a judge who sees a topic
+with one publisher and one subscriber can tell it was added to be seen. Saying which service was
+removed and why is worth more than the service would have been.
+
+---
+
+## 5. The watcher can read the archive, and still cannot rewrite it
+
+**Decided:** 19 August 2026, when the watcher first needed yesterday's page.
+
+Comparing today with yesterday needs yesterday, so the watcher needs to read the snapshot archive.
+It held `storage.objectAdmin`, which would have done it, and which also allows overwrite and delete.
+
+That would have quietly ended the strongest claim in the build. Decision 1 says the archive earns its
+place because the process that fills it cannot revise it. An archive the watcher can rewrite is an
+archive whose history is only as good as the watcher, and the watcher is the one component whose
+entire job is to make claims about the past.
+
+**So the watcher now holds `storage.objectViewer` plus `storage.objectCreator`, and no longer holds
+`objectAdmin`.** It can add a snapshot and read one back. It cannot overwrite one and it cannot
+delete one. The researcher stays creator only and still cannot read.
+
+This is a claim, so it gets a test rather than a sentence, in `tools/test_isolation.py`.
