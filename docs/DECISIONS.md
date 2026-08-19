@@ -162,3 +162,30 @@ entire job is to make claims about the past.
 delete one. The researcher stays creator only and still cannot read.
 
 This is a claim, so it gets a test rather than a sentence, in `tools/test_isolation.py`.
+
+---
+
+## 6. The international share ranks institutions and is never shown
+
+**Decided:** 19 August 2026.
+
+The share comes from Times Higher Education, which is a publisher rather than a government and a
+commercial one. It is used as an ordering key when deciding which institutions to put in front of
+somebody, and it is not displayed and not cited to a user.
+
+**What that changes.** A number we show is a claim we make, and a claim needs a source the reader can
+check. A number that only decides what order a list comes in is not a claim to the reader at all, so
+the question it has to answer is narrower: is the ordering better with it than without.
+
+**What it does not change.** The provenance is still stored on every row: publisher, edition, the
+verbatim span the figure was read from, the source URL and the date read. Not displaying something is
+not a reason to stop recording where it came from, and the day anybody asks why one school appeared
+above another, the answer exists.
+
+**What is still true and still the user's to weigh.** These are somebody else's figures. Using them
+internally is a lighter question than republishing them, and it is not no question.
+
+**The coverage this ranks over.** 97 of 946 UK institutions have a published share. The register is
+mostly language schools, private colleges and independent schools, which no ranking covers. So the
+share orders universities and says nothing about the rest, and anything built on it has to behave
+sensibly when the key is absent rather than treating unranked as worst.
