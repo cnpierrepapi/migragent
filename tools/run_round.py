@@ -55,6 +55,16 @@ def main() -> int:
     if "--limit" in sys.argv:
         limit = int(sys.argv[sys.argv.index("--limit") + 1])
     max_depth = None if "--all" in sys.argv else 1
+    if "--depth" in sys.argv:
+        # `--depth 0` reads only the pages we deliberately seeded.
+        #
+        # Needed where a site's sections are not lane shaped. The walk gives a
+        # discovered page the lane of the entry that found it, which is right
+        # when a government puts student pages under a student section, and
+        # wrong when one catalogue serves every route: Italy's visa portal
+        # handed its study entry the tourism, business and salaried employment
+        # pages, all tagged study. See D29.
+        max_depth = int(sys.argv[sys.argv.index("--depth") + 1])
     force = "--force" in sys.argv
 
     if mode == "watch":

@@ -967,3 +967,38 @@ never in Italy. A walk that finds nothing needs the sample it learned from inspe
 destination.
 
 **Status:** closed.
+
+---
+
+## D29. A discovered page inherits the lane of whoever found it, and one catalogue serves every lane
+
+**Found:** 19 August 2026, checking Italy's rows before extracting them. Caught by looking, not by any
+count being wrong.
+
+**What was about to happen.** The walk gives a discovered page the lane of the entry that found it.
+That is right when a government organises by route: gov.uk puts student pages under the student visa
+page, so a page found from there really is a study page.
+
+Italy does not. Its visa portal publishes every route as a sibling at one path, so the study entry
+discovered the whole catalogue first and claimed all of it. **Tourism, business, medical care,
+religious reasons and salaried employment were all sitting in the registry tagged `lane=study`.**
+
+Extracting that would have put tourism visa requirements into an Italian study guide, each one
+carrying a verbatim quote and an official government link. Every mechanism in this product would have
+worked perfectly: the quote would be real, the link would be real, the date would be real, and the
+requirement would have nothing to do with studying. **The anti invention machinery does not protect
+against a true sentence filed under the wrong question.**
+
+**What was done.** Italy is extracted at depth 0, which is only the two pages deliberately seeded and
+correctly laned: the study visa and the salaried employment visa. The 37 sibling pages stay in the
+registry and stay watched, because they are real Italian visa pages that really change. They are not
+extracted into a lane nobody has established they belong to.
+
+**What is NOT fixed, and should be said plainly.** There is no per page lane detection. A site that
+serves every route from one catalogue can only contribute its seeded pages until there is. Italy is
+therefore correct and thin, and the intake screen says which lanes are deep.
+
+**The lesson:** the guard that catches this is not a test. It is reading the rows before extracting
+them, because everything downstream would have reported success.
+
+**Status:** the wrong labelling is avoided. Per page lane detection is open.
