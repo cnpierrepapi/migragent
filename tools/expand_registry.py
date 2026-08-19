@@ -25,7 +25,7 @@ from migragent import identity  # noqa: E402
 from migragent.expand import Expander  # noqa: E402
 from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.render import BrowserFetcher  # noqa: E402
-from migragent.registry import Registry, Source  # noqa: E402
+from migragent.registry import JURISDICTIONS, Registry, Source  # noqa: E402
 
 PROJECT = "project-e0928f2f-5abf-46a3-b8a"
 MAX_DEPTH = 2
@@ -42,6 +42,24 @@ def source_id(jurisdiction: str, lane: str, url: str) -> str:
     host = parts[0].replace(".", "-")
     tail = "-".join(p for p in parts[1:] if p)[-70:].replace(".", "-") or "root"
     return f"{jurisdiction.lower()}-{lane}-{host}-{tail}"[:180]
+
+
+def _only() -> set[str]:
+    """Jurisdictions this run is limited to, empty meaning all of them.
+
+    An unknown flag used to be ignored in silence, which is how `--only ES`
+    became a full purge of every jurisdiction. Anything that looks like a
+    jurisdiction code and is not one now stops the run.
+    """
+    if "--only" not in sys.argv:
+        return set()
+    raw = sys.argv[sys.argv.index("--only") + 1]
+    codes = {c.strip().upper() for c in raw.split(",") if c.strip()}
+    unknown = codes - set(JURISDICTIONS)
+    if unknown:
+        raise SystemExit(f"--only got {', '.join(sorted(unknown))}, which is not "
+                         f"a jurisdiction. Known: {', '.join(sorted(JURISDICTIONS))}")
+    return codes
 
 
 def main() -> int:
@@ -66,10 +84,18 @@ def main() -> int:
             current_seed_ids = {seed_id(j, lane, url) for j, lane, url, _t, _l in CANDIDATES}
         except Exception:  # noqa: BLE001
             pass
+        # The purge respects --only as well. It did not once, and a run meant to
+        # rebuild one country deleted every walked row in the registry, 1,048
+        # down to 14 seeds. It rebuilt, because walked rows are derived and
+        # source ids come from URLs, but it cost a full re-walk and every row
+        # lost its snapshot path. See D25.
+        only = _only()
         stale = [
             s for s in Registry(writer_db).all()
-            if s.discovered_via.startswith("walked from")
-            or (s.discovered_via == "seed" and current_seed_ids and s.source_id not in current_seed_ids)
+            if (not only or s.jurisdiction in only)
+            and (s.discovered_via.startswith("walked from")
+                 or (s.discovered_via == "seed" and current_seed_ids
+                     and s.source_id not in current_seed_ids))
         ]
         batch = writer_db.batch()
         for i, s in enumerate(stale, 1):
@@ -86,7 +112,16 @@ def main() -> int:
     )
     registry = Registry(reader)
     entries = [s for s in registry.all() if s.kind == "government" and s.readable]
-    print(f"{len(entries)} readable entry points\n")
+
+    # Walking every entry point re-reads a thousand pages to add one country.
+    # `--only IT,DE` walks just those, which is what adding a jurisdiction or
+    # fixing a seed actually needs.
+    only = _only()
+    if only:
+        entries = [s for s in entries if s.jurisdiction in only]
+
+    print(f"{len(entries)} readable entry points"
+          + (f", limited to {', '.join(sorted(only))}" if only else "") + "\n")
 
     fetcher = Fetcher(delay_seconds=0.6)
 

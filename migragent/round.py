@@ -247,11 +247,20 @@ class Round:
             out.outcome = "already read"
             return out
 
-        allowed, why = self._fetcher.allowed(source.url)
-        if not allowed:
+        state, why = self._fetcher.permission(source.url)
+        if state == "disallowed":
             out.outcome = "unreadable"
             out.detail = why
             self._mark_blocked(source, why)
+            return out
+        if state == "unknown":
+            # Could not read the rules this time. Not a verdict on the source,
+            # so it is recorded as unverified and tried again. D25.
+            out.outcome = "unreadable"
+            out.detail = why
+            source.unverified_reason = why
+            source.last_attempt_at = _now()
+            self._registry.put(source)
             return out
 
         page = self._fetch(source.url)

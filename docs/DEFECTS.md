@@ -766,3 +766,67 @@ path. Only the US and Australia hosts stop, now with an accurate reason.
 cost here was not the crawl it blocked, it was the sentence it put in the README.
 
 **Status:** closed.
+
+---
+
+## D25. Three ways a fix for D24 made things quietly worse
+
+**Found:** 19 August 2026, within an hour of closing D24, while adding four jurisdictions.
+
+D24 taught the robots gate to tell "the host stated its rules" apart from "the host would not tell
+us". That was right. What it did with the second answer was wrong, in three ways that only showed up
+together.
+
+### 25a. A transient failure written down as a permanent refusal
+
+The new gate returned "not allowed" for both a served disallow and a robots.txt that could not be
+read. The seeder maps "not allowed" to `blocked`, which is a property of the source. So one bad
+robots.txt fetch marked **twelve Spanish pages as refusing us, an hour after they had been read
+successfully and extracted from**, and two German pages went the same way on a network blip that had
+cleared by the time anybody looked.
+
+**This is D8 one layer up.** D8 was a transient DNS failure nearly writing "unreachable" onto six
+working government sites. The gate reintroduced it, in the code written to fix a different defect
+about the same gate.
+
+**Fix.** `Fetcher.permission()` returns three states rather than a boolean: allowed, disallowed, and
+unknown. Disallowed is a fact about a source and is written down as one. Unknown is a fact about a
+moment: the crawl stops, the row is marked unverified with the reason, and it is tried again.
+
+**And the result of separating them is worth stating.** After re-checking every blocked row against a
+fresh answer: **sixteen were not blocked at all, six are unknown, and zero are genuinely disallowed by
+anybody's robots.txt.** The product had been saying "robots.txt disallows us" about a situation that
+does not exist anywhere in the registry.
+
+### 25b. A field set to None could never be cleared
+
+Repairing those rows appeared to work and changed nothing. `Source.to_dict()` drops None, and
+`Registry.put` writes with `merge=True`, so a field set back to None is simply absent from the write
+and the old value stays.
+
+That had been silently true the whole time. `unverified_reason` is set to None on every successful
+read and **had never once been cleared**, so a source that failed on a bad network carried
+"unreachable" forever while being read successfully every day.
+
+**Fix.** The dataclass is the whole state of the row, so `put` writes `DELETE_FIELD` for anything that
+is None rather than omitting it.
+
+### 25c. An unknown flag was ignored in silence, and purged the registry
+
+`expand_registry.py --only ES --purge` was run to rebuild one country. `--only` was not implemented.
+Unknown arguments were ignored, `--purge` was not, and it **deleted every walked row in the registry,
+1,048 down to 14 seeds.**
+
+It recovered, because walked rows are derived and source ids come from URLs, so a full re-walk
+rebuilt them and every lane came back with its previous count. The cost was the walk, plus every row
+losing its `snapshot_path`, which is what the watcher diffs against. `tools/backfill_snapshots.py`
+now reads the archive listing and points each source back at its most recent snapshot.
+
+**Fix.** `--only` is implemented, applies to the purge as well as the walk, and rejects anything that
+is not a known jurisdiction rather than ignoring it.
+
+**The lesson across all three:** a change that makes one thing more accurate can make three other
+things less true, and none of them announced itself. What caught 25a was reading the blocked list
+after a routine seed, and 25a is the only reason 25b was ever found.
+
+**Status:** closed.

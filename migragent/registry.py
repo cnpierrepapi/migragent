@@ -65,6 +65,20 @@ JURISDICTIONS = {
     "FR": {"name": "France", "languages": ["fr"]},
     "ES": {"name": "Spain", "languages": ["es"]},
     "AE": {"name": "United Arab Emirates", "languages": ["ar", "en"]},
+    # Added 19 August 2026, after checking where people actually go. Most
+    # African migration is inside Africa, and off the continent the corridors
+    # that matter are Europe, the Gulf and North America. Italy, Germany and
+    # Portugal are three of the largest European destinations and none of them
+    # was covered; Saudi Arabia is the Gulf corridor alongside the UAE.
+    #
+    # Where a government publishes the same guidance in its own language and in
+    # English, both are listed, because the English page is published by the
+    # source itself rather than translated by us. Rule 2 is about not extracting
+    # from a translation WE made.
+    "IT": {"name": "Italy", "languages": ["it", "en"]},
+    "DE": {"name": "Germany", "languages": ["de", "en"]},
+    "PT": {"name": "Portugal", "languages": ["pt", "en"]},
+    "SA": {"name": "Saudi Arabia", "languages": ["ar", "en"]},
 }
 
 
@@ -164,8 +178,28 @@ class Registry:
         self._db = client
 
     def put(self, source: Source) -> None:
+        """Write the row, including the fields that are now empty.
+
+        `to_dict()` drops None, and a merge write ignores what is not there. So
+        setting a field back to None left the old value sitting in Firestore,
+        and nothing said so. Two things had been quietly broken by it:
+
+        A source cleared of a block stayed blocked. Eighteen Spanish and German
+        pages were marked as refusing us by a transient robots failure, and the
+        repair that cleared them did nothing at all.
+
+        `unverified_reason` could never be cleared, so a source that failed once
+        on a bad network carried "unreachable" forever, even while being read
+        successfully every day.
+
+        The dataclass is the whole state of the row, so a field that is None on
+        the object is deleted on the document rather than left behind. See D25.
+        """
+        payload: dict[str, Any] = {}
+        for key, value in asdict(source).items():
+            payload[key] = firestore.DELETE_FIELD if value is None else value
         self._db.collection(COLLECTION).document(source.source_id).set(
-            source.to_dict(), merge=True
+            payload, merge=True
         )
 
     def get(self, source_id: str) -> Source | None:

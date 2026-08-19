@@ -222,14 +222,41 @@ class Fetcher:
         self._robots[host] = state
         return state
 
-    def allowed(self, url: str) -> tuple[bool, str]:
-        """May we fetch this? Checked before every request, never skipped."""
+    def permission(self, url: str) -> tuple[str, str]:
+        """Three states, kept apart, because two of them are not the same fact.
+
+          allowed     robots.txt was read and permits this, or there is none
+          disallowed  robots.txt was read and forbids this. A fact about the
+                      source, and it is written into the registry as one.
+          unknown     we could not read robots.txt at all. A fact about a
+                      moment, not about the source.
+
+        THE DISTINCTION IS NOT PEDANTRY. Collapsing unknown into disallowed
+        marked twelve Spanish pages as refusing us, an hour after they had been
+        read successfully, because one robots.txt fetch went wrong once. Two
+        German pages went the same way on a network blip that had cleared by the
+        time anybody looked.
+
+        That is D8 exactly: a transient failure written down as a permanent
+        property of a source, so a working government site is recorded as dead
+        and nothing ever tries it again. D8 was about page fetches. This is the
+        same mistake one layer up, in the gate, introduced by the code that
+        fixed D24.
+
+        A caller that gets unknown does not crawl, and records the source as
+        unverified and retryable rather than blocked.
+        """
         parser, why, permissive_without_parser = self._robots_for(url)
         if parser is None:
-            return permissive_without_parser, why
+            return ("allowed" if permissive_without_parser else "unknown"), why
         if parser.can_fetch(self.user_agent, url):
-            return True, "allowed by robots.txt"
-        return False, "disallowed by robots.txt"
+            return "allowed", "allowed by robots.txt"
+        return "disallowed", "disallowed by robots.txt"
+
+    def allowed(self, url: str) -> tuple[bool, str]:
+        """May we fetch this? Checked before every request, never skipped."""
+        state, why = self.permission(url)
+        return state == "allowed", why
 
     def _wait_turn(self, url: str) -> None:
         """One request per host at a time, with a gap, honouring crawl-delay."""
@@ -255,11 +282,16 @@ class Fetcher:
     # -- fetching --------------------------------------------------------
 
     def fetch(self, url: str) -> Fetched:
-        allowed, why = self.allowed(url)
-        if not allowed:
+        state, why = self.permission(url)
+        if state == "disallowed":
             # Rule 10. No fetching anyway, no swapping the user agent. The row
             # records the refusal so the source does not silently vanish.
             return Fetched(url=url, outcome="blocked_by_robots", read_at=_now(), reason=why)
+        if state == "unknown":
+            # We could not read the rules, so we do not crawl, and we do not
+            # write that down as the source refusing us. It is retryable and it
+            # says why. D8, and D25 for how it came back.
+            return Fetched(url=url, outcome="network_unknown", read_at=_now(), reason=why)
 
         self._wait_turn(url)
 

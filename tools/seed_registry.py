@@ -85,6 +85,42 @@ CANDIDATES = [
      "Visa and Emirates ID", "en"),
     ("AE", "work", "https://u.ae/en/information-and-services/jobs",
      "Jobs and employment", "en"),
+
+    # Added 19 August 2026. Three European corridors and one Gulf corridor that
+    # the first seven missed, chosen against where people actually move rather
+    # than against a list somebody wrote down.
+    #
+    # Each of these was fetched before it was written here, and two obvious
+    # candidates were rejected on what came back rather than on preference:
+    #
+    #   make-it-in-germany.com  Germany's own portal, behind a Radware bot wall
+    #                           that returns a captcha to a real browser
+    #   universitaly.it         Italy's student portal, returns "we need to
+    #                           verify that you're not a robot"
+    #
+    # Both are refusals, and a refusal is not a puzzle to solve. We read the
+    # ministries instead, which serve us without being asked twice.
+    ("IT", "study", "https://vistoperitalia.esteri.it/home.aspx",
+     "Visti per l'Italia", "it"),
+    ("IT", "work", "https://www.lavoro.gov.it/",
+     "Ministero del Lavoro e delle Politiche Sociali", "it"),
+
+    ("DE", "study",
+     "https://www.bamf.de/EN/Themen/MigrationAufenthalt/ZuwandererDrittstaaten/Bildung/bildung-node.html",
+     "Education and study in Germany", "en"),
+    ("DE", "work",
+     "https://www.bamf.de/EN/Themen/MigrationAufenthalt/ZuwandererDrittstaaten/Arbeit/arbeit-node.html",
+     "Working in Germany", "en"),
+
+    ("PT", "study", "https://aima.gov.pt/pt",
+     "Agencia para a Integracao, Migracoes e Asilo", "pt"),
+    ("PT", "work", "https://vistos.mne.gov.pt/en/",
+     "Portugal visas portal", "en"),
+
+    ("SA", "study", "https://moe.gov.sa/en/Pages/default.aspx",
+     "Ministry of Education", "en"),
+    ("SA", "work", "https://www.hrsd.gov.sa/en",
+     "Ministry of Human Resources and Social Development", "en"),
 ]
 
 
