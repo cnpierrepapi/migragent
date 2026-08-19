@@ -152,8 +152,10 @@ until it exists, because everything downstream is only as current as the last ha
 
 - Extraction runs over every offered lane, not two. Guide citable depth stays 0 and 1, which is the
   entry page and what the government links directly; depth 2 stays in the registry and stays watched.
-- **US and Australia come off the offer.** US federal immigration sites disallow us in robots.txt and
-  Australia refuses our crawler outright. They are shown as **coming soon**, with the real reason
+- **US and Australia come off the offer**, and the reason is not the one first recorded. Neither
+  disallows us. US immigration hosts refuse to serve their robots.txt to anybody, so we cannot learn
+  their rules; Australia serves its robots.txt to a generic client and refuses it to one that says who
+  it is. In both cases we stop, because a host that will not state its rules has not given permission. They are shown as **coming soon**, with the real reason
   written on the screen, and their rows stay in the registry marked blocked. They are not counted as
   readable and they do not quietly vanish, because a source that disappears from the count is how a
   count starts lying.

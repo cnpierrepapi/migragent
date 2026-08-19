@@ -60,16 +60,26 @@ CANDIDATES = [
     ("FR", "work", "https://www.service-public.fr/particuliers/vosdroits/F2728",
      "Titre de sejour salarie", "fr"),
 
+    # RESEEDED 19 August 2026. The first pair pointed at the foreign ministry:
+    # a consular services index and a ministry homepage. Both are navigation,
+    # and Spain produced ONE citable requirement while the same walk found 65
+    # one hop further out. The entries were the problem, not the crawler.
+    #
+    # Requirements for living in Spain are published by the migration ministry,
+    # not the foreign one, and each route has its own front door. Those pages
+    # were unreachable until D24, because Spain's portal serves 403 to
+    # Python's default user agent and 404 to a client that says who it is, and
+    # a 404 means there is no robots.txt at all, which is permission.
+    #
+    # Still deliberately two different pages, one per lane. Seeding both lanes
+    # with the same URL once made the navigation sample hold that page twice,
+    # so every link looked like navigation and Spain returned zero. See D11.
     ("ES", "study",
-     "https://www.exteriores.gob.es/es/ServiciosAlCiudadano/Paginas/Servicios-consulares.aspx",
-     "Servicios consulares, visados", "es"),
-    # Deliberately a different page from the study entry. Seeding both lanes
-    # with the same URL made the navigation sample hold that page twice, so
-    # every link counted as appearing "on two pages" and the entire page was
-    # classified as navigation. Spain returned zero. See D11.
+     "https://www.inclusion.gob.es/web/migraciones/estudiar",
+     "Estudiar en Espana", "es"),
     ("ES", "work",
-     "https://www.exteriores.gob.es/es/Paginas/index.aspx",
-     "Portada, Ministerio de Asuntos Exteriores", "es"),
+     "https://www.inclusion.gob.es/web/migraciones/cuenta-ajena",
+     "Residencia y trabajo por cuenta ajena", "es"),
 
     ("AE", "study", "https://u.ae/en/information-and-services/visa-and-emirates-id",
      "Visa and Emirates ID", "en"),

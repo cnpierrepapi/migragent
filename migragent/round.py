@@ -52,11 +52,16 @@ Mode = str  # "extract" or "watch"
 CHANGES = "changes"
 ROUNDS = "rounds"
 
-# The five jurisdictions this product offers, in a fixed order. US and Australia
-# are not here: US federal immigration sites disallow us in robots.txt and
-# Australia refuses our crawler outright, so they are shown as coming soon with
-# the reason on the screen. Their rows stay in the registry marked blocked,
-# because a source that disappears from a count is how a count starts lying.
+# The five jurisdictions this product offers, in a fixed order.
+#
+# US and Australia are not here, and the reason is narrower than "they disallow
+# us", which is what was first recorded and is not true of either. US
+# immigration hosts refuse to serve their robots.txt to anybody, so their rules
+# cannot be read. Australia serves its robots.txt to a generic client and
+# refuses it to one that names itself. A host that will not state its rules has
+# not given permission, so we stop, and the registry records which of the two it
+# was. See D24. Their rows stay, marked blocked, because a source that
+# disappears from a count is how a count starts lying.
 OFFERED = ["UK", "CA", "FR", "ES", "AE"]
 
 # A page that comes back this thin is usually a host that hides its content

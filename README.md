@@ -28,8 +28,10 @@ pacing; each line appears when that step really finished, carrying the count it 
 
 The registry holds 1,046 sources across seven jurisdictions and two lanes each, work and study:
 United Kingdom, United States, Canada, Australia, France, Spain, United Arab Emirates. Four are
-recorded as blocked rather than quietly dropped: US study and work, where robots.txt disallows us,
-and AU study and work, which refuse our crawler outright.
+recorded as blocked rather than quietly dropped. US study and work, because those hosts refuse to
+serve their robots.txt to anybody, so we cannot learn their rules and do not crawl them. AU study and
+work, because that host serves its robots.txt to a generic client and refuses it to one that says who
+it is. Neither is the same as being disallowed, and the registry says which it is.
 
 Extraction runs lane by lane. Two lanes are deep today, with 708 requirements in the corpus: Canada
 study, 568, and UK study, 140. The intake screen greys out what it cannot serve and says why, rather

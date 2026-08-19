@@ -720,3 +720,49 @@ and demanding a zero. Nobody would have found it by reading the code, and it wou
 looking like a working watcher.
 
 **Status:** closed.
+
+---
+
+## D24. The robots gate asked in somebody else's name, and recorded the answer as a refusal
+
+**Found:** 19 August 2026, while looking for real Spanish entry pages after Spain produced one
+citable requirement.
+
+**What was wrong.** `allowed()` used `RobotFileParser.read()`, which fetches robots.txt as
+`Python-urllib` rather than as us, and which turns a 401 or 403 on that fetch into "disallow
+everything" without saying so.
+
+Spain's immigration portal serves **403 to `Python-urllib` and 404 to a client that says who it is.**
+A 404 means there is no robots.txt, which is permission. So the entire portal, which is where Spain
+actually publishes its residence and study requirements, was recorded as refusing us when it had only
+refused a user agent we do not use.
+
+**What it cost.** Spain was seeded against the foreign ministry instead, whose pages are navigation,
+and produced 1 citable requirement while the same walk found 65 one hop out. The lane looked like a
+crawler problem and was a permission problem wearing a crawler's clothes.
+
+**What else it was hiding.** Two claims in the product were wrong in the same way.
+
+- **The US is not disallowing us.** `travel.state.gov`, `www.uscis.gov` and `studyinthestates.dhs.gov`
+  return 403 on robots.txt to every user agent tried. They will not state their rules at all.
+- **Australia is not refusing our crawler outright.** `immi.homeaffairs.gov.au` serves its robots.txt
+  happily to a generic client and 403s the one that names itself.
+
+Both still end in not crawling, because a host that will not state its rules has not given
+permission. But "robots.txt disallows us" was written in the README, in the plan and in the code, and
+it was not true of either country. That is rule 3 territory: a claim that was never tested, sitting in
+front of users.
+
+**Fix.** robots.txt is now fetched the way every other page is fetched, by a client that identifies
+itself, and three outcomes are kept apart rather than collapsed: the host stated its rules and they
+are obeyed; there are no rules, which is permission; or the host would not tell us, which stops the
+crawl and is recorded as a refusal rather than a prohibition.
+
+**Checked for regressions before switching**, across all 14 hosts in the registry: 12 still allowed,
+including `u.ae`, which has no robots.txt at all and was previously allowed through the accidental
+path. Only the US and Australia hosts stop, now with an accurate reason.
+
+**The lesson:** a gate that asks a question in somebody else's name gets somebody else's answer. The
+cost here was not the crawl it blocked, it was the sentence it put in the README.
+
+**Status:** closed.

@@ -162,38 +162,71 @@ class Fetcher:
     delay_seconds: float = DEFAULT_DELAY_SECONDS
     timeout: int = TIMEOUT_SECONDS
 
-    _robots: dict[str, urllib.robotparser.RobotFileParser | None] = field(default_factory=dict)
+    _robots: dict[str, tuple[urllib.robotparser.RobotFileParser | None, str, bool]] = \
+        field(default_factory=dict)
     _last_hit: dict[str, float] = field(default_factory=dict)
 
     # -- politeness ------------------------------------------------------
 
-    def _robots_for(self, url: str) -> urllib.robotparser.RobotFileParser | None:
-        """Fetch and cache robots.txt for the host.
+    def _robots_for(self, url: str) -> tuple[urllib.robotparser.RobotFileParser | None, str, bool]:
+        """Fetch and cache robots.txt for the host, under our own name.
 
-        Returns None when robots.txt could not be read at all. That is treated
-        as permissive, which is the documented convention, and the caller
-        records that it was unreadable rather than pretending it said yes.
+        Returns the parser, the reason in words, and whether anything may be
+        fetched when there is no parser.
+
+        THE PART THAT WAS WRONG. This used `RobotFileParser.read()`, which
+        fetches robots.txt as `Python-urllib`, and which turns a 401 or 403 on
+        that fetch into "disallow everything" without telling anybody. Spain's
+        immigration portal serves 403 to `Python-urllib` and 404 to a client
+        that says who it is. A 404 means there is no robots.txt, which is
+        permission, so the whole portal was recorded as refusing us when it had
+        simply refused a user agent we do not use. That is D24.
+
+        So robots.txt is fetched the same way every other page is fetched, by a
+        client that identifies itself, and the three outcomes are kept apart:
+
+          200  the host stated its rules, and they are obeyed
+          404  there are no rules, which is permission
+          401, 403, 5xx, or no answer
+               the host would not tell us its rules. We do not crawl it, and
+               the reason recorded says it was refused rather than disallowed,
+               because those are different facts about the world.
         """
         parts = urllib.parse.urlsplit(url)
         host = f"{parts.scheme}://{parts.netloc}"
         if host in self._robots:
             return self._robots[host]
 
-        parser = urllib.robotparser.RobotFileParser()
-        parser.set_url(f"{host}/robots.txt")
+        request = urllib.request.Request(
+            f"{host}/robots.txt", headers={"User-Agent": self.user_agent},
+        )
         try:
-            parser.read()
-        except Exception:  # noqa: BLE001
-            self._robots[host] = None
-            return None
-        self._robots[host] = parser
-        return parser
+            with urllib.request.urlopen(request, timeout=self.timeout,
+                                        context=_tls_context()) as response:
+                body = response.read().decode("utf-8", "ignore")
+            parser = urllib.robotparser.RobotFileParser()
+            parser.set_url(f"{host}/robots.txt")
+            parser.parse(body.splitlines())
+            state = (parser, "the host stated its rules", True)
+        except urllib.error.HTTPError as exc:
+            if exc.code in (404, 410):
+                state = (None, f"no robots.txt on this host (HTTP {exc.code}), "
+                               "which is permission", True)
+            else:
+                state = (None, f"the host would not serve its robots.txt "
+                               f"(HTTP {exc.code}), so we do not crawl it", False)
+        except Exception as exc:  # noqa: BLE001
+            state = (None, f"robots.txt could not be reached "
+                           f"({type(exc).__name__}), so we do not crawl it", False)
+
+        self._robots[host] = state
+        return state
 
     def allowed(self, url: str) -> tuple[bool, str]:
         """May we fetch this? Checked before every request, never skipped."""
-        parser = self._robots_for(url)
+        parser, why, permissive_without_parser = self._robots_for(url)
         if parser is None:
-            return True, "robots.txt could not be read, treated as permissive"
+            return permissive_without_parser, why
         if parser.can_fetch(self.user_agent, url):
             return True, "allowed by robots.txt"
         return False, "disallowed by robots.txt"
@@ -202,7 +235,8 @@ class Fetcher:
         """One request per host at a time, with a gap, honouring crawl-delay."""
         host = urllib.parse.urlsplit(url).netloc
         delay = self.delay_seconds
-        parser = self._robots.get(f"{urllib.parse.urlsplit(url).scheme}://{host}")
+        cached = self._robots.get(f"{urllib.parse.urlsplit(url).scheme}://{host}")
+        parser = cached[0] if cached else None
         if parser is not None:
             try:
                 declared = parser.crawl_delay(self.user_agent)
