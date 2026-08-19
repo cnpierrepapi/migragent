@@ -3,6 +3,7 @@
     python -m tools.run_round CA study --limit 5
     python -m tools.run_round ES work --mode extract
     python -m tools.run_round UK study --all
+    python -m tools.run_round UK work --agent --limit 1
 
 The job in Cloud Run is the real thing. This exists so a round can be watched
 line by line while it is being changed, and so a lane can be pushed along by
@@ -34,6 +35,7 @@ from migragent.extract import Extractor  # noqa: E402
 from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.occupations import ShortageReader, Shortages  # noqa: E402
 from migragent.registry import Registry  # noqa: E402
+from migragent.researcher import Researcher  # noqa: E402
 from migragent.render import BrowserFetcher  # noqa: E402
 from migragent.round import ChangeWriter, Round, RunLog  # noqa: E402
 from migragent.snapshots import SnapshotStore  # noqa: E402
@@ -55,6 +57,10 @@ def main() -> int:
     limit = None
     if "--limit" in sys.argv:
         limit = int(sys.argv[sys.argv.index("--limit") + 1])
+    # The agent reads entry pages and chooses what to open from there. Off by
+    # default so a round reads the way it has been reading unless somebody says
+    # otherwise, and comparable against it when they do.
+    with_agent = "--agent" in sys.argv
     max_depth = None if "--all" in sys.argv else 1
     if "--depth" in sys.argv:
         # `--depth 0` reads only the pages we deliberately seeded.
@@ -90,6 +96,10 @@ def main() -> int:
             changes_writer=ChangeWriter(writer_db),
             shortage_reader=ShortageReader(PROJECT, MODEL, MODEL_LOCATION, reader),
             shortages=Shortages(writer_db),
+            researcher=Researcher(project=PROJECT, model=MODEL, location=MODEL_LOCATION,
+                                  credentials=reader, fetcher=fetcher,
+                                  on_event=lambda line: print(line, flush=True))
+            if with_agent else None,
             browser=browser,
             on_event=lambda line: print(line, flush=True),
         )
@@ -103,6 +113,14 @@ def main() -> int:
           f"unreadable {result.unreadable}, failed {result.failed}")
     print(f"kept {result.kept}, dropped {result.dropped}, retired {result.retired}, "
           f"{result.seconds}s")
+
+    # What the agent chose, and why it stopped. Without this a researched row
+    # prints as one line with a count on it, and a session that fell over looks
+    # exactly like a session that found nothing.
+    for o in result.outcomes:
+        if o.outcome == "researched":
+            print(f"  chose from {o.url[-70:]}")
+            print(f"      {o.detail}")
     if result.failed or result.unreadable:
         print("\nwhat did not read:")
         for o in result.outcomes:

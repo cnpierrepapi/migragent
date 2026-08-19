@@ -44,7 +44,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 
 from .changes import Change, change_id, text_diff
-from .extract import page_text
+from .extract import Extraction, page_text
 from .fetcher import Fetched
 
 Mode = str  # "extract" or "watch"
@@ -141,8 +141,12 @@ class Round:
 
     def __init__(self, *, registry, corpus, snapshots, fetcher, extractor,
                  explainer, changes_writer, browser=None,
-                 shortage_reader=None, shortages=None,
+                 shortage_reader=None, shortages=None, researcher=None,
                  on_event: Callable[[str], None] | None = None) -> None:
+        # Optional on purpose. Without it a round reads the way it always has,
+        # which is what watch mode needs and what a round with no model access
+        # falls back to.
+        self._researcher = researcher
         self._shortage_reader = shortage_reader
         self._shortages = shortages
         self._registry = registry
@@ -186,6 +190,15 @@ class Round:
                    if s.blocked is None]
         if max_depth is not None:
             sources = [s for s in sources if (s.depth or 0) <= max_depth]
+        if self._researcher is not None:
+            # Entry pages first. They are where the agent starts, and a limited
+            # run that never reached one would report that the agent did nothing
+            # when what happened is that it was never asked.
+            # An unset depth means a hand seeded entry, which is what the rest
+            # of this file already means by `s.depth or 0`. Sorting it as
+            # missing instead put the entry pages last, and a limited run picked
+            # up a shortage list and reported that the agent had done nothing.
+            sources.sort(key=lambda s: s.depth or 0)
         if limit:
             sources = sources[:limit]
         result.considered = len(sources)
@@ -220,7 +233,7 @@ class Round:
                     result.unchanged += 1
                 elif outcome.outcome == "changed":
                     result.changed += 1
-                elif outcome.outcome == "extracted":
+                elif outcome.outcome in ("extracted", "researched"):
                     result.extracted += 1
 
             result.kept += outcome.kept
@@ -328,6 +341,14 @@ class Round:
             self._mark_read(source, page, snapshot_path)
             return out
 
+        # An entry page is where a lane starts, and it is the one place where
+        # choosing what to read next is worth a decision rather than a rule. So
+        # if there is an agent, the entry page is handed to it and it reads out
+        # from there. Every other row is read the way it always was.
+        if (self._researcher is not None and mode == "extract"
+                and (source.depth or 0) == 0):
+            return self._research(source, jurisdiction, lane, page, snapshot_path, out)
+
         extraction = self._extractor.extract(
             page, jurisdiction=jurisdiction, lane=lane,
             language=source.language, provenance=source.provenance,
@@ -353,6 +374,88 @@ class Round:
         out.dropped = read.dropped
         out.outcome = out.outcome or "extracted"
         self._mark_read(source, page, snapshot_path)
+        return out
+
+    # -------------------------------------------------------------- the agent
+
+    def _research(self, source, jurisdiction: str, lane: str, page: Fetched,
+                  snapshot_path: str | None, out: SourceOutcome) -> SourceOutcome:
+        """Hand the entry page to the agent, and file what it comes back with.
+
+        The agent reads pages of its own choosing, so some of what it returns is
+        about pages this registry has never heard of. Those get rows, because a
+        page a requirement is cited from has to be a page the watcher re-reads
+        tomorrow. A citation to something nothing is watching goes stale in
+        silence, which is the whole failure this pipeline exists to avoid.
+
+        Rows are looked up by URL before being created, so a page the walk
+        already found keeps the name it already has rather than gaining a second
+        one. See D31.
+        """
+        from .registry import JURISDICTIONS, Source, source_id
+
+        place = JURISDICTIONS.get(jurisdiction, {}).get("name", jurisdiction)
+        session = self._researcher.research(
+            source.url, jurisdiction=jurisdiction, lane=lane, place=place,
+            language=source.language, provenance=source.provenance,
+        )
+
+        by_url: dict[str, list] = {}
+        for requirement in session.requirements:
+            by_url.setdefault(requirement.source_url, []).append(requirement)
+
+        for url in session.pages_read:
+            fetched = session.fetched.get(url)
+            if fetched is None:
+                continue
+
+            if url == source.url or url == (page.final_url or source.url):
+                row, path = source, snapshot_path
+            else:
+                row = self._registry.by_url(jurisdiction, lane, url)
+                if row is None:
+                    row = Source(
+                        source_id=source_id(jurisdiction, lane, url),
+                        jurisdiction=jurisdiction, lane=lane, kind="government",
+                        url=url,
+                        title=url.rstrip("/").rsplit("/", 1)[-1].replace("-", " ")
+                                 .replace(".html", ""),
+                        language=source.language, provenance=source.provenance,
+                        discovered_via=f"chosen by the researcher from {source.source_id}",
+                        lead_url=source.url,
+                        # Depth is how far the GUIDE may cite from, and the agent
+                        # opened this because the entry page pointed at it, which
+                        # is what depth 1 means.
+                        depth=1,
+                        robots_allowed=True, robots_checked_at=fetched.read_at,
+                    )
+                path = self._snapshots.store(row.source_id, fetched)
+
+            requirements = by_url.get(url, [])
+            extraction = Extraction(
+                source_url=url, read_at=fetched.read_at, requirements=requirements,
+                # Open questions belong to the session rather than to any one
+                # page, so they are filed against the entry page and not
+                # repeated under every page the agent opened.
+                open_questions=session.open_questions if row is source else [],
+            )
+
+            before = self._corpus.live_ids_for_source(row.source_id)
+            read = self._corpus.record(row.source_id, extraction, jurisdiction, lane)
+            gone = before - self._corpus.live_ids_for_source(row.source_id)
+            if gone:
+                out.retired += self._corpus.retire(
+                    gone, fetched.read_at, "the page no longer says this")
+
+            out.kept += read.kept
+            self._mark_read(row, fetched, path)
+
+        out.dropped += len(session.refused)
+        out.outcome = out.outcome or "researched"
+        out.detail = (f"{len(session.pages_read)} page(s) chosen, {session.turns} turn(s), "
+                      f"{len(session.refused)} refused: {session.stopped_because}")[:200]
+        if session.error:
+            out.detail = f"{out.detail} | {session.error}"[:200]
         return out
 
     # ------------------------------------------------------------- shortages

@@ -240,6 +240,22 @@ class Registry:
             return None
         return Source(**snap.to_dict())
 
+    def by_url(self, jurisdiction: str, lane: str, url: str) -> Source | None:
+        """The row for a page, found by what page it is rather than by its name.
+
+        The agent chooses pages the walk never queued, and some of them are
+        already in the registry under a name minted by an older rule. Looking
+        them up by URL is what stops a second row appearing for a page that is
+        already there. See D31.
+        """
+        query = self._db.collection(COLLECTION).where(
+            filter=firestore.FieldFilter("url", "==", url)).limit(20)
+        for doc in query.stream():
+            row = doc.to_dict()
+            if row.get("jurisdiction") == jurisdiction and row.get("lane") == lane:
+                return Source(**row)
+        return None
+
     def all(self) -> list[Source]:
         return [Source(**d.to_dict()) for d in self._db.collection(COLLECTION).stream()]
 

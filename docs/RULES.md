@@ -108,3 +108,16 @@ referenced from the code and renumbering them would break those references.
     read as a person wrote them.
 38. **The docs get fixed rather than ignored.** If the build contradicts a document, the document is
     wrong and gets corrected in the same commit.
+
+## The agent
+
+40. **The rules live in the tools, not in the prompt.** An agent may choose what to read. It may not
+    fetch, and it may not record a requirement, except by asking a tool that applies the robots gate
+    and the quote check first. A rule an agent can decide to skip is not a rule.
+41. **Every model call goes through `migragent/model.py`,** including the agent's. A framework that
+    brings its own client gets an adapter, not an exemption. Checked by `tools/test_agent.py`.
+42. **Budgets are caps in code**, not requests in an instruction. Pages read and model turns are
+    counted by the loop that runs the agent.
+43. **What an agent was refused is reported alongside what it kept.** A session that had nine of ten
+    quotes rejected has said something about itself, and swallowing it hides the one thing worth
+    knowing.

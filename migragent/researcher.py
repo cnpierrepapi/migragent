@@ -70,6 +70,11 @@ class Session:
     stopped_because: str = ""
     error: str = ""
 
+    # The pages themselves, keyed by the URL they finally resolved to. The
+    # caller needs them to snapshot what was read and to record what came back,
+    # and handing back only the addresses would mean fetching them all again.
+    fetched: dict[str, Fetched] = field(default_factory=dict)
+
     @property
     def kept(self) -> int:
         return len(self.requirements)
@@ -285,17 +290,41 @@ class Researcher:
     def research(self, entry_url: str, *, jurisdiction: str, lane: str, place: str,
                  language: str = "en", provenance: str = "official") -> Session:
         import asyncio
+        import threading
 
         desk = Desk(fetcher=self._fetcher, jurisdiction=jurisdiction, lane=lane,
                     language=language, provenance=provenance, on_event=self._on_event)
         desk.session.entry_url = entry_url
+
+        # ADK is asynchronous and the round that calls it is not, so somebody has
+        # to start an event loop. It goes on its own thread because the round may
+        # already be holding one: the browser fallback is Playwright's synchronous
+        # API, which runs a loop of its own, and starting a second one in the same
+        # thread raises before a single page is read. That failure arrived as
+        # "coroutine was never awaited", which says nothing about loops at all.
+        failure: list[BaseException] = []
+
+        def run_loop() -> None:
+            try:
+                asyncio.run(self._run(desk, entry_url, place, lane))
+            except BaseException as exc:  # noqa: BLE001
+                failure.append(exc)
+
+        thread = threading.Thread(target=run_loop, name="researcher", daemon=True)
+        thread.start()
+        thread.join()
+
         try:
-            asyncio.run(self._run(desk, entry_url, place, lane))
+            if failure:
+                raise failure[0]
         except Exception as exc:  # noqa: BLE001
             # A session that falls over keeps what it had already recorded and
             # says why it stopped. Requirements already accepted passed the quote
             # check when they were accepted; a later failure does not unmake that.
             desk.session.error = f"{type(exc).__name__}: {exc}"[:300]
+
+        desk.session.fetched = {url: desk.pages[url] for url in desk.session.pages_read
+                                if url in desk.pages}
         return desk.session
 
     async def _run(self, desk: Desk, entry_url: str, place: str, lane: str) -> None:

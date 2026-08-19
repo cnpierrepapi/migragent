@@ -48,6 +48,7 @@ from .corpus import Corpus
 from .extract import Extractor
 from .fetcher import Fetcher
 from .registry import Registry
+from .researcher import Researcher
 from .round import ChangeWriter, Round, RunLog, lanes
 from .snapshots import SnapshotStore
 
@@ -55,6 +56,11 @@ PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
 MODEL = os.environ.get("MIGRAGENT_MODEL", "gemini-3.5-flash")
 MODEL_LOCATION = os.environ.get("MIGRAGENT_MODEL_LOCATION", "global")
 MODE = os.environ.get("MIGRAGENT_MODE", "extract")
+
+# Who reads an entry page: the agent that chooses what to open next, or the flat
+# extractor that reads whatever the walk queued. Off unless asked for, so the
+# daily round does not change what it does because a dependency was installed.
+USE_AGENT = os.environ.get("MIGRAGENT_RESEARCHER", "") == "agent"
 
 # Depth 0 and 1 is the entry page and what the government links directly, which
 # is all the guide may cite. Depth 2 stays in the registry and stays watched.
@@ -174,6 +180,10 @@ def main() -> int:
         changes_writer=ChangeWriter(db),
         shortage_reader=ShortageReader(PROJECT, MODEL, MODEL_LOCATION, credentials),
         shortages=Shortages(db),
+        researcher=Researcher(project=PROJECT, model=MODEL, location=MODEL_LOCATION,
+                              credentials=credentials, fetcher=Fetcher(delay_seconds=0.5),
+                              on_event=lambda line: print(line, flush=True))
+        if USE_AGENT else None,
         on_event=lambda line: print(line, flush=True),
     )
 
