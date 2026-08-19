@@ -1,7 +1,11 @@
 # The plan
 
-Four builds. Everything that has been asked for is in one of them. Each ends with something working
-on a live URL.
+Six builds. Everything that has been asked for is in one of them. Each ends with something working on
+a live URL.
+
+Builds 1 and 2 are done. **Build 3, the pipeline, is next.** The researcher gets wrapped in ADK in
+Build 4 rather than before, because the researcher's real job is the one inside the pipeline, and
+wrapping it first would mean wrapping a tool that a laptop runs by hand.
 
 Standing rules are in `docs/RULES.md`. What gets read and how is in `docs/SOURCES.md`. How it feels
 to use is in `docs/HOW_IT_WORKS.md`. Every defect found so far is in `docs/DEFECTS.md`.
@@ -74,8 +78,7 @@ citations. **Done.**
 
 **Still open in Build 1**
 - **The researcher is not on ADK.** Gemini is called over plain HTTP from `migragent/model.py`. A
-  Google agent framework is a mandatory requirement of the event, so this is the first thing built,
-  ahead of everything below.
+  Google agent framework is mandatory, and it is Build 4.
 
 ---
 
@@ -173,9 +176,52 @@ each one is a row type, not a code change.
 - **Public job services.** Government run job boards, which are public by design. The large commercial
   boards disallow crawling and the robots gate is not negotiable, so they are out.
 
+### The listings engine
+
+Ingestion only. What a user sees built on top of this is Build 5.
+
+- Shortage list read like any government page, so the occupations arrive quoted, linked and dated.
+- Occupations become search terms against the public job services for that country. Listings are
+  stored as their own row type, with employer, occupation, location, the listing URL, the date read
+  and the date it closes if it says.
+- **Listings are watched by the same daily round as everything else**, because a role that closed is
+  worse than no role at all. A listing that stops resolving is marked closed on the date it stopped,
+  not deleted, so the board can tell somebody the thing they were working on is gone.
+- Coverage is reported per country rather than assumed. Most target countries run a public job
+  service. The UAE most likely does not, and where a country has no readable service the product says
+  so on screen rather than looking uniformly capable.
+
+### What ships on screen at the end of Build 3
+
+- **Every offered lane deep.** Ten lanes with real requirements, not two.
+- **US and Australia shown as coming soon**, with the real reason written next to them.
+- **The country watch screen.** Where policy has loosened and where it has tightened, from the
+  observed record, with the date and the source on every line. Read only first, personalised later.
+- The live counts on the front of the product move from a registry that is only read by hand to one
+  that is read every day.
+
 ---
 
-## Build 4 — The person, the board, and the work after arrival
+## Build 4 — The researcher on ADK
+
+**Ends with:** the daily round is run by an agent that chooses what to read, and the mandatory
+framework is satisfied by something that does real work rather than by a wrapper.
+
+- The researcher becomes an ADK agent inside the ingestion job, with a small set of declared tools:
+  fetch a page, check that a sentence really appears on it, record a requirement, look at a sibling
+  page. It decides which pages to read and when it has enough.
+- **What stays plain code, deliberately:** the robots gate, fetching, hashing, snapshotting, the
+  verbatim quote check, the citation built from the fetch, PDF rendering. Those are rules rather than
+  judgment, and a rule an agent can decide to skip is not a rule. This restraint gets said out loud in
+  the submission.
+- **The one thing that must not break:** ADK brings its own model client, which would route around the
+  single caller in `migragent/model.py` and lose the retry and the status codes that D20 exists to
+  preserve. Model calls stay behind that caller, and this is checked rather than assumed.
+- Same agent, same tools, later reused by the people finder in Build 5.
+
+---
+
+## Build 5 — The person, the board, and the work after arrival
 
 **Ends with:** an account that remembers you, a board that fills itself, and a reason to still be here
 next month.
@@ -200,35 +246,32 @@ way that matters, so it gets its own treatment.
 - **It does not feed the readiness score.** Readiness is defined as the share of extracted requirements
   your documents cover, and a CV covers almost none of them. Letting it move that number would make
   the one honest number in the product dishonest.
-- **It gets its own score: CV fit, per country.** Page limits, whether a photo or a date of birth is
-  expected or a liability, Canadian versus British conventions, the French CV, where references belong.
-- **Sourcing is split and labelled.** Where an official body publishes guidance it is cited like any
-  requirement. Where it is convention rather than rule, it says so and does not borrow the guide's
-  authority.
-- **Rewriting is live in the product.** One CV per target country, and later one per application,
-  because a CV for everything is a CV for nothing. Every rewrite is a draft and says so.
+- **Its score is fit against a listing.** Not a standalone grade for the document, and not a guess at
+  a country's taste. A CV scores against a specific job, computed from the listing's own words and the
+  user's case, and the number only exists where there is a listing to score it against.
+- **The score says fit and never says you will get the job.** That sentence sits next to the number,
+  not in a footnote. It means this listing matches your profile, which is a claim we can support, and
+  nothing about an employer's decision, which is not.
+- **Rewriting is live in the product.** One CV per target country to start, then one per listing,
+  because a CV for everything is a CV for nothing. Country conventions are cited where an official
+  body publishes them and labelled as convention where they are not, so the rewrite never borrows the
+  guide's authority. Every rewrite is a draft and says so.
 
 ### Jobs, from shortage lists rather than from guesswork
 
 "Companies that hire the most internationals" is not something anybody publishes, so building on it
 means inferring a list and then citing ourselves for it. Shortage lists are published, official,
-dated, and already the kind of page this pipeline reads. So the chain runs:
+dated, and already the kind of page this pipeline reads.
 
-1. **Shortage list** for the country, read and quoted like any other government source.
-2. **Listings** for those occupations, from public job services, under the same robots gate.
-3. **Fit score** for the user against a listing, computed from their CV and their case.
-4. **Notification**, routed the same way source changes are.
+Build 3 does the reading. Build 5 is what the user gets from it:
 
-Two rules hold this together and both are the same rule that governs the guide.
+1. **Fit score** for the user against a listing, computed from their CV and their case.
+2. **Notification**, routed the same way source changes are.
+3. **I'm interested**, which is the next section.
 
-- **A job posting is never a source for a requirement.** It is an opportunity. Requirements come from
-  governments and regulators. A posting that says something about a visa is evidence of what an
-  employer believes, not of what the law is, and it is labelled that way.
-- **The fit score is a fit score.** It says this listing matches your profile, and it never says or
-  implies you will get the job. That gets written on the screen next to the number, not buried.
-
-Listings are watched by the same daily round as everything else, because a role that closed is worse
-than no role at all.
+**A job posting is never a source for a requirement.** It is an opportunity. Requirements come from
+governments and regulators. A posting that says something about a visa is evidence of what an employer
+believes, not of what the law is, and it is labelled that way wherever it appears.
 
 ### "I'm interested", and the board
 
@@ -254,6 +297,19 @@ the application. The board is the record of what they did, not a claim about wha
 **This is the retention feature.** The guide ends when they land. The board does not, because everybody
 is always looking for the next job, and the shortage lists and the listings keep moving whether or not
 anybody is watching them.
+
+---
+
+## Build 6 — The submission
+
+**Ends with:** somebody who has never seen this can understand it, run it, and watch it work.
+
+- **Architecture diagram**, showing the four identities, what each one may touch, and where the model
+  is and is not allowed to be.
+- **README a stranger can follow**, with the pre-existing code disclosed, which the rules require.
+- **The video.** The beat that matters is an invented requirement being refused on screen. Every entry
+  will show a thing being generated. Almost none will show a thing being rejected.
+- Repo made public, domain mapped, category selected.
 
 ---
 
