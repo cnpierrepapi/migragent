@@ -647,3 +647,76 @@ while making the check mean something.
 
 **Worth noting:** a check that never fires and a check that always says "cannot
 tell" fail the same way. Both look like caution and are silence.
+
+---
+
+## D22. One Spanish page counted six times, once per interface language
+
+**Found:** 19 August 2026, reading the output of the first full extraction round.
+
+**What was wrong.** Spain's consular site serves the same procedure page at six URLs that differ only
+by a `/language/` segment: `es_ES`, `ca_ES`, `eu_ES`, `gl_ES`, `fr`, `en`. The walk found all six.
+The registry counted all six as sources. The extractor read all six and produced six near identical
+copies of every requirement on the page.
+
+**Three separate costs, and the first is the one that matters.** It inflates the source count, which
+is the single number on the front of this product that has to be true. It pays the model six times
+for one page. And it would have put six copies of one requirement into a guide.
+
+**Fix.** `Registry.redundant_language` compares the language segment against the languages the
+jurisdiction actually publishes in, which the registry already records. Spain publishes in Spanish,
+so the Spanish page is the source and the other five renderings are the same source wearing a
+different interface.
+
+**Nothing was deleted.** The ten rows are marked `blocked = duplicate_language` with the reason in
+words, per rule 11, because they are evidence that the walk found them. The 35 requirements already
+extracted from them were retired with the same reason, so they stop reaching guides while the record
+of having read them survives.
+
+**Worth noting:** this was invisible while Spain was one of eight lanes nobody had extracted. It
+appeared the moment the pipeline ran everything, which is the argument for running everything.
+
+**Status:** closed.
+
+---
+
+## D23. The watcher reported that two thirds of the corpus had changed, and none of it had
+
+**Found:** 19 August 2026, on the first real watch round, which is the round that was supposed to
+prove the watcher could be trusted to run daily. It proved the opposite, which is why it was run.
+
+**What it looked like.** 143 pages watched. **95 came back as changed, within hours of being read,
+across the UK, France and the UAE.** Canada and Spain reported nothing.
+
+**What it was.** Every one of the 95 had **zero added lines and zero removed lines**. The words were
+identical. Only the bytes differed.
+
+The stable digest strips scripts, styles, comments and nonce attributes, which was enough for Canada,
+whose Akamai nonce is D6. It is not enough for everybody. Hosts vary markup per request, per region
+and per cache edge, and a digest fetched from a Cloud Run container in us-central1 did not match one
+fetched from a laptop for the same unchanged page.
+
+**Why it is serious rather than untidy.** Each false change triggered a full re-extraction of the
+page, so a watch round cost about what a first read costs, every day, forever. And a watcher that
+cries change every day is worse than no watcher, because the person receiving the notifications
+learns to ignore them, and the day something real moves they ignore that too.
+
+**Fix, and the shape of it matters.** Chasing the digest until it is perfect is a game with no end,
+because every host has its own idea of what to vary. So the digest stays what it always was, a cheap
+first filter that avoids reading anything at all, and a second gate now decides whether anything
+happened: read the stored version, diff the text, and if not one line of words moved then nothing
+moved, whatever the bytes say. Only then is a snapshot stored, a change recorded, or the model called.
+
+**The archive holds versions of a page, not readings of it.** A byte variant that says exactly the
+same thing is not stored, because filling the evidence store with noise makes the real history harder
+to find.
+
+**The 95 change rows were deleted.** They record changes that did not happen, and the change screen is
+built from that collection. Keeping them would have meant the first thing this product ever said about
+what moved in immigration policy was ninety five things that did not.
+
+**The lesson:** the test that catches this is running the round twice with nothing expected to change
+and demanding a zero. Nobody would have found it by reading the code, and it would have shipped
+looking like a working watcher.
+
+**Status:** closed.

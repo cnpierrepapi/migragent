@@ -34,7 +34,22 @@ Blocked = Literal[
     "server_refused",        # a polite identified request got 401, 403 or 429
     "gone",                  # the server answered 404 or 410, the page is not there
     "not_html",              # a PDF or a download, needs a different reader
+    "duplicate_language",    # the same page in a language this jurisdiction does not publish in
 ]
+
+# Hosts that serve one page many times, once per interface language, at URLs
+# that differ only by a language segment. Spain's consular site does this in six
+# languages, so one procedure page arrived as six sources and was extracted six
+# times, producing six near identical copies of the same requirement and paying
+# for each one. See D22.
+#
+# The rule stays what it always was: extract from the language the source
+# publishes in, and keep the original sentence. Spain publishes in Spanish, so
+# the Spanish page is the source and the Basque, Galician, Catalan, French and
+# English renderings of it are not five more sources. They are the same source
+# wearing a different interface, and counting them would inflate every number on
+# the front of the product.
+LANGUAGE_SEGMENT = "/language/"
 
 # Deliberately NOT a Blocked state. A DNS or connection failure is a fact about
 # the network between us and the host, not about the source, and writing it in
@@ -226,6 +241,23 @@ class Registry:
             "institution": sum(1 for r in rows if r.kind == "institution"),
             "jurisdictions": len({r.jurisdiction for r in rows}),
         }
+
+    @staticmethod
+    def redundant_language(url: str, jurisdiction: str) -> str | None:
+        """Whether this URL is the same page in a language we do not read from.
+
+        Returns the reason when it is redundant and None when it is not, so a
+        caller can record why rather than dropping the row and leaving a hole in
+        the count. Rule 11.
+        """
+        if LANGUAGE_SEGMENT not in url:
+            return None
+        tag = url.split(LANGUAGE_SEGMENT, 1)[1].split("/", 1)[0].lower()
+        wanted = JURISDICTIONS.get(jurisdiction, {}).get("languages", [])
+        if any(tag.startswith(w.lower()) for w in wanted):
+            return None
+        return (f"the same page in {tag}, and {jurisdiction} publishes in "
+                f"{', '.join(wanted) or 'no recorded language'}")
 
     def bulk_put(self, sources: Iterable[Source]) -> int:
         batch = self._db.batch()

@@ -262,6 +262,28 @@ class Round:
             self._mark_read(source, page, source.snapshot_path)
             return out
 
+        # Second gate, and the one that stops the watcher crying wolf.
+        #
+        # The stable digest strips scripts, styles, comments and nonces, and on
+        # the first real watch round 95 pages out of 143 still came back with a
+        # different digest and NOT ONE ADDED OR REMOVED LINE OF TEXT. Two thirds
+        # of the corpus reported a change that did not happen, and each one paid
+        # for a re-extraction. That is D23.
+        #
+        # Chasing the digest until it is perfect is a game with no end: every
+        # host has its own idea of what to vary per request, per region and per
+        # edge cache. So the digest stays a cheap first filter, and what decides
+        # whether anything happened is the text itself. If not one line of words
+        # moved, nothing moved, whatever the bytes say.
+        #
+        # A watcher that cries change every day is worse than no watcher,
+        # because it teaches the person receiving the notifications to ignore
+        # them, and the day something real moves they will ignore that too.
+        if mode == "watch":
+            settled = self._settle(source, page, out)
+            if settled is not None:
+                return settled
+
         snapshot_path = self._snapshots.store(source.source_id, page)
 
         if mode == "watch":
@@ -295,6 +317,37 @@ class Round:
         return out
 
     # ---------------------------------------------------------------- change
+
+    def _settle(self, source, page: Fetched, out: SourceOutcome) -> SourceOutcome | None:
+        """Decide whether a different digest means a different page.
+
+        Returns a finished outcome when the words are identical and the round
+        should stop here, and None when something really did move and the round
+        should carry on to the diff and the re-read.
+
+        When the words are identical the new digest is written down, so the same
+        page does not report the same non change again tomorrow, and the snapshot
+        is NOT stored. The archive holds versions of a page, not readings of it.
+        Storing a byte variant that says exactly the same thing would fill the
+        evidence store with noise and make the real history harder to find.
+        """
+        if not source.snapshot_path:
+            return None
+        previous = self._snapshots.read(source.snapshot_path)
+        if previous is None:
+            return None
+
+        before = Fetched(url=source.url, outcome="fetched",
+                         read_at=source.last_read_at or "unknown",
+                         status=200, body=previous)
+        added, removed, _ = text_diff(page_text(before), page_text(page))
+        if added or removed:
+            return None
+
+        out.outcome = "unchanged"
+        out.detail = "the bytes differ and not one line of text does"
+        self._mark_read(source, page, source.snapshot_path)
+        return out
 
     def _record_change(self, source, page: Fetched, snapshot_path: str | None,
                        jurisdiction: str, lane: str,
@@ -373,7 +426,7 @@ class Round:
         self._registry.put(source)
 
     def _mark_blocked(self, source, why: str) -> None:
-        source.blocked = "robots"
+        source.blocked = "robots_disallowed"
         source.blocked_reason = why
         source.last_attempt_at = _now()
         self._registry.put(source)
