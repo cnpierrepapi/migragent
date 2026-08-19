@@ -301,7 +301,18 @@ class Fetcher:
 
     # -- fetching --------------------------------------------------------
 
-    def fetch(self, url: str) -> Fetched:
+    def fetch(self, url: str, *, expect: str = "html") -> Fetched:
+        """Fetch a page, or a data file when one is asked for by name.
+
+        `expect="data"` allows CSV and plain text through the content type gate.
+        It is not a loosening of that gate, it is the caller saying which kind of
+        thing it came for: a register published as a CSV is still an official
+        publication, and refusing it would mean reading a wrapper page about a
+        list instead of the list.
+
+        The default stays "html", so nothing that does not ask for this can be
+        handed a spreadsheet and try to read it as a page.
+        """
         state, why = self.permission(url)
         if state == "disallowed":
             # Rule 10. No fetching anyway, no swapping the user agent. The row
@@ -355,7 +366,12 @@ class Fetcher:
                 attempts=TRANSPORT_ATTEMPTS,
             )
 
-        if "html" not in content_type.lower() and "xml" not in content_type.lower():
+        kind = content_type.lower()
+        acceptable = ("html" in kind or "xml" in kind) if expect == "html" else (
+            "csv" in kind or "text/plain" in kind or "octet-stream" in kind
+            or "html" in kind or "xml" in kind
+        )
+        if not acceptable:
             return Fetched(url=url, outcome="not_html", read_at=read_at, status=status,
                            content_type=content_type, final_url=final_url,
                            reason=f"content type was {content_type or 'absent'}")
