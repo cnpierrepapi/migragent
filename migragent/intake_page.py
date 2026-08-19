@@ -69,6 +69,10 @@ SHARED_CSS = '''
   .choice b { display: block; font-weight: 600 }
   .choice em { font-style: normal; font-family: var(--font-mono); font-size: .7rem;
                color: var(--ink-soft); display: block; margin-top: 3px }
+  /* Thin is a warning and not a refusal, so it is marked and stays choosable.
+     The colour is the measured warn tone, which clears contrast on paper; the
+     accent never carries text. Rules 16 and 17. */
+  .choice.thin em { color: var(--warn) }
   .go { padding: 15px 40px; border: 0; border-radius: var(--radius); background: var(--primary);
         color: var(--paper-raised); font: 600 1rem var(--font-body); cursor: pointer }
   .go:disabled { opacity: .45; cursor: not-allowed }
@@ -78,16 +82,38 @@ SHARED_CSS = '''
 
 def intake_html(coverage_by_lane: dict, total_sources: int) -> str:
     """One page: what you want, and what you already have."""
+    # A place is offered when either of its lanes can be answered, and the note
+    # says how well rather than whether. "Ready" used to mean extraction had run
+    # at least once, so a lane holding three requirements and a lane holding 568
+    # looked identical on this screen. The number is now on the page.
+    #
+    # Only two things are greyed out: a place nothing has been read for, and a
+    # place whose government will not tell us its crawling rules. Thin is not
+    # greyed out. Somebody who wants the three requirements we can genuinely
+    # source should be able to have them, knowing there are three.
+    order = {"ready": 0, "thin": 1, "watched": 2, "unavailable": 3, "uncovered": 4}
     places = []
     for code, meta in JURISDICTIONS.items():
-        states = {lane: coverage_by_lane.get((code, lane), ("uncovered", "")) for lane in ("study", "work")}
-        any_ready = any(s[0] == "ready" for s in states.values())
-        note = ("ready" if any_ready else
-                "watched, not read yet" if any(s[0] == "watched" for s in states.values())
-                else "not covered yet")
-        disabled = "" if any_ready else " disabled"
+        states = [coverage_by_lane.get((code, lane), ("uncovered", ""))
+                  for lane in ("study", "work")]
+        best = min(states, key=lambda s: order.get(s[0], 9))
+        usable = best[0] in ("ready", "thin")
+
+        if best[0] == "ready":
+            note = best[1]
+        elif best[0] == "thin":
+            note = best[1]
+        elif best[0] == "watched":
+            note = "pages found, none read yet"
+        elif best[0] == "unavailable":
+            note = "the government will not state its crawling rules"
+        else:
+            note = "no official source could be read"
+
+        disabled = "" if usable else " disabled"
+        classes = "choice" + ("" if best[0] == "ready" else f" {best[0]}")
         places.append(f'''
-        <label class="choice">
+        <label class="{classes}">
           <input type="radio" name="place" value="{_e(code)}"{disabled} required>
           <span><b>{_e(meta["name"])}</b><em>{_e(note)}</em></span>
         </label>''')
@@ -126,9 +152,11 @@ def intake_html(coverage_by_lane: dict, total_sources: int) -> str:
     <fieldset>
       <legend>Where?</legend>
       <div class="choices">{"".join(places)}</div>
-      <p class="sub" style="margin-top:10px;font-size:.88rem">Somewhere greyed out means no
-      official source could be read for it yet. It says so rather than handing you a thinner
-      guide without mentioning it.</p>
+      <p class="sub" style="margin-top:10px;font-size:.88rem">The number beside a place is how
+      many requirements have actually been read from official pages for it. Where that number is
+      small it says so, and you can still take the guide. Greyed out means nothing could be read
+      there yet, or that the government will not state its crawling rules, and we do not crawl a
+      site that will not say what it allows.</p>
     </fieldset>
 
     <fieldset>
