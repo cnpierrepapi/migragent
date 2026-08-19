@@ -830,3 +830,54 @@ things less true, and none of them announced itself. What caught 25a was reading
 after a routine seed, and 25a is the only reason 25b was ever found.
 
 **Status:** closed.
+
+---
+
+## D26. Four new countries came back empty, for three unrelated reasons
+
+**Found:** 19 August 2026, on the first walk after adding Italy, Germany, Portugal and Saudi Arabia.
+All four discovered **zero pages**. Four countries failing at once looks like one bug and was three.
+
+### 26a. A host with one entry page teaches the walk nothing
+
+The walk learns what is navigation by comparing pages of the same host: a link on every page is
+chrome, a link on one page is content. That needs at least two pages per host to compare.
+
+The seven original jurisdictions all put both lanes on one host, so this never came up. The four new
+ones were each seeded across two hosts with one page apiece, so **six of eight entries were skipped
+before anything was fetched**, and the run said so plainly in a line nobody had needed to read before.
+
+**Fix.** Both lanes on one host wherever the government publishes both there. Portugal moved to
+`aima.gov.pt/pt/estudar` and `aima.gov.pt/pt/trabalhar` and went from 0 pages to 64.
+
+### 26b. `<base href>` was ignored, so every relative link resolved to a page that does not exist
+
+Germany was not skipped. It had two pages on `bamf.de`, learned its navigation, and still found
+nothing.
+
+BAMF serves `<base href="https://www.BAMF.de/"/>` and writes its links as `EN/Themen/...` with no
+leading slash. Relative links on a page with a base tag are relative to **that**, not to the page.
+Joined against the page's own deep URL, every link became a path that does not exist.
+
+**It looked like a country with no content and was a defect in us.** Germany went from 0 pages to 22
+once the base tag was honoured.
+
+### 26c. A host that writes its own name in two cases
+
+BAMF's base tag says `www.BAMF.de` while its seed URL says `www.bamf.de`. Hosts are case insensitive,
+so those are one host, and every comparison we make is string equality: the same-host check, the
+source id, the navigation sample. One page would have become two sources with two ids on two hosts.
+
+**Fix.** Scheme and host are lowercased when a link is normalised. The path is not, because paths are
+case sensitive and changing one would change which page is meant.
+
+**What is still open.** Italy and Saudi Arabia remain seeded across two hosts each and are still
+skipped by 26a. Italy's visa portal publishes a page per visa type but puts a session id in the URL,
+which would give the same page a different source id on every walk, so it needs handling rather than
+seeding. Saudi Arabia's education ministry serves no content links at all to a crawler.
+
+**The lesson:** the run printed "ONLY ONE PAGE ON THIS HOST, nothing can be told apart" for six hosts
+and that line had been there, correct and unread, since the walk was written. A diagnostic nobody
+reads is a diagnostic that does not exist.
+
+**Status:** 26a, 26b and 26c closed. Italy and Saudi Arabia open.

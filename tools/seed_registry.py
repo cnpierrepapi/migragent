@@ -112,10 +112,15 @@ CANDIDATES = [
      "https://www.bamf.de/EN/Themen/MigrationAufenthalt/ZuwandererDrittstaaten/Arbeit/arbeit-node.html",
      "Working in Germany", "en"),
 
-    ("PT", "study", "https://aima.gov.pt/pt",
-     "Agencia para a Integracao, Migracoes e Asilo", "pt"),
-    ("PT", "work", "https://vistos.mne.gov.pt/en/",
-     "Portugal visas portal", "en"),
+    # Both Portuguese lanes on one host, deliberately. The walk learns what is
+    # navigation by comparing pages of the same host, so a host with a single
+    # entry page teaches it nothing and gets skipped entirely. Portugal, Italy
+    # and Saudi Arabia were each seeded across two hosts with one page apiece and
+    # all six were skipped for exactly that reason. See D26.
+    ("PT", "study", "https://aima.gov.pt/pt/estudar",
+     "Estudar em Portugal", "pt"),
+    ("PT", "work", "https://aima.gov.pt/pt/trabalhar",
+     "Trabalhar em Portugal", "pt"),
 
     ("SA", "study", "https://moe.gov.sa/en/Pages/default.aspx",
      "Ministry of Education", "en"),

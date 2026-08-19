@@ -108,14 +108,52 @@ def _normalise(base: str, href: str) -> str | None:
     if parts.scheme not in ("http", "https"):
         return None
     path = parts.path.rstrip("/") or "/"
-    return urllib.parse.urlunsplit((parts.scheme, parts.netloc, path, "", ""))
+    # Hosts are case insensitive, and one site writing itself differently in two
+    # places is enough to break everything downstream. BAMF's base tag says
+    # www.BAMF.de while its seed URL says www.bamf.de, which would make the
+    # same page look like two sources, put it on a host the same-host check does
+    # not recognise, and give it a different source id on every walk. The path
+    # is left alone, because paths are case sensitive and changing one would
+    # change which page we mean.
+    return urllib.parse.urlunsplit(
+        (parts.scheme.lower(), parts.netloc.lower(), path, "", "")
+    )
+
+
+_BASE_TAG = re.compile(rb"<base[^>]+href=[\"']([^\"']+)[\"']", re.I)
+
+
+def _base_for(page: Fetched) -> str:
+    """What relative links on this page are relative to.
+
+    Usually the page's own URL. Not always: a page may carry `<base href>`, and
+    then every relative link is relative to that instead, and the page URL is
+    the wrong answer.
+
+    Germany's BAMF does exactly this. It serves
+    `<base href="https://www.BAMF.de/"/>` and writes its links as
+    `EN/Themen/...` with no leading slash. Joined against the page's own deep
+    URL, every one of them resolved to a path that does not exist, so the walk
+    over both German lanes discovered zero pages and looked like a country with
+    no content rather than a bug in us. See D26.
+    """
+    if page.body is None:
+        return page.final_url or page.url
+    # Only the head can carry it, and looking further costs nothing but is more
+    # likely to catch a <base> written inside body text as an example.
+    match = _BASE_TAG.search(page.body[:8000])
+    if not match:
+        return page.final_url or page.url
+    declared = match.group(1).decode("utf-8", "replace").strip()
+    # A relative base is itself relative to the page, which is rare and legal.
+    return urllib.parse.urljoin(page.final_url or page.url, declared)
 
 
 def links_on(page: Fetched) -> list[str]:
     """Every link on the page, absolute and de-duplicated, in document order."""
     if not page.ok or page.body is None:
         return []
-    base = page.final_url or page.url
+    base = _base_for(page)
     seen: dict[str, None] = {}
     for raw in _HREF.findall(page.body):
         url = _normalise(base, raw.decode("utf-8", "replace").strip())
