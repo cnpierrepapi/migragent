@@ -7,6 +7,30 @@ If code and this file disagree, the code is wrong.
 
 ---
 
+## The shape of the product
+
+This is first because it governs everything below it, and numbered last because the numbers are
+referenced from the code and renumbering them would break those references.
+
+39. **There is no search. Anywhere. Ever.**
+    - The product shows you things because of what you uploaded and what you filled in. Nothing else.
+    - **No search box, no query field, no free text prompt, no browse-everything list, no filters over
+      content you have not been matched to, no chat.** A user never types a question at this product.
+    - **The only two ways in are a call to action and a drag and drop.** A button that says what will
+      happen when it is pressed, and a place to drop a file.
+    - Content a user has not earned through their own case does not appear to them. A listing, a
+      change, a requirement or a route reaches somebody because their case matched it, and it arrives
+      with the reason it reached them.
+    - This is what makes it an agent rather than a website with a database behind it. A search box
+      hands the work back to the person who came here to have it taken off them, and the moment one
+      exists the product becomes a directory and every claim in it becomes something the user went
+      looking for rather than something we stand behind.
+    - Public marketing pages are not the product. If a browsable country page is ever published for
+      people who have not signed up, it lives outside the application and is written as marketing,
+      not as somebody's guide.
+
+---
+
 ## Evidence
 
 1. **The citation comes from the fetch, never from the model.** The URL and the date read are
@@ -61,8 +85,9 @@ If code and this file disagree, the code is wrong.
 
 ## Engineering
 
-25. **ADK sits on the researcher and nowhere else.** Fetching, hashing, diffing and rendering are
-    plain code on purpose.
+25. **ADK sits on the researcher and on the people finder, and nowhere else.** Fetching, hashing,
+    the quote check, diffing and rendering are plain code on purpose, because they are rules rather
+    than judgment and a rule an agent can decide to skip is not a rule.
 26. **Gemini model calls pin to `location="global"`.** Every 3.5 model returns 404 in `us-central1`.
 27. **Images use `gemini-2.5-flash-image`** on the same project. Every Imagen endpoint 404s here.
 28. **The registry is data, not code.** Source 400 is a row, not a deploy.
@@ -79,7 +104,7 @@ If code and this file disagree, the code is wrong.
 
 35. **Commit every finished task without asking. Halt before deploying.**
 36. **Every bug and its fix goes in `docs/DEFECTS.md` as it happens**, with how it was found.
-37. **No Claude traces in the repo.** No co-author trailer, no mention, commits read as a person
-    wrote them.
+37. **No tooling traces in the repo.** No co-author trailers, no assistant named anywhere, commits
+    read as a person wrote them.
 38. **The docs get fixed rather than ignored.** If the build contradicts a document, the document is
     wrong and gets corrected in the same commit.
