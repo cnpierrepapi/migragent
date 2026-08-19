@@ -230,8 +230,19 @@ framework is satisfied by something that does real work rather than by a wrapper
 `migragent/researcher.py` holds the desk the agent works at and the five tools it may use,
 `migragent/agent_llm.py` puts ADK's traffic through `migragent/model.py`, and `tools/test_agent.py`
 runs a whole session against a scripted model and a fake fetcher with ADK's own client booby
-trapped, reporting 11 checks. What remains is the comparison on real pages, and then wiring the
-agent into the round as the reader for entry pages. The reasoning is Decision 7.
+trapped, reporting 11 checks. The round hands entry pages to it behind `--agent` locally and
+`MIGRAGENT_RESEARCHER=agent` on the job, off by default, and pages the agent chooses get registry
+rows so tomorrow's watch round re-reads them. The reasoning is Decision 7.
+
+**What it is worth, measured rather than asserted.** On `gov.uk/skilled-worker-visa` the agent
+opened the pages about the job, English, costs and documents, and returned the salary floor of
+£41,700, level B2, the three month deadline on a certificate of sponsorship, the Ecctis assessment,
+the Care Quality Commission condition and the actual fees. The one shot extractor over the same
+entry page returned "you must pay the application fee" with no amount. Same model, same page budget
+per page, different choice of pages.
+
+**Still to do:** turn it on for every lane rather than one at a time, and decide whether an entry
+page read by the agent should still be walked at all.
 
 ---
 

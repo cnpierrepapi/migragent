@@ -50,7 +50,12 @@ from .fetcher import Fetched
 PAGE_CHARS = MAX_CHARS
 
 MAX_PAGES = 8
-MAX_TURNS = 40
+
+# Pages are the budget that matters. Turns are a backstop against a loop, and
+# they were set low enough to be the binding limit instead: a run that read its
+# eight pages and recorded thirty requirements spent one turn per recording and
+# was cut off mid session, reporting the turn limit as though it had gone wrong.
+MAX_TURNS = 120
 MAX_LINKS_SHOWN = 60
 
 

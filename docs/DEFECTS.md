@@ -1118,3 +1118,31 @@ real answer is the agent choosing pages for a stated question rather than a walk
 it reaches, which is Build 4 and is why the agent is worth having.
 
 **Status:** the 23 are fixed. The general case is open, and D29 stays open with it.
+
+---
+
+## D33 — The laptop stopped matching the image, and only the deploy knew
+
+**Found:** 19 August 2026, by the deploy failing on the commit that added the agent.
+
+Installing `google-adk` here upgraded `google-auth` from 2.30.0 to 2.56.3, and `google-cloud-firestore`
+and `google-cloud-storage` with it, because the agent needs newer ones. `requirements.txt` still
+pinned the old versions. Everything kept working locally, on the upgraded libraries, while the file
+that builds the image described a set of versions that cannot be installed together at all:
+
+```
+ERROR: Cannot install -r requirements.txt (line 3), (line 4), (line 8) and
+google-auth==2.30.0 because these package versions have conflicting dependencies.
+```
+
+**Why it is worth writing down.** Nothing failed. Every test passed, on this machine, against
+libraries the image does not have. The build is what noticed, which is the right place for it to be
+noticed and the last place you want to find out.
+
+**Fix.** The pins are the versions this has actually been run against: firestore 2.28.1, storage
+3.13.1, auth 2.56.3, adk 2.7.1.
+
+**The habit this argues for.** `pip install` of anything new is a change to the image, not a change
+to a laptop, and the pin file is edited in the same breath or the two drift silently.
+
+**Status:** closed, pending the build going green.
