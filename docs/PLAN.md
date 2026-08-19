@@ -197,8 +197,13 @@ Ingestion only. What a user sees built on top of this is Build 5.
 
 - **Every offered lane deep.** Ten lanes with real requirements, not two.
 - **US and Australia shown as coming soon**, with the real reason written next to them.
-- **The country watch screen.** Where policy has loosened and where it has tightened, from the
-  observed record, with the date and the source on every line. Read only first, personalised later.
+- **Changes reach a person through their own case, and there is no general watch screen.**
+  Earlier drafts of this plan had a browsable country page showing where policy loosened and where it
+  tightened. That is a directory, and rule 39 says the product shows you things because of what you
+  uploaded and filled in, for no other reason. A screen anybody can browse without a case is the same
+  thing as a search box wearing a different hat.
+  So an observed change surfaces on **your** guide, against **your** requirement, saying what moved,
+  on what date, with both versions and the source. If it does not touch your case you never see it.
 - The live counts on the front of the product move from a registry that is only read by hand to one
   that is read every day.
 

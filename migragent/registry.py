@@ -19,7 +19,7 @@ from google.cloud import firestore
 COLLECTION = "sources"
 
 Lane = Literal["work", "study"]
-Kind = Literal["government", "institution"]
+Kind = Literal["government", "institution", "shortage_list"]
 
 # Where a requirement was actually read from. This rides along with every
 # extraction and is shown in the guide, per rule 8. The institution's own site
