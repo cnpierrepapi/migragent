@@ -128,7 +128,8 @@ class Drafter:
     def _call(self, prompt: str) -> dict[str, Any]:
         return call_json(project=self._project, model=self._model,
                          location=self._location, credentials=self._credentials,
-                         parts=[{"text": prompt}], temperature=0.2)
+                         parts=[{"text": prompt}], temperature=0.2,
+                         interactive=True)
 
     def _invented_numbers(self, text: str, cv: CV) -> list[str]:
         """Numbers in the draft that are in no claim the person made.

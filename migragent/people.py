@@ -313,7 +313,8 @@ class PeopleFinder:
         try:
             payload = call_content(project=self._project, model=self._model,
                                    location=self._location,
-                                   credentials=self._credentials, body=body)
+                                   credentials=self._credentials, body=body,
+                                   interactive=True)
         except ModelError as exc:
             return "", str(exc)
 
@@ -342,7 +343,8 @@ class PeopleFinder:
         try:
             payload = call_content(project=self._project, model=self._model,
                                    location=self._location,
-                                   credentials=self._credentials, body=body)
+                                   credentials=self._credentials, body=body,
+                                   interactive=True)
         except ModelError as exc:
             return None, str(exc)
         return _json_from(payload)

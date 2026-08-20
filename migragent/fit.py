@@ -240,7 +240,7 @@ class FitScorer:
                                # Thinking tokens are spent from the same budget
                                # as the answer, and this model spends about three
                                # thousand of them before writing anything.
-                               max_output_tokens=16384)
+                               max_output_tokens=16384, interactive=True)
         except Exception as exc:  # noqa: BLE001
             fit.error = str(exc)
             return fit

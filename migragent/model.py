@@ -47,6 +47,16 @@ MAX_ATTEMPTS = 4
 BASE_DELAY = 2.0
 TIMEOUT = 180
 
+# What a person waiting on a page gets. The defaults above are for the ingestion
+# job, where a slow answer costs nothing because nobody is watching. On a web
+# request they multiply into something absurd: four transport attempts of three
+# minutes, doubled by the retry on an unparseable body, is a request that can run
+# for twenty minutes behind a browser that gave up in thirty seconds.
+#
+# So a caller with somebody waiting says so, and gets a budget instead.
+INTERACTIVE_TIMEOUT = 55
+INTERACTIVE_ATTEMPTS = 2
+
 
 class ModelError(RuntimeError):
     """A model call that failed, with enough detail to act on."""
@@ -64,7 +74,8 @@ def endpoint(project: str, location: str, model: str) -> str:
             f"/locations/{location}/publishers/google/models/{model}:generateContent")
 
 
-def _post(url: str, body: bytes, credentials) -> dict[str, Any]:
+def _post(url: str, body: bytes, credentials, timeout: int = TIMEOUT,
+          max_attempts: int = MAX_ATTEMPTS) -> dict[str, Any]:
     """The retry loop. Every model call in this product goes through here.
 
     Kept as one function rather than copied into each caller, because the whole
@@ -75,7 +86,7 @@ def _post(url: str, body: bytes, credentials) -> dict[str, Any]:
     last_status: int | None = None
     last_detail = ""
 
-    for attempt in range(1, MAX_ATTEMPTS + 1):
+    for attempt in range(1, max_attempts + 1):
         credentials.refresh(google.auth.transport.requests.Request())
         request = urllib.request.Request(
             url, data=body,
@@ -83,7 +94,7 @@ def _post(url: str, body: bytes, credentials) -> dict[str, Any]:
                      "Content-Type": "application/json"},
         )
         try:
-            with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
                 return json.load(response)
         except urllib.error.HTTPError as exc:
             last_status = exc.code
@@ -91,29 +102,31 @@ def _post(url: str, body: bytes, credentials) -> dict[str, Any]:
                 last_detail = exc.read()[:300].decode("utf-8", "replace")
             except Exception:  # noqa: BLE001
                 last_detail = str(exc)
-            if exc.code not in RETRY_STATUSES or attempt == MAX_ATTEMPTS:
+            if exc.code not in RETRY_STATUSES or attempt == max_attempts:
                 raise ModelError(last_status, last_detail, attempt) from exc
         except Exception as exc:  # noqa: BLE001
             last_detail = f"{type(exc).__name__}: {exc}"
-            if attempt == MAX_ATTEMPTS:
+            if attempt == max_attempts:
                 raise ModelError(None, last_detail, attempt) from exc
 
         # Full jitter. Several workers hitting the same quota at once should not
         # come back in step and hit it again together.
         time.sleep(random.uniform(0, BASE_DELAY * (2 ** (attempt - 1))))
 
-    raise ModelError(last_status, last_detail, MAX_ATTEMPTS)  # pragma: no cover
+    raise ModelError(last_status, last_detail, max_attempts)  # pragma: no cover
 
 
 def call_content(*, project: str, model: str, location: str, credentials,
-                 body: dict[str, Any]) -> dict[str, Any]:
+                 body: dict[str, Any], interactive: bool = False) -> dict[str, Any]:
     """Send a request that is already assembled, and return the raw response.
 
     For callers that build their own request because they need tools, a system
     instruction or a conversation with more than one turn in it. The retries and
     the error type are the same ones everything else gets.
     """
-    return _post(endpoint(project, location, model), json.dumps(body).encode(), credentials)
+    return _post(endpoint(project, location, model), json.dumps(body).encode(), credentials,
+                 timeout=INTERACTIVE_TIMEOUT if interactive else TIMEOUT,
+                 max_attempts=INTERACTIVE_ATTEMPTS if interactive else MAX_ATTEMPTS)
 
 
 def _json_from(payload: dict[str, Any]) -> tuple[dict[str, Any] | None, str]:
@@ -163,7 +176,8 @@ def _json_from(payload: dict[str, Any]) -> tuple[dict[str, Any] | None, str]:
 
 def call_json(*, project: str, model: str, location: str, credentials,
               parts: list[dict[str, Any]], temperature: float = 0.0,
-              max_output_tokens: int | None = None) -> dict[str, Any]:
+              max_output_tokens: int | None = None,
+              interactive: bool = False) -> dict[str, Any]:
     """Call Gemini and parse the JSON it returns.
 
     `parts` is the content parts list, so a caller can pass text, or inline
@@ -190,14 +204,16 @@ def call_json(*, project: str, model: str, location: str, credentials,
     body = {"contents": [{"role": "user", "parts": parts}], "generationConfig": config}
 
     why = ""
-    for attempt in (1, 2):
+    # One attempt when somebody is waiting. The second is worth a second on a
+    # job and is not worth another minute in front of a person.
+    for attempt in ((1,) if interactive else (1, 2)):
         payload = call_content(project=project, model=model, location=location,
-                               credentials=credentials, body=body)
+                               credentials=credentials, body=body, interactive=interactive)
         parsed, why = _json_from(payload)
         if parsed is not None:
             return parsed
 
-    raise ModelError(None, f"{why} (asked twice)", 2)
+    raise ModelError(None, why if interactive else f"{why} (asked twice)", attempt)
 
 
 def _outermost_object(text: str) -> dict[str, Any] | None:

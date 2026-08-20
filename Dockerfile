@@ -22,4 +22,9 @@ EXPOSE 8080
 # instead of erroring. That cost a deploy cycle on the previous build.
 ENV MIGRAGENT_AMBIENT_PRINCIPAL=migragent-web
 
-CMD exec gunicorn --bind :$PORT --workers 2 --threads 8 --timeout 120 migragent.app:app
+# The worker timeout matches Cloud Run's request timeout of 300 seconds rather
+# than sitting under it. At 120 a request that was still working got its worker
+# killed and the caller got nothing to read, which looks like a crash and is a
+# deadline. The real cap on a slow route is the model budget in
+# migragent/model.py, which is a number with a reason attached.
+CMD exec gunicorn --bind :$PORT --workers 2 --threads 8 --timeout 300 migragent.app:app
