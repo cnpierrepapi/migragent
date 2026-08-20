@@ -92,6 +92,11 @@ STYLE = '''
            border: 1px solid var(--warn); border-radius: 100px; padding: 1px 7px;
            margin-left: 6px }
   form.inline { display: inline }
+  details.piece summary { cursor: pointer; color: var(--ink); font-weight: 600 }
+  details.piece pre { white-space: pre-wrap; font: .82rem/1.6 var(--font-mono);
+                      background: var(--paper); border: 1px solid var(--rule);
+                      border-radius: var(--radius-sm); padding: 12px; margin: 10px 0 6px;
+                      overflow-x: auto }
 '''
 
 
@@ -171,8 +176,24 @@ def _job(row: dict[str, Any], fit: dict | None) -> str:
             <input type="hidden" name="listing" value="{listing_id}">
             <button class="cta" type="submit">See how you fit</button></form>'''
         breakdown = ""
+    elif not int(fit.get("asked", 0)):
+        # Nought per cent and "this advert does not say what it wants" are not
+        # the same sentence, and showing the first when the second is true tells
+        # somebody they are a poor match for a job nobody described.
+        action = f'''<span class="score"><small>This posting does not state what it
+            asks for, so there is nothing to score against.</small></span>
+          <form class="inline" method="post" action="/interested">
+            <input type="hidden" name="listing" value="{listing_id}">
+            <button class="cta" type="submit">I'm interested</button></form>'''
+        breakdown = ""
     else:
-        action = f'''<span class="score">{int(fit.get("score", 0))}%<small> fit</small></span>
+        asked, met = int(fit.get("asked", 0)), int(fit.get("met", 0))
+        # A percentage off one or two requirements is false precision. A posting
+        # that states one thing and gets it is "1 of 1", not "100% fit", and the
+        # difference is whether somebody reads it as a verdict.
+        shown = (f'{int(fit.get("score", 0))}%<small> fit</small>' if asked >= 3
+                 else f'{met} of {asked}<small> things it asks for</small>')
+        action = f'''<span class="score">{shown}</span>
           <form class="inline" method="post" action="/interested">
             <input type="hidden" name="listing" value="{listing_id}">
             <button class="cta" type="submit">I'm interested</button></form>'''
@@ -200,7 +221,9 @@ def _breakdown(fit: dict) -> str:
         evidence = match.get("evidence")
         mark = "met" if met else "gap"
         if met:
+            detail = match.get("evidence_detail")
             tail = (f'Your CV: <b>{_e(evidence)}</b>'
+                    + (f' &middot; {_e(detail)}' if detail else "")
                     + ("" if match.get("evidence_verified")
                        else " <span class=\"draft\">unverified</span>"))
         else:
@@ -242,31 +265,54 @@ def board_html(columns: dict[str, list]) -> str:
     return _page("Your board", body)
 
 
+PIECE_KINDS = (("cv", "CV for this job"), ("cover_letter", "Cover letter"))
+
+
 def _card(item, column: str) -> str:
-    pieces = "".join(
-        f'<div class="piece">{_e(p.title)}'
-        f'{"<span class=\"draft\">draft</span>" if p.is_draft else ""}</div>'
-        for p in item.pieces) or '<div class="piece">Nothing prepared yet</div>'
+    written = {p.kind: p for p in item.pieces}
+
+    pieces = []
+    for kind, label in PIECE_KINDS:
+        piece = written.get(kind)
+        if piece is None:
+            pieces.append(f"""<div class="piece">{_e(label)}
+              <form class="inline" method="post" action="/board/draft">
+                <input type="hidden" name="item" value="{_e(item.item_id)}">
+                <input type="hidden" name="kind" value="{kind}">
+                <button class="cta quiet" type="submit">Draft it</button></form></div>""")
+            continue
+        pieces.append(f"""<details class="piece"><summary>{_e(piece.title)}
+            <span class="draft">draft</span></summary>
+            <pre>{_e(piece.body)}</pre>
+            <p class="caveat">{_e(piece.note)}</p>
+            <form class="inline" method="post" action="/board/draft">
+              <input type="hidden" name="item" value="{_e(item.item_id)}">
+              <input type="hidden" name="kind" value="{kind}">
+              <button class="cta quiet" type="submit">Draft it again</button></form>
+          </details>""")
 
     moves = []
     for target in COLUMNS:
         if target == column:
             continue
-        moves.append(f'''<form class="inline" method="post" action="/board/move">
+        moves.append(f"""<form class="inline" method="post" action="/board/move">
             <input type="hidden" name="item" value="{_e(item.item_id)}">
             <input type="hidden" name="column" value="{target}">
-            <button class="cta quiet" type="submit">{_e(COLUMN_NAMES[target])}</button></form>''')
+            <button class="cta quiet" type="submit">{_e(COLUMN_NAMES[target])}</button></form>""")
 
     fit = (f'<span class="score">{item.fit_score}%<small> fit</small></span>'
            if item.fit_score is not None else "")
 
-    return f'''<div class="card">
+    return f"""<div class="card">
       <b>{_e(item.title)}</b>
       <div class="meta">{_e(item.employer)} {_e(item.location)}</div>
       {fit}
-      {pieces}
+      <div class="row" style="margin:8px 0">
+        <a class="cta quiet" href="{_e(item.url)}" rel="nofollow noopener"
+           target="_blank">The posting</a></div>
+      {"".join(pieces)}
       <div class="row" style="margin-top:10px">{"".join(moves)}</div>
-    </div>'''
+    </div>"""
 
 
 def _page(title: str, body: str) -> str:

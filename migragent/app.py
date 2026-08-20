@@ -26,9 +26,11 @@ from . import identity
 from .board import Board, Piece
 from .cases import RETENTION_DAYS, Cases
 from .cv import CVReader, CVStore
+from .drafts import Drafter
 from .fetcher import Fetcher
 from .fit import FitScorer, Fits
-from .listings import Listings, matched_for
+from .listings import Listings, matched_for, occupations_matching
+from .occupations import Shortages
 from .corpus import Corpus
 from .coverage import Matcher, document_worth
 from .detect import agreement, detect
@@ -348,7 +350,12 @@ def work() -> Response:
     listings: list = []
     if cv is not None:
         roles = [c.value for c in cv.of_kind("role")] + [c.value for c in cv.of_kind("licence")]
-        listings = matched_for(roles, Listings(db).for_jurisdiction(case.jurisdiction))
+        # CV to occupations first, then occupations to listings. The government's
+        # list of what it is short of is the join, and narrowing in the query is
+        # what stops a person being matched against an arbitrary slice of the
+        # board.
+        wanted = occupations_matching(roles, Shortages(db).for_jurisdiction(case.jurisdiction))
+        listings = matched_for(roles, Listings(db).for_occupations(case.jurisdiction, wanted))
 
     scored = {row.get("listing_id"): row
               for row in [Fits(db).get(case.case_id, listing.get("listing_id"))
@@ -457,4 +464,38 @@ def move_item() -> Response:
         return redirect("/")
     Board(db).advance(case.case_id, request.form.get("item") or "",
                       request.form.get("column") or "")
+    return redirect("/board")
+
+
+@app.post("/board/draft")
+def draft_piece() -> Response:
+    """Write one piece of an application, when a person asks for it.
+
+    On demand rather than on "I'm interested", because a click that silently
+    spends two model calls is a click that has to justify itself, and most
+    people want to look at the job before anybody writes anything.
+    """
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/")
+
+    kind = request.form.get("kind") or ""
+    identifier = request.form.get("item") or ""
+    board = Board(db)
+    item = board.get(case.case_id, identifier)
+    cv = CVStore(db).get(case.case_id)
+    if item is None or cv is None or kind not in ("cv", "cover_letter"):
+        return redirect("/board")
+
+    snap = db.collection("listings").document(item.listing_id).get()
+    listing = snap.to_dict() if snap.exists else {"title": item.title,
+                                                  "employer": item.employer}
+
+    drafter = Drafter(_project(), MODEL, MODEL_LOCATION,
+                      identity.credentials_for(identity.RESEARCHER, _project()))
+    piece = (drafter.rewrite_cv(cv, listing, case.jurisdiction) if kind == "cv"
+             else drafter.cover_letter(cv, listing, case.jurisdiction))
+    board.attach(case.case_id, identifier, piece)
     return redirect("/board")

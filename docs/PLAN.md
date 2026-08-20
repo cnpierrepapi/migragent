@@ -248,6 +248,18 @@ page read by the agent should still be walked at all.
 
 ## Build 5 — The person, the board, and the work after arrival
 
+**Where it is, measured on 20 August 2026.** The work half is built and running end to end: 2,042
+Canadian listings from Job Bank, filed under the 91 occupations Canada published as short; a CV
+reader that keeps only what the document can be shown to say; a fit score computed from a posting's
+own words; and a board that only a person moves. `tools/test_work.py` walks the whole chain against
+the real model, the real store and a real posting, and deletes its case afterwards.
+
+**Still to do in this build:** accounts and per-user memory, notification routing, and the people
+worth speaking to. The last one is the dossier port and it needs a decision first, because dossier
+found people with a web search and this product has no search engine and a robots gate it will not
+break. What it can do is read an employer's own public pages, which is narrower and honest, and that
+is what it should say on the screen.
+
 **Ends with:** an account that remembers you, a board that fills itself, and a reason to still be here
 next month.
 

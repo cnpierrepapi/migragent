@@ -237,3 +237,42 @@ the fetch.
 dependencies it does not use. Splitting them means a second Dockerfile and a second dependency set
 to keep in step, which is a standing cost to avoid a one time one. One image, and the reason is
 written here rather than left for somebody to wonder about.
+
+---
+
+## 8. The CV is scored against a job, not against a country
+
+**Decided:** 20 August 2026.
+
+Every other document a person uploads answers a question a government asked. A CV answers nobody's
+question, so it needed its own rules, and there were three choices to make.
+
+**It stays out of the readiness score.** Readiness is the share of a government's extracted
+requirements that a person's documents cover. A CV covers almost none of them. Letting it move that
+number would have made the one honest number in the product dishonest, in exchange for a bar that
+goes up when somebody uploads a file.
+
+**Its number is fit against one listing.** Not a grade for the document, not a guess at a country's
+taste in CVs. Fit is the share of what a posting says it wants that the CV can be shown to evidence,
+and every line of it shows the posting's own sentence next to the person's own. That makes the
+number arguable, which is the point: a person can look at a row and disagree with it.
+
+**It says fit and never says you will get the job.** That sentence is stored on the score itself
+rather than written into a template, so nothing can show one without the other.
+
+**What is enforced in code rather than asked for in the prompt.** The requirement must carry a
+verbatim quote that is really on the posting. The evidence must be a claim the CV actually made,
+checked by membership against claims already read and quote-checked out of the document. A model
+cannot credit somebody with a certificate because the job asks for one.
+
+**What that cost, and the correction.** The first version also forbade paraphrase, and the model
+read that as permission to refuse anything not worded identically: a welder with seven years of
+drawings work scored 0% against a job asking him to read drawings. Judgment and citation are two
+different things, and they are now two different instructions. Judge the substance, copy the claim
+exactly. Same CV, same postings: 17% and 38%, with the matched rows showing which line did it.
+
+**Rewrites are drafts, and their numbers are checked.** A model asked to make a CV fit a job will
+round three years up to five. So a rewrite may only use claims already read from the CV, and every
+number in the finished draft is checked against the numbers in those claims, with anything else
+listed on the draft in front of the person. Layout advice is labelled convention, because no
+government publishes a required CV format and the guide's authority comes from citing one that does.

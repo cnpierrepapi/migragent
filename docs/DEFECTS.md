@@ -1146,3 +1146,93 @@ noticed and the last place you want to find out.
 to a laptop, and the pin file is edited in the same breath or the two drift silently.
 
 **Status:** closed, pending the build going green.
+
+---
+
+## D34 — A welder was shown two jobs out of two thousand
+
+**Found:** 20 August 2026, by the end to end test printing what it matched instead of only
+asserting that it matched something.
+
+`Listings.for_jurisdiction` took the first 200 rows the database felt like returning and the
+matching then ran over those. With 2,042 Canadian listings held, a welder was matched against an
+arbitrary tenth of them and shown two jobs, both of which only surfaced because the advert's own
+title happened to be the word "welder".
+
+Two separate causes, and the second was hiding inside the first.
+
+**The slice.** Narrowing after the query instead of in it. The answer depended on row order, so it
+would have been different every day and correct on none of them. Fixed with `for_occupations`, which
+goes CV to occupation to listing: a person's roles are matched against the occupations the
+government published as short, and the listings query asks for those occupations by name.
+
+**The plural.** A CV says "Welder". Canada's list says "Welders and related machine operators".
+Word comparison missed it, so even inside the slice the join was failing. Fixed with a plural-only
+stem, deliberately nothing more: turning "engineering" into "engineer" starts putting people in
+front of jobs they cannot do, with no line in their CV to point at.
+
+**Why the test passed anyway before this.** It asserted `len(listings) > 0`. Two is greater than
+zero. The check that found this was printing the matches and reading them, which is a reminder that
+an assertion on a count is not an assertion on an answer.
+
+**Status:** closed. A welder now matches five distinct welding jobs across four employers.
+
+---
+
+## D35 — "The response was not JSON" meant the answer was cut off
+
+**Found:** 20 August 2026, scoring a CV against a job posting.
+
+A posting with seventeen requirements, each carrying its own verbatim quote, ran past the model's
+default output budget. The answer arrived as a valid object with its end missing, `json.loads`
+raised, and the error read:
+
+```
+the response was not JSON: {"matches": [{"asks_for": "French language proficiency"...
+```
+
+Which sends somebody to look at the prompt, the schema and the parser, when the fix is a bigger
+budget and one line long. The model had said `finishReason: MAX_TOKENS` in the same response and
+nothing read it.
+
+**Fix.** `call_json` reads the finish reason and says which failure it was: "the answer was cut off
+at the token limit after 5,815 characters". Callers can pass `max_output_tokens`, and the fit scorer
+asks for a bigger budget and tells the model to score the fifteen most important requirements rather
+than every duty on a long advert.
+
+**The shape.** D20 again, one layer down: an error message that names the symptom instead of the
+cause costs more than the failure it describes. That was written down about HTTP statuses in June
+and this is the same file.
+
+**Then it turned out not to be one bug but three, wearing each other's clothes.**
+
+The honest message made the next two visible. With the budget raised, failures kept coming and now
+said `STOP`, meaning the model believed it had finished. Three of five postings failed, then two of
+five, then three again, on the same postings with temperature zero.
+
+- **Thinking is spent from the answer's budget.** This model spends two to three thousand tokens
+  thinking before writing anything, and `maxOutputTokens` covers both. A budget that looks generous
+  for the answer is not one.
+- **Filtering the model's reasoning out by flag was wrong.** Parts carry a `thoughtSignature` and are
+  not flagged `thought`, so the filter removed nothing on a good response and would have removed a
+  real chunk of the answer on some others. Dropped: all parts are joined, and a preamble is handled
+  by salvage instead, which finds the outermost balanced braces and parses between them. Salvage
+  cannot repair truncation, so a truncated answer still fails, which is correct.
+- **What remained was weather.** The same posting scored twice returned a whole object once and a
+  cut off one the next time. So a body that will not parse is retried once, the way a 429 is. That
+  is the difference between three failures in five and none.
+
+**And a fourth, which the retry proved was not weather.** One posting failed twice in a row at 2,791
+characters with `STOP`. Not truncated, not preamble: the answer quoted an advert verbatim, the advert
+had a line break inside the quoted sentence, and the model copied it into the JSON string without
+escaping it. `json.loads` rejects raw control characters inside strings, stops at the first one, and
+what it had read up to that point looks exactly like a good beginning to a cut off answer.
+
+Parsing now falls back to `strict=False`, which accepts them. This is the one place a verbatim quote
+and a strict parser genuinely conflict, and the quote is the thing worth keeping.
+
+**Measured after all four:** the whole chain, 16 checks, no failures, and a welder scoring 53% on a
+fabrication job with every matched row citing the posting's sentence and his own. Before: two of
+five, and the two that worked were the short adverts.
+
+**Status:** closed.

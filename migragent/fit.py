@@ -63,6 +63,36 @@ def _normalise(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip().lower()
 
 
+def _claim_for(evidence: str | None, by_value: dict[str, Any]) -> Any:
+    """The claim a piece of evidence refers to, or None if it refers to none.
+
+    Exact equality was the first version and it was too brittle to be honest.
+    Asked to copy "English, fluent" the model writes "English", and the match is
+    thrown away: a welder scored zero against a job asking for English while his
+    CV said English. Five of twelve requirements on one posting died that way,
+    and the number a person saw was wrong in the direction that hurts.
+
+    So containment either way, on top of exact match. That still requires the
+    evidence to correspond to something the person actually wrote, which is the
+    whole point of the check, and it stops the check punishing the person for
+    the model tidying their wording.
+
+    The bar is a real word, not a stray letter: two characters or fewer match
+    nothing, because "a" appearing inside a claim proves nothing about anybody.
+    """
+    if not evidence:
+        return None
+    key = _normalise(evidence)
+    if key in by_value:
+        return by_value[key]
+    if len(key) <= 2:
+        return None
+    for value, claim in by_value.items():
+        if key in value or value in key:
+            return claim
+    return None
+
+
 @dataclass
 class Match:
     """One thing the posting asks for, and whether the CV shows it."""
@@ -71,6 +101,11 @@ class Match:
     quote: str
     met: bool
     evidence: str | None = None
+    # What the claim said beyond its value: the employer, the dates, the level.
+    # Without it a row can read "5 years of experience: Welder", which does not
+    # show five years of anything, and the person cannot tell whether the match
+    # was fair. The detail is where the dates live.
+    evidence_detail: str | None = None
     evidence_verified: bool = False
     note: str | None = None
 
@@ -137,9 +172,12 @@ For every requirement the POSTING ITSELF states, return:
   "asks_for": what the posting wants, in plain words, one short sentence
   "quote": a VERBATIM span copied character for character from the posting text \
 that states it
-  "met": true only if one of the CV claims below shows the person has it
-  "evidence": the exact "value" of the CV claim that shows it, copied from the \
-list, or null if met is false
+  "met": true if one of the CV claims below shows the person has it. Judge the \
+substance, not the wording: "read and worked from engineering drawings" shows \
+"read and interpret blueprints and drawings". Different words for the same thing \
+count.
+  "evidence": the claim that shows it, copied EXACTLY as written in the list \
+below, or null if met is false
   "note": if met is false, one short line on what is missing, else null
 
 Rules:
@@ -147,8 +185,13 @@ Rules:
 want.
 - The quote is checked against the posting automatically. Anything not on the \
 page word for word is discarded.
-- "evidence" must be one of the claim values listed. Do not invent, do not \
-paraphrase, do not credit a skill because the job title implies it.
+- Judge fairly. A claim in different words still counts, and refusing everything \
+that is not phrased identically tells the person nothing useful.
+- Do not credit a skill because the job title implies it, and do not credit \
+anything with no claim behind it. "evidence" is checked against the list \
+automatically, so copy it exactly rather than rewriting it.
+- Return the fifteen most important requirements at most. A posting that lists \
+thirty duties does not need every one of them scored.
 - If the posting states nothing an applicant must have, return an empty list.
 
 Return only JSON: {"matches": [...]}
@@ -190,7 +233,14 @@ class FitScorer:
         try:
             parsed = call_json(project=self._project, model=self._model,
                                location=self._location, credentials=self._credentials,
-                               parts=[{"text": prompt}])
+                               parts=[{"text": prompt}],
+                               # A posting with twenty requirements, each carrying
+                               # its own verbatim quote, does not fit in a default
+                               # answer. It came back as half an object.
+                               # Thinking tokens are spent from the same budget
+                               # as the answer, and this model spends about three
+                               # thousand of them before writing anything.
+                               max_output_tokens=16384)
         except Exception as exc:  # noqa: BLE001
             fit.error = str(exc)
             return fit
@@ -211,7 +261,7 @@ class FitScorer:
 
             met = bool(item.get("met"))
             evidence = str(item.get("evidence") or "").strip() or None
-            claim = by_value.get(_normalise(evidence)) if evidence else None
+            claim = _claim_for(evidence, by_value)
 
             if met and claim is None:
                 # It said the person has this and cited something they never
@@ -228,6 +278,7 @@ class FitScorer:
             fit.matches.append(Match(
                 asks_for=asks_for, quote=quote, met=met,
                 evidence=claim.value if claim else None,
+                evidence_detail=claim.detail if claim else None,
                 evidence_verified=bool(claim and claim.verified),
                 note=str(item.get("note") or "").strip() or None if not met else None,
             ))

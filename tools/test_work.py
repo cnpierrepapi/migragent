@@ -35,7 +35,8 @@ from migragent.cv import CVReader, CVStore  # noqa: E402
 from migragent.documents import extract_text  # noqa: E402
 from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.fit import FitScorer, Fits  # noqa: E402
-from migragent.listings import Listings, matched_for  # noqa: E402
+from migragent.listings import Listings, matched_for, occupations_matching  # noqa: E402
+from migragent.occupations import Shortages  # noqa: E402
 
 PROJECT = "project-e0928f2f-5abf-46a3-b8a"
 MODEL = "gemini-3.5-flash"
@@ -132,8 +133,11 @@ def main() -> int:
               f"{len([c for c in cv.claims if c.verified])} of {len(cv.claims)} verified")
 
         # 2. What it matched.
+        wanted = occupations_matching(roles, Shortages(db).for_jurisdiction("CA"))
+        check(bool(wanted), "the CV matched an occupation Canada published as short",
+              f"{wanted[:3]}")
         listings = matched_for(roles + [c.value for c in cv.of_kind("licence")],
-                               Listings(db).for_jurisdiction("CA"))
+                               Listings(db).for_occupations("CA", wanted))
         check(len(listings) > 0, "the CV matched listings we already hold",
               f"{len(listings)} matched")
         if listings:

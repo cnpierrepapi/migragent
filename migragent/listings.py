@@ -268,12 +268,47 @@ class Listings:
         return written
 
     def for_jurisdiction(self, jurisdiction: str, limit: int = 200) -> list[dict[str, Any]]:
+        """Some listings for a place. For counting and for tools, not for people.
+
+        It takes whatever the first `limit` rows happen to be, which is fine for
+        a count and wrong for a person: matching a welder against an arbitrary
+        two hundred of two thousand listings found him two jobs and hid the
+        rest. Use `for_occupations` for anything somebody will see.
+        """
         from google.cloud import firestore
 
         query = (self._db.collection(LISTINGS)
                  .where(filter=firestore.FieldFilter("jurisdiction", "==", jurisdiction))
                  .limit(limit))
         return [d.to_dict() for d in query.stream()]
+
+    def for_occupations(self, jurisdiction: str, occupations: list[str],
+                        per_occupation: int = 25, limit: int = 60) -> list[dict[str, Any]]:
+        """Listings filed under the occupations a person's CV matched.
+
+        The narrowing happens in the query rather than after it. Reading a slice
+        of the whole board and filtering it in memory means the answer depends
+        on which rows the database felt like returning first, and a person whose
+        job was not in that slice is told there is nothing for them.
+        """
+        from google.cloud import firestore
+
+        rows: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for title in occupations:
+            query = (self._db.collection(LISTINGS)
+                     .where(filter=firestore.FieldFilter("jurisdiction", "==", jurisdiction))
+                     .where(filter=firestore.FieldFilter("matched_occupation", "==", title))
+                     .limit(per_occupation))
+            for doc in query.stream():
+                row = doc.to_dict()
+                if row.get("listing_id") in seen:
+                    continue
+                seen.add(row.get("listing_id"))
+                rows.append(row)
+            if len(rows) >= limit:
+                break
+        return rows[:limit]
 
     def counts(self) -> dict[str, int]:
         counts: dict[str, int] = {}
@@ -291,8 +326,28 @@ _NOISE = {"and", "or", "of", "the", "in", "other", "related", "occupations",
           "junior", "trades", "general"}
 
 
+def _stem(word: str) -> str:
+    """Enough of a stem to match a person against a classification, no more.
+
+    A CV says "Welder". Canada's list says "Welders and related machine
+    operators". Those are the same job and a plain word comparison misses it,
+    which it did: a welder matched two listings out of two thousand, both of
+    them because the advert's own title happened to be the singular.
+
+    Plurals only. Nothing that would turn "nursing" into "nurse" or decide
+    "engineer" and "engineering" are the same word, because the moment this
+    starts guessing at word families it starts putting people in front of jobs
+    they cannot do, and there is no line in their CV to point at when it does.
+    """
+    for suffix in ("ies", "es", "s"):
+        if word.endswith(suffix) and len(word) - len(suffix) >= 4:
+            return word[: -len(suffix)] + ("y" if suffix == "ies" else "")
+    return word
+
+
 def _words(value: str) -> set[str]:
-    return {w for w in re.findall(r"[a-z]+", value.lower()) if len(w) > 2} - _NOISE
+    return {_stem(w) for w in re.findall(r"[a-z]+", value.lower())
+            if len(w) > 2 and w not in _NOISE} - {_stem(n) for n in _NOISE}
 
 
 def matched_for(roles: list[str], listings: list[dict[str, Any]],
@@ -330,3 +385,25 @@ def matched_for(roles: list[str], listings: list[dict[str, Any]],
 
     ranked.sort(key=lambda pair: (-pair[0], pair[1].get("title", "")))
     return [row for _score, row in ranked[:limit]]
+
+
+def occupations_matching(roles: list[str], occupations: list[dict[str, Any]]) -> list[str]:
+    """Which published occupations a person's own roles overlap with.
+
+    Between a CV and a job board sits a government's list of what it is short
+    of, and this is the join. It means a person is only ever shown work under an
+    occupation their country of destination has published as short, which is the
+    whole premise, and it means the query that follows can be narrow.
+    """
+    ranked: list[tuple[int, str]] = []
+    role_words = [_words(role) for role in roles if role.strip()]
+    for occupation in occupations:
+        title = (occupation.get("title") or "").strip()
+        if not title:
+            continue
+        against = _words(title)
+        best = max((len(words & against) for words in role_words), default=0)
+        if best:
+            ranked.append((best, title))
+    ranked.sort(key=lambda pair: (-pair[0], pair[1]))
+    return [title for _score, title in ranked]
