@@ -241,8 +241,12 @@ the Care Quality Commission condition and the actual fees. The one shot extracto
 entry page returned "you must pay the application fee" with no amount. Same model, same page budget
 per page, different choice of pages.
 
-**Still to do:** turn it on for every lane rather than one at a time, and decide whether an entry
-page read by the agent should still be walked at all.
+**Still to do, and this is the honest state of Build 4.** The agent is off. `MIGRAGENT_RESEARCHER`
+is not set on the ingestion job, so the daily round still reads the way it always did, and this
+build's "ends with" line above is not true yet. Turning it on is one environment variable and a
+watched round; what stops it being a one-liner is that nobody has yet compared a full agent-read lane
+against a walked one on the same lane, and switching the pipeline over on the strength of one gov.uk
+entry page would be exactly the sort of claim this project keeps catching itself making.
 
 ---
 
@@ -254,11 +258,14 @@ reader that keeps only what the document can be shown to say; a fit score comput
 own words; and a board that only a person moves. `tools/test_work.py` walks the whole chain against
 the real model, the real store and a real posting, and deletes its case afterwards.
 
-**Still to do in this build:** accounts and per-user memory, notification routing, and the people
-worth speaking to. The last one is the dossier port and it needs a decision first, because dossier
-found people with a web search and this product has no search engine and a robots gate it will not
-break. What it can do is read an employer's own public pages, which is narrower and honest, and that
-is what it should say on the screen.
+**The people finder is built**, on Google Search grounding rather than on our own crawl, which was
+the user's call over my recommendation and is Decision 9. It carries three guards earned from its
+first real run, and everything it returns is labelled as found by search rather than read by us.
+
+**Still to do in this build:** the sign-in screen, which is blocked on an OAuth client, and
+notification routing, which needs accounts before it means anything. The server half of accounts is
+built: `migragent/accounts.py` verifies a Firebase ID token and claims a case for the person who was
+already working on it.
 
 **Ends with:** an account that remembers you, a board that fills itself, and a reason to still be here
 next month.
@@ -352,11 +359,13 @@ anybody is watching them.
 
 ## The three mandatory requirements
 
+Checked against the code on 20 August 2026, not remembered.
+
 | Required | Where |
 | --- | --- |
-| Gemini 3.5 or newer | requirement extraction, document reading, diff explanation, CV fit, fit scoring |
-| A Google agent framework | ADK, on the researcher and on the people finder |
-| Google Cloud infrastructure | Cloud Run and Cloud Run jobs, Firestore, Pub/Sub, Cloud Scheduler, Cloud Storage |
+| Gemini 3.5 or newer | requirement extraction, document reading, CV reading, diff explanation, fit scoring, CV and cover letter drafts, the people finder |
+| A Google agent framework | ADK, on the researcher: `migragent/researcher.py` and `migragent/agent_llm.py`. **Nowhere else.** The people finder was going to be the second one and is not: it is two plain Gemini calls, one of them with Google Search grounding, because grounding and a tool-calling agent solve different halves of that problem and the agent added nothing. |
+| Google Cloud infrastructure | Cloud Run, Cloud Run jobs, Firestore, Cloud Scheduler, Cloud Storage, Vertex AI, Artifact Registry, Cloud Build, Identity Platform. **Not Pub/Sub**, which was in this table for weeks after Decision 4 removed it. |
 
 No marks exist for touching more Google products. Every service above earns its place, and the
 restraint gets said out loud, because what we deliberately did not use is more interesting to a judge
