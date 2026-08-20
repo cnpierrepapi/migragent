@@ -265,7 +265,8 @@ def board_html(columns: dict[str, list]) -> str:
     return _page("Your board", body)
 
 
-PIECE_KINDS = (("cv", "CV for this job"), ("cover_letter", "Cover letter"))
+PIECE_KINDS = (("cv", "CV for this job"), ("cover_letter", "Cover letter"),
+               ("people", "People worth speaking to"))
 
 
 def _card(item, column: str) -> str:

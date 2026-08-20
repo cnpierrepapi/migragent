@@ -276,3 +276,49 @@ round three years up to five. So a rewrite may only use claims already read from
 number in the finished draft is checked against the numbers in those claims, with anything else
 listed on the draft in front of the person. Layout advice is labelled convention, because no
 government publishes a required CV format and the guide's authority comes from citing one that does.
+
+---
+
+## 9. The people finder searches, and says so
+
+**Decided:** 20 August 2026, by the user, against my recommendation. Recorded that way because a
+decision somebody overrode is the one most worth being able to find later.
+
+The "people worth speaking to" feature came from `dossier`, which used a search API. I proposed
+reading only an employer's own public pages, so the robots gate would govern this feature like
+everything else. The call was Vertex's Google Search grounding instead: better coverage, and a
+Google tool, which suits the event.
+
+**What that costs, stated plainly rather than glossed.** Search grounding does not crawl. It reads an
+index of pages somebody else fetched, so our robots gate does not apply to it and cannot. The
+submission previously said this product does not touch what it is not allowed to crawl. That sentence
+is now false as written and becomes: **everything this pipeline fetches goes through the gate, and
+the people finder does not fetch, it asks Google.** People found this way are labelled as found
+through Google Search wherever they appear.
+
+**Three things are enforced in code, because the first real run needed all of them.**
+
+Asked about Nomad Hauling Inc, a hauling firm in Merritt, British Columbia, grounding fired
+thirty-seven searches and answered confidently about Nomad Inc, an AI fleet platform in Toronto. The
+Chicago Booth failure again: true, and about the wrong subject.
+
+- **The company is checked before anybody is kept.** The model must name what it found, and it is
+  matched against the employer on the listing. A single significant word must match exactly, because
+  a subset rule alone lets "Nomad Inc" pass as "Nomad Hauling Inc", which is the exact case.
+- **The place is checked too.** Two real companies share a name far more often than they share a name
+  and a town.
+- **The source must be one the search returned.** This needs two calls and the reason is measured: a
+  grounded call answering in prose comes back with real `groundingChunks`, and the same call asked
+  for JSON comes back with the queries and no sources at all, while still naming plausible websites
+  from memory. Naming a real person at a real company against a source the model invented is not
+  worth shipping. So: search in prose with its sources, then structure the notes with no search, and
+  drop anybody whose source is not on the list.
+
+**No contact details, ever.** No email, no phone, no address. Stripped in code rather than asked for
+in the prompt. This is "here is who does this job", not a lead list.
+
+**What it actually returns.** Regency Fireplace Products: four people, correct roles, every one with
+a live source link. Nomad Hauling: one, the owner, from a legal notices publication. That second
+result is the edge worth watching. He is the right person to contact about a job at his own company,
+and he is also a private individual at a micro business who was published for an unrelated reason.
+The feature is working as designed and the design has a boundary near there.

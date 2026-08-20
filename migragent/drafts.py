@@ -40,6 +40,7 @@ from typing import Any
 
 from .board import Piece
 from .cv import CV
+from .people import PeopleFinder
 from .model import call_json
 
 # Country conventions, as conventions. Short on purpose: the honest version of
@@ -196,3 +197,57 @@ class Drafter:
             parts.append("Some of this came from a scan with no text layer, so it could not be "
                          "checked against your document.")
         return " ".join(parts)
+
+
+PEOPLE_NOTE = ("Found through Google Search, not by reading pages ourselves, so treat it as a "
+               "starting point rather than a record. No contact details are collected or stored: "
+               "look them up on LinkedIn yourself.")
+
+
+class PeopleDrafter:
+    """The people worth speaking to, as a piece of a board item.
+
+    Separate from Drafter because it is a different kind of thing: the drafts are
+    written from the person's own CV and never leave it, and this reaches outside
+    the product entirely. Keeping them apart makes that visible in the code
+    rather than only in a comment.
+    """
+
+    def __init__(self, project: str, model: str, location: str, credentials: Any) -> None:
+        self._finder = PeopleFinder(project, model, location, credentials)
+
+    def people(self, listing: dict[str, Any]) -> Piece:
+        finding = self._finder.find(listing.get("employer") or "",
+                                    listing.get("location") or "",
+                                    listing.get("title") or "")
+
+        if finding.error:
+            return Piece(kind="people", title="People worth speaking to", body="",
+                         note=f"This search failed: {finding.error[:160]}")
+
+        if finding.refused_reason:
+            # Saying which company was found and why it was rejected beats an
+            # empty box, because "we found a different company with a similar
+            # name" is genuinely useful to somebody about to write to them.
+            return Piece(kind="people", title="People worth speaking to", body="",
+                         note=f"Nobody was recorded for this employer: "
+                              f"{finding.refused_reason} {PEOPLE_NOTE}")
+
+        if not finding.people:
+            return Piece(kind="people", title="People worth speaking to", body="",
+                         note="Nothing is published about the people at this employer. "
+                              "That is normal for a small business. " + PEOPLE_NOTE)
+
+        lines = []
+        for person in finding.people:
+            lines.append(f"{person.name} - {person.role}")
+            if person.why:
+                lines.append(f"  {person.why}")
+            if person.source_title:
+                lines.append(f"  published by: {person.source_title}")
+            if person.source_uri:
+                lines.append(f"  {person.source_uri}")
+            lines.append("")
+
+        return Piece(kind="people", title=f"People at {finding.company_found}",
+                     body="\n".join(lines).strip(), note=PEOPLE_NOTE)

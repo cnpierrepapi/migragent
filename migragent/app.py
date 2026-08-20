@@ -26,7 +26,7 @@ from . import identity
 from .board import Board, Piece
 from .cases import RETENTION_DAYS, Cases
 from .cv import CVReader, CVStore
-from .drafts import Drafter
+from .drafts import Drafter, PeopleDrafter
 from .fetcher import Fetcher
 from .fit import FitScorer, Fits
 from .listings import Listings, matched_for, occupations_matching
@@ -486,16 +486,23 @@ def draft_piece() -> Response:
     board = Board(db)
     item = board.get(case.case_id, identifier)
     cv = CVStore(db).get(case.case_id)
-    if item is None or cv is None or kind not in ("cv", "cover_letter"):
+    if item is None or kind not in ("cv", "cover_letter", "people"):
+        return redirect("/board")
+    if cv is None and kind != "people":
+        # The two written pieces are made out of the CV and cannot exist without
+        # one. The people are about the employer and do not need it.
         return redirect("/board")
 
     snap = db.collection("listings").document(item.listing_id).get()
     listing = snap.to_dict() if snap.exists else {"title": item.title,
                                                   "employer": item.employer}
 
-    drafter = Drafter(_project(), MODEL, MODEL_LOCATION,
-                      identity.credentials_for(identity.RESEARCHER, _project()))
-    piece = (drafter.rewrite_cv(cv, listing, case.jurisdiction) if kind == "cv"
-             else drafter.cover_letter(cv, listing, case.jurisdiction))
+    reader = identity.credentials_for(identity.RESEARCHER, _project())
+    if kind == "people":
+        piece = PeopleDrafter(_project(), MODEL, MODEL_LOCATION, reader).people(listing)
+    else:
+        drafter = Drafter(_project(), MODEL, MODEL_LOCATION, reader)
+        piece = (drafter.rewrite_cv(cv, listing, case.jurisdiction) if kind == "cv"
+                 else drafter.cover_letter(cv, listing, case.jurisdiction))
     board.attach(case.case_id, identifier, piece)
     return redirect("/board")
