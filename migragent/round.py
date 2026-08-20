@@ -186,8 +186,19 @@ class Round:
         result = RoundResult(jurisdiction=jurisdiction, lane=lane, mode=mode,
                              started_at=_now())
 
+        # Rows blocked by robots.txt come back for a re-check, and nothing else
+        # blocked does. A 404 is a fact about a page and stays one; permission is
+        # a fact about a host on a day, and hosts change their minds.
+        #
+        # This matters more than it sounds. On 20 August the daily round marked
+        # all sixteen Spanish rows `robots_disallowed`, and the filter below meant
+        # they would never be looked at again: Spain left the pipeline silently
+        # and permanently, from one reading, while the product still offered it.
+        # A minute later the same check from a laptop said Spain allows us. One
+        # of those two answers is about the network the question was asked from,
+        # and neither is a reason to retire a country forever.
         sources = [s for s in self._registry.for_lane(jurisdiction, lane)
-                   if s.blocked is None]
+                   if s.blocked is None or s.blocked == "robots_disallowed"]
         if max_depth is not None:
             sources = [s for s in sources if (s.depth or 0) <= max_depth]
         if self._researcher is not None:
@@ -269,6 +280,14 @@ class Round:
             out.detail = why
             self._mark_blocked(source, why)
             return out
+
+        if source.blocked == "robots_disallowed":
+            # It said no before and says yes now. The block lifts, because the
+            # only thing it ever recorded was an answer on a particular day.
+            out.detail = "robots.txt allows this again"
+            source.blocked = None
+            source.blocked_reason = None
+            self._registry.put(source)
         if state == "unknown":
             # Could not read the rules this time. Not a verdict on the source,
             # so it is recorded as unverified and tried again. D25.

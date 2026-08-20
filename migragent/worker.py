@@ -146,12 +146,70 @@ def selftest() -> int:
     return 1 if failed else 0
 
 
+def robots_probe() -> int:
+    """Print robots.txt exactly as this job sees it.
+
+    On 20 August the daily round marked every Spanish source `robots_disallowed`
+    and fetched nothing, and a minute later the same check from a laptop said
+    Spain allows us: its robots.txt disallows `/buscar` and nothing else.
+
+    Both readings cannot be wrong, and neither can be argued with from the other
+    end. A host can serve different rules to different clients, and a government
+    site behind a bot filter can serve a challenge to an unfamiliar address while
+    serving the real file to a home connection. So this asks from here, prints
+    what came back, and leaves no room for either of us to guess.
+
+    `MIGRAGENT_MODE=robots`, optionally `MIGRAGENT_HOSTS` as a comma separated
+    list. The evidence lands in the job's own logs.
+    """
+    import urllib.error
+    import urllib.request
+
+    from .fetcher import TLS, Fetcher
+
+    hosts = [h.strip() for h in os.environ.get(
+        "MIGRAGENT_HOSTS",
+        "https://www.inclusion.gob.es,https://sede.inclusion.gob.es,"
+        "https://www.gov.uk,https://www.canada.ca").split(",") if h.strip()]
+
+    fetcher = Fetcher(delay_seconds=0.5)
+
+    for host in hosts:
+        print(f"\n=== {host} ===", flush=True)
+        request = urllib.request.Request(f"{host}/robots.txt",
+                                         headers={"User-Agent": fetcher.user_agent})
+        try:
+            with urllib.request.urlopen(request, timeout=30, context=TLS) as response:
+                body = response.read().decode("utf-8", "replace")
+                print(f"HTTP {response.status}, {len(body)} bytes, "
+                      f"content-type {response.headers.get('Content-Type')}", flush=True)
+                print("--- first 800 characters as this job received them ---", flush=True)
+                print(body[:800], flush=True)
+        except urllib.error.HTTPError as exc:
+            print(f"HTTP {exc.code}: {exc.reason}", flush=True)
+        except Exception as exc:  # noqa: BLE001
+            print(f"{type(exc).__name__}: {exc}", flush=True)
+
+    print("\n=== what the gate concludes ===", flush=True)
+    for url in [h.strip() for h in os.environ.get(
+            "MIGRAGENT_URLS",
+            "https://www.inclusion.gob.es/web/migraciones/estudiar,"
+            "https://www.gov.uk/skilled-worker-visa").split(",") if h.strip()]:
+        state, why = fetcher.permission(url)
+        print(f"  {state:<11} {url}", flush=True)
+        print(f"              {why}", flush=True)
+    return 0
+
+
 def main() -> int:
     if not PROJECT:
         raise SystemExit("GOOGLE_CLOUD_PROJECT is not set")
 
     if MODE == "selftest":
         return selftest()
+
+    if MODE == "robots":
+        return robots_probe()
 
     lane_pair = _lane_for_task()
     if lane_pair is None:
