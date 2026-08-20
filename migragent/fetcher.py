@@ -350,6 +350,11 @@ class Fetcher:
     def fetch(self, url: str, *, expect: str = "html") -> Fetched:
         """Fetch a page, or a data file when one is asked for by name.
 
+        `expect="feed"` asks for XML and accepts it. A job board that publishes
+        an RSS feed answers 406 Not Acceptable to a client that says it only
+        wants HTML, which looks exactly like a refusal and is not one: it is the
+        server correctly honouring a header we sent without meaning it.
+
         `expect="data"` allows CSV and plain text through the content type gate.
         It is not a loosening of that gate, it is the caller saying which kind of
         thing it came for: a register published as a CSV is still an official
@@ -372,9 +377,11 @@ class Fetcher:
 
         self._wait_turn(url)
 
+        accept = ("application/rss+xml,application/xml;q=0.9,text/xml;q=0.9"
+                  if expect == "feed" else "text/html,application/xhtml+xml")
         request = urllib.request.Request(url, headers={
             "User-Agent": self.user_agent,
-            "Accept": "text/html,application/xhtml+xml",
+            "Accept": accept,
             "Accept-Language": "en,fr;q=0.8,es;q=0.8,ar;q=0.8",
         })
 
@@ -413,7 +420,7 @@ class Fetcher:
             )
 
         kind = content_type.lower()
-        acceptable = ("html" in kind or "xml" in kind) if expect == "html" else (
+        acceptable = ("html" in kind or "xml" in kind) if expect in ("html", "feed") else (
             "csv" in kind or "text/plain" in kind or "octet-stream" in kind
             or "html" in kind or "xml" in kind
         )

@@ -57,6 +57,16 @@ LISTS = [
     ("CA", "https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/"
            "express-entry/eligibility/find-national-occupation-code.html",
      "National Occupational Classification codes", "en"),
+    # The page that actually names the occupations. Canada does not publish a
+    # "shortage list" under that name: it publishes categories the minister
+    # chose "to meet an identified economic goal", each one a list of
+    # occupations that get their own invitation rounds. Same thing wearing a
+    # different word, and the two pages above name the mechanism without naming
+    # a single job. Added 19 August 2026, and it is why CA went from zero
+    # occupations to some.
+    ("CA", "https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/"
+           "express-entry/rounds-invitations/category-based-selection.html",
+     "Category-based selection", "en"),
 
     # Spain publishes the catalogue in the official gazette every quarter. Both
     # the gazette resolution and the employment service's own page are read: the

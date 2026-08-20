@@ -23,7 +23,12 @@ from flask import (Flask, Response, jsonify, make_response, redirect, request,
                    send_from_directory)
 
 from . import identity
+from .board import Board, Piece
 from .cases import RETENTION_DAYS, Cases
+from .cv import CVReader, CVStore
+from .fetcher import Fetcher
+from .fit import FitScorer, Fits
+from .listings import Listings, matched_for
 from .corpus import Corpus
 from .coverage import Matcher, document_worth
 from .detect import agreement, detect
@@ -36,6 +41,7 @@ from .run import Run, sse_done
 from .guide import build, to_html
 from .registry import JURISDICTIONS, Registry
 from .upload_page import upload_html
+from .work_page import board_html, jobs_html
 
 BRAND_DIR = Path(__file__).resolve().parent.parent / "web" / "brand"
 
@@ -317,3 +323,138 @@ def guide() -> Response:
         registry.total_sources(),
     )
     return Response(to_html(built), mimetype="text/html")
+
+
+# ---------------------------------------------------------------- work and board
+
+
+@app.get("/work")
+def work() -> Response:
+    """What this person's CV matched. There is nothing else on this screen.
+
+    No search box, no filters, no browse. A person drops a CV and is shown what
+    it matched, each row carrying the line in their own CV that put it there.
+    Rule 39.
+    """
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/")
+
+    cv = CVStore(db).get(case.case_id)
+    place = JURISDICTIONS.get(case.jurisdiction, {}).get("name", case.jurisdiction)
+
+    listings: list = []
+    if cv is not None:
+        roles = [c.value for c in cv.of_kind("role")] + [c.value for c in cv.of_kind("licence")]
+        listings = matched_for(roles, Listings(db).for_jurisdiction(case.jurisdiction))
+
+    scored = {row.get("listing_id"): row
+              for row in [Fits(db).get(case.case_id, listing.get("listing_id"))
+                          for listing in listings]
+              if row}
+
+    return Response(jobs_html(cv, listings, scored, place), mimetype="text/html")
+
+
+@app.post("/cv")
+def upload_cv() -> Response:
+    """Read a CV, keep what it says, never keep the file.
+
+    The CV does not touch the readiness score. That number is the share of a
+    government's stated requirements a person's documents cover, and a CV covers
+    almost none of them. It is scored against a listing instead, where there is
+    a listing to score it against.
+    """
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/")
+
+    uploaded = request.files.get("cv")
+    if uploaded is None or not uploaded.filename:
+        return redirect("/work")
+
+    mime = MIME_BY_SUFFIX.get(Path(uploaded.filename).suffix.lower())
+    if mime is None:
+        return redirect("/work")
+
+    data = uploaded.read()
+    reader = CVReader(_project(), MODEL, MODEL_LOCATION,
+                      identity.credentials_for(identity.RESEARCHER, _project()))
+    cv = reader.read(uploaded.filename, data, mime, extract_text(data, mime))
+    del data
+
+    CVStore(db).put(case.case_id, cv)
+    return redirect("/work")
+
+
+@app.post("/fit")
+def score_fit() -> Response:
+    """Score the CV against one posting, from the posting's own words."""
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/")
+
+    listing_id = request.form.get("listing") or ""
+    listing = db.collection("listings").document(listing_id).get()
+    cv = CVStore(db).get(case.case_id)
+    if not listing.exists or cv is None:
+        return redirect("/work")
+
+    row = listing.to_dict()
+    # Fetched here, at the moment somebody asks, because a posting's own words
+    # are what the score is made of and the search results page does not carry
+    # them. The robots gate applies exactly as it does everywhere else.
+    page = Fetcher(delay_seconds=0.5).fetch(row.get("url", ""))
+    scorer = FitScorer(_project(), MODEL, MODEL_LOCATION,
+                       identity.credentials_for(identity.RESEARCHER, _project()))
+    fit = scorer.score(page, cv, listing_id, case.case_id)
+    Fits(db).put(fit)
+    return redirect("/work")
+
+
+@app.post("/interested")
+def interested() -> Response:
+    """Put an application on the board. It does not move again without them."""
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/")
+
+    listing_id = request.form.get("listing") or ""
+    snap = db.collection("listings").document(listing_id).get()
+    if not snap.exists:
+        return redirect("/work")
+
+    fit = Fits(db).get(case.case_id, listing_id) or {}
+    Board(db).add(case.case_id, snap.to_dict(), fit.get("score"))
+    return redirect("/board")
+
+
+@app.get("/board")
+def board() -> Response:
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/")
+    return Response(board_html(Board(db).for_case(case.case_id)), mimetype="text/html")
+
+
+@app.post("/board/move")
+def move_item() -> Response:
+    """A person moved this. Nothing else can."""
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/")
+    Board(db).advance(case.case_id, request.form.get("item") or "",
+                      request.form.get("column") or "")
+    return redirect("/board")

@@ -24,6 +24,13 @@ CASE_DOCUMENTS = "case_documents"
 COVERAGE = "case_coverage"
 RESULTS = "case_results"
 
+# Build 5 added three more places a person's data lives. They are named here
+# rather than in the delete function, because a collection that is written
+# somewhere and not listed here is a delete that quietly stopped being true.
+CV_FIELDS = "case_cv"
+FITS = "case_fits"
+BOARD_ITEMS = "board_items"
+
 # Long enough to come back and finish, short enough that nothing sits around for
 # a reason nobody could defend. docs/DATA_PROTECTION.md explains the choice.
 RETENTION_DAYS = 30
@@ -143,7 +150,8 @@ class Cases:
         "done" is not evidence of anything. A delete that leaves an orphan is a
         broken delete, so the numbers are the point and the test asserts on them.
         """
-        removed = {"documents": 0, "coverage": 0, "result": 0, "case": 0}
+        removed = {"documents": 0, "coverage": 0, "result": 0, "cv": 0,
+                   "fits": 0, "board_items": 0, "case": 0}
 
         query = self._db.collection(CASE_DOCUMENTS).where(
             filter=firestore.FieldFilter("case_id", "==", case_id))
@@ -167,6 +175,26 @@ class Cases:
         if res.get().exists:
             res.delete()
             removed["result"] = 1
+
+        cv = self._db.collection(CV_FIELDS).document(case_id)
+        if cv.get().exists:
+            cv.delete()
+            removed["cv"] = 1
+
+        # Fits and board items are per case and there can be many of each.
+        for collection, key in ((FITS, "fits"), (BOARD_ITEMS, "board_items")):
+            rows = self._db.collection(collection).where(
+                filter=firestore.FieldFilter("case_id", "==", case_id))
+            batch = self._db.batch()
+            n = 0
+            for snap in rows.stream():
+                batch.delete(snap.reference)
+                removed[key] += 1
+                n += 1
+                if n % 400 == 0:
+                    batch.commit()
+                    batch = self._db.batch()
+            batch.commit()
 
         case = self._db.collection(CASES).document(case_id)
         if case.get().exists:
