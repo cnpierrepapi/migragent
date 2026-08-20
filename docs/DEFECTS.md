@@ -1236,3 +1236,56 @@ fabrication job with every matched row citing the posting's sentence and his own
 five, and the two that worked were the short adverts.
 
 **Status:** closed.
+
+---
+
+## D36 — Spain was retired from the pipeline by one morning's answer
+
+**Found:** 20 August 2026, by reading the daily round's own row rather than trusting that a green job
+means a working job.
+
+The 04:40 watch round reported ten of ten tasks succeeded and no failures. Inside that green tick,
+the Spanish study lane had `considered 9, fetched 0, unreadable 9`, every one of them
+"disallowed by robots.txt", and the same for the work lane. Sixteen rows were written `blocked`.
+
+**The block was permanent, and that was the actual defect.** `Round.run` selected sources with
+`s.blocked is None`, so a blocked row was never looked at again by anything. One answer, on one
+morning, removed a country from the pipeline for good, silently, while the product carried on
+offering Spain on its front page.
+
+**What robots.txt actually says**, checked minutes later from a laptop:
+
+```
+User-Agent: *
+Disallow: /buscar
+Disallow: /documents/20121/6726220
+```
+
+Nothing that touches the pages we read.
+
+**Where the answer came from, since guessing would have been worse.** A host can serve different
+rules to different clients, and a job running in Cloud Run is a different client from a laptop. That
+is a claim about the world that neither end can settle from the other, so `MIGRAGENT_MODE=robots`
+prints robots.txt exactly as the job receives it, the same way the watcher's storage boundary is
+proved from inside the watcher.
+
+**The job sees the same permissive file, and concludes `allowed` for the exact URL it blocked.** So
+the disallow was real at 04:45 and was gone by 18:26. A maintenance window, a bot filter that runs
+overnight, a cache: it does not matter which. What matters is that it was true for a while and false
+afterwards.
+
+**Fix.** A 404 is a fact about a page and stays one. Permission is a fact about a host on a day, so a
+`robots_disallowed` row comes back for a re-check every round and clears itself when the answer
+changes. A disallow is still obeyed the moment it arrives, which is the part that is not negotiable.
+
+**Restored:** Spain's study lane re-read, 9 of 9 fetched, 61 requirements kept, 4 dropped by the
+quote check.
+
+**Found alongside, and still open.** `sede.inclusion.gob.es` fails TLS verification from inside the
+job, `CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate`, while working from a
+laptop. That is an incomplete certificate chain the browser papers over and Python does not. Two of
+the sixteen Spanish rows are on that host and the job cannot read them until it is resolved.
+Recorded as unknown rather than blocked, which is correct, and it is not fixed by turning
+verification off.
+
+**Status:** the permanent block is closed. The TLS chain is open.
