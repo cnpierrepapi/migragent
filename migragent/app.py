@@ -41,12 +41,14 @@ from .corpus import Corpus
 from .coverage import Matcher, document_worth
 from .detect import agreement, detect
 from .documents import KINDS, MIME_BY_SUFFIX, DocumentReader, extract_text
+from .ocr import OCR, can_read as ocr_can_read
 from .form import FormBuilder
 from .intake_page import intake_html, working_html
 from .landing_page import landing_html
 from .result_page import result_html
 from .routes import RouteFinder
 from .run import Run, sse_done
+from .timing import RunTimes
 from .guide import build, to_html
 from .registry import JURISDICTIONS, Registry
 from .upload_page import upload_html
@@ -90,6 +92,35 @@ def _db():
         project=_project(),
         credentials=identity.credentials_for(identity.WEB, _project()),
     )
+
+
+def _text_for(data: bytes, mime: str) -> tuple[str, str, str]:
+    """The text to check quotes against, and how we came by it.
+
+    A PDF carries its own. A photograph does not, and most people photograph
+    their documents, so the alternative to reading the pixels is telling the
+    majority of this product's users that nothing they own can be verified.
+
+    OCR is a separate engine from the one making the claims, deliberately. Using
+    the model to transcribe and then checking the model's claims against its own
+    transcription would be marking its own homework: a hallucinated date would
+    verify itself.
+
+    A failure returns no text, and the document falls back to exactly what it did
+    before OCR existed. An upload must not fail because a second service is
+    having a bad afternoon.
+    """
+    layer = extract_text(data, mime)
+    if layer:
+        return layer, "pdf", "checked against the document's own text layer"
+
+    if not ocr_can_read(mime):
+        return "", "none", ""
+
+    text, note = OCR(identity.credentials_for(identity.RESEARCHER, _project())).read(data, mime)
+    if not text:
+        return "", "none", note
+    return text, "ocr", note
 
 
 @app.get("/health")
@@ -247,7 +278,9 @@ def begin() -> Response:
         if mime is None:
             continue
         data = uploaded.read()
-        doc = reader.read(uploaded.filename, data, mime, extract_text(data, mime))
+        text, source, note = _text_for(data, mime)
+        doc = reader.read(uploaded.filename, data, mime, text,
+                          text_source=source, text_note=note)
         del data
         if not doc.error:
             cases.add_document(case.case_id, doc)
@@ -267,7 +300,9 @@ def working() -> Response:
     case = _case_or_none(cases)
     if case is None:
         return redirect("/start")
-    return Response(working_html(case, len(cases.documents(case.case_id))),
+    documents = len(cases.documents(case.case_id))
+    return Response(working_html(case, documents,
+                                 RunTimes(_db()).estimate(case.lane, documents)),
                     mimetype="text/html")
 
 
@@ -290,6 +325,7 @@ def run_stream() -> Response:
         builder=FormBuilder(_project(), MODEL, MODEL_LOCATION, creds),
         detect_fn=detect,
         agreement_fn=agreement,
+        times=RunTimes(db),
     )
     return Response(run.stream(case), mimetype="text/event-stream",
                     headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
@@ -455,7 +491,8 @@ def upload_cv() -> Response:
     data = uploaded.read()
     reader = CVReader(_project(), MODEL, MODEL_LOCATION,
                       identity.credentials_for(identity.RESEARCHER, _project()))
-    cv = reader.read(uploaded.filename, data, mime, extract_text(data, mime))
+    text, source, _note = _text_for(data, mime)
+    cv = reader.read(uploaded.filename, data, mime, text, text_source=source)
     del data
 
     CVStore(db).put(case.case_id, cv)

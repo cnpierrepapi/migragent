@@ -12,6 +12,10 @@ That restraint is not decoration. The screen it feeds is the first thing a perso
 sees before deciding whether to trust a guide with their savings, and a progress
 bar that is really a timer is the same lie as an invented citation told in a
 different medium.
+
+What this file does contribute to the estimated wait on that screen is the one
+honest ingredient: how long the run really took, recorded when it finishes and
+only when it finishes. Runs that died are not evidence of how long a run takes.
 """
 from __future__ import annotations
 
@@ -32,7 +36,7 @@ class Run:
     """Does the work for one case and reports honestly as it goes."""
 
     def __init__(self, *, cases, corpus, registry, matcher, finder, builder,
-                 detect_fn, agreement_fn) -> None:
+                 detect_fn, agreement_fn, times=None) -> None:
         self._cases = cases
         self._corpus = corpus
         self._registry = registry
@@ -41,17 +45,32 @@ class Run:
         self._builder = builder
         self._detect = detect_fn
         self._agreement = agreement_fn
+        # Optional, because a Run is constructed in tests and tools that have no
+        # interest in bookkeeping. Where it is present, every finished run tells
+        # the next person how long to expect to wait.
+        self._times = times
 
     def stream(self, case) -> Iterator[str]:
         started = time.monotonic()
+        finished = False
 
         try:
             yield from self._steps(case)
+            finished = True
         except Exception as exc:  # noqa: BLE001
             yield _sse({"event": "error", "what": "The run stopped",
                         "detail": f"{type(exc).__name__}: {exc}"})
 
-        yield _sse({"event": "done", "took": _took(time.monotonic() - started)})
+        took = time.monotonic() - started
+
+        # Only a run that got all the way through is evidence of how long a run
+        # takes. One that died after four seconds would drag every future
+        # estimate down and make the screen promise a wait it cannot keep.
+        if finished and self._times is not None:
+            self._times.record(case.jurisdiction, case.lane,
+                               getattr(case, "document_count", 0) or 0, took)
+
+        yield _sse({"event": "done", "took": _took(took)})
 
     def _steps(self, case) -> Iterator[str]:
         lane_name = f"{case.jurisdiction} {case.lane}"

@@ -101,6 +101,21 @@ class ReadDocument:
     text_layer: bool = False
     error: str | None = None
 
+    # HOW the text we checked against was obtained, which is not the same
+    # question as whether there was any.
+    #
+    #   pdf    the document's own embedded text layer. What the file literally
+    #          contains, so a quote either is in it or was invented.
+    #   ocr    a reading of the pixels by Cloud Vision. Right nearly always and
+    #          wrong sometimes, and it flattens tables: a WASSCE slip comes back
+    #          with every subject, then every grade, so "Mathematics C4" is not
+    #          a contiguous span even though the paper plainly says it.
+    #   none   a photograph with no reading. Nothing to check against.
+    #
+    # This is why an OCR miss is not treated like a text-layer miss. See `read`.
+    text_source: str = "none"
+    text_note: str = ""
+
     # The words' own opinion of what this document is, and whether it agrees
     # with the model. Computed here, at read time, because this is the only
     # moment the document's text exists: it is deliberately never stored.
@@ -125,6 +140,8 @@ class ReadDocument:
             "filename": self.filename,
             "read_at": self.read_at,
             "text_layer": self.text_layer,
+            "text_source": self.text_source,
+            "text_note": self.text_note,
             "fields": [f.to_dict() for f in self.fields],
             "dropped": self.dropped,
             "error": self.error,
@@ -192,10 +209,14 @@ class DocumentReader:
         )
 
     def read(self, filename: str, data: bytes, mime: str,
-             extractable_text: str = "") -> ReadDocument:
+             extractable_text: str = "", text_source: str = "",
+             text_note: str = "") -> ReadDocument:
         now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        has_text = bool(extractable_text.strip())
         doc = ReadDocument(kind="other", filename=filename, read_at=now,
-                           text_layer=bool(extractable_text.strip()))
+                           text_layer=has_text,
+                           text_source=(text_source or ("pdf" if has_text else "none")),
+                           text_note=text_note)
 
         if len(data) > MAX_BYTES:
             doc.error = f"file is {len(data):,} bytes, over the {MAX_BYTES:,} limit"
@@ -237,6 +258,22 @@ class DocumentReader:
 
             if quote and _normalise(quote) in haystack:
                 doc.fields.append(Field(name=name, value=value, quote=quote, verified=True))
+            elif doc.text_source == "ocr":
+                # A miss against OCR text is not evidence of invention, and
+                # dropping it would make photographs WORSE off than before OCR
+                # existed rather than better.
+                #
+                # Vision reads a table column by column. A result slip comes back
+                # as every subject followed by every grade, so "Mathematics C4"
+                # is not a contiguous span in the text even though the paper
+                # says exactly that. Drop on that basis and the product deletes
+                # a true grade and tells the person their document did not say
+                # it.
+                #
+                # So: kept, marked unverified, with the reason. Never better than
+                # it was; never worse either.
+                doc.fields.append(Field(name=name, value=value, quote=quote,
+                                        verified=False))
             else:
                 doc.dropped.append({
                     "name": name, "value": value, "quote": quote,

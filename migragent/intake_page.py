@@ -20,6 +20,14 @@ here than anywhere else in the product: a fake progress bar in front of a person
 about to trust a guide with their savings is the same lie as an invented
 citation, told in a different medium. If a step takes four seconds the line sits
 there for four seconds.
+
+There is now an estimated wait on the screen, and it is not that. The difference
+is the claim being made. A progress bar says a measured fraction of the work is
+finished, and when the fraction is invented the claim is false. An estimate says
+"about three minutes", which is a statement about expectation, is labelled as
+one, is computed from what runs have really taken, and is ended by the real
+completion event rather than by its own clock. It also never sits at zero while
+work continues: when it runs out it says it has run out. See migragent/timing.py.
 """
 from __future__ import annotations
 
@@ -263,8 +271,28 @@ def intake_html(coverage_by_lane: dict, total_sources: int, live: int = 0) -> st
 '''
 
 
-def working_html(case, file_count: int) -> str:
-    """The agent at work. Every line is a step that really ran."""
+def working_html(case, file_count: int, estimate=None) -> str:
+    """The agent at work. Every line is a step that really ran.
+
+    THE COUNTDOWN, AND WHY IT IS NOT THE THING THIS SCREEN BANS
+    -----------------------------------------------------------
+    This page has always refused a progress bar, because a bar that fills on a
+    schedule claims a measured fraction of the work is done, and an invented
+    fraction is an invented citation in a different medium. That still holds and
+    the bar is still not here.
+
+    What is here is an estimated wait, which is a different sentence. It says
+    "about three minutes", not "62% complete". It is computed from what runs have
+    really taken (migragent/timing.py), it is deliberately padded so it leans
+    long, and the real `done` event ends it the instant the work finishes
+    whatever the clock says.
+
+    It never sits at 0:00 while the work continues. That is the dishonest
+    version: a countdown that has run out and is still counting is claiming
+    something it cannot know. When it runs out it says so and stops.
+    """
+    seconds = int(round(getattr(estimate, "seconds", 0) or 0))
+    basis = getattr(estimate, "basis", "") or ""
     return f'''<!doctype html>
 <html lang="en" data-theme="dark"><head>{HEAD}<title>Working</title>
 <style>{SHARED_CSS}
@@ -283,6 +311,17 @@ def working_html(case, file_count: int) -> str:
   .counter {{ font: var(--display-wght) 3rem var(--font-display); font-variant-numeric: tabular-nums }}
   .working {{ display: flex; align-items: baseline; gap: 14px }}
   .cap {{ font-family: var(--font-mono); font-size: .78rem; color: var(--ink-soft) }}
+  .eta {{ display: flex; gap: 18px; align-items: baseline; flex-wrap: wrap;
+           border: 1px solid var(--rule); background: var(--paper-raised);
+           border-radius: var(--radius); padding: 15px 18px; margin-top: 22px }}
+  .eta .left {{ display: flex; align-items: baseline; gap: 9px; flex: 0 0 auto }}
+  .eta b {{ font-family: var(--font-mono); font-size: 1.5rem; font-variant-numeric: tabular-nums;
+            color: var(--ink); line-height: 1 }}
+  .eta span {{ font-family: var(--font-mono); font-size: .71rem; color: var(--ink-soft) }}
+  .eta p {{ margin: 0; flex: 1 1 260px; font-family: var(--font-mono); font-size: .71rem;
+            color: var(--ink-soft); line-height: 1.65 }}
+  .eta.over b, .eta.over span {{ color: var(--warn) }}
+  .eta.ready b, .eta.ready span {{ color: var(--primary) }}
   .done {{ margin-top: 30px; display: none }}
   @media (prefers-reduced-motion: reduce) {{ .steps li {{ animation: none; opacity: 1; transform: none }} }}
 </style></head>
@@ -290,11 +329,18 @@ def working_html(case, file_count: int) -> str:
   <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
   <h1>Reading the sources</h1>
   <p class="sub">Every line below is a step that actually ran, with what it actually produced.
-  Nothing here is a timer pretending to be progress.</p>
+  The clock is an estimate of how long to wait, not a measure of how much is done.</p>
 
   <div class="working">
     <div class="counter" id="n">0</div>
     <div class="cap">steps completed &nbsp;·&nbsp; {file_count} document{"" if file_count == 1 else "s"} to read</div>
+  </div>
+
+  <div class="eta" id="eta" data-seconds="{seconds}">
+    <div class="left"><b id="clock">{"—" if not seconds else f"{seconds // 60}:{seconds % 60:02d}"}</b>
+      <span id="etalabel">estimated wait</span></div>
+    <p id="etawhy">{_e(basis)}. It leans long on purpose, and the moment the work
+    is finished this stops, whatever it says.</p>
   </div>
 
   <ul class="steps" id="steps"></ul>
@@ -309,10 +355,49 @@ def working_html(case, file_count: int) -> str:
   var count = 0;
   var source = new EventSource('/run-stream');
 
+  // The estimated wait. It counts down, it never counts past zero, and the real
+  // 'done' event stops it wherever it happens to be. See working_html's
+  // docstring for why this is not the progress bar this screen refuses.
+  var eta = document.getElementById('eta');
+  var clock = document.getElementById('clock');
+  var etaLabel = document.getElementById('etalabel');
+  var etaWhy = document.getElementById('etawhy');
+  var left = parseInt(eta.getAttribute('data-seconds'), 10) || 0;
+  var ticking = left > 0;
+
+  function paint(secs) {{
+    var m = Math.floor(secs / 60), s = secs % 60;
+    clock.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+  }}
+
+  var timer = ticking && setInterval(function () {{
+    left -= 1;
+    if (left > 0) {{ paint(left); return; }}
+    // Out of time and still working. Say that, rather than sitting at 0:00
+    // pretending the estimate still means something.
+    clearInterval(timer);
+    ticking = false;
+    eta.classList.add('over');
+    clock.textContent = '—';
+    etaLabel.textContent = 'longer than usual';
+    etaWhy.textContent = 'This is taking longer than runs like yours normally do. '
+      + 'It is still going: every step below is real and they are still arriving.';
+  }}, 1000);
+
+  function resolve() {{
+    if (timer) clearInterval(timer);
+    eta.classList.remove('over');
+    eta.classList.add('ready');
+    clock.textContent = 'Done';
+    etaLabel.textContent = '';
+    etaWhy.textContent = 'Finished. The estimate above was an estimate; this is the real thing.';
+  }}
+
   source.onmessage = function (e) {{
     var d = JSON.parse(e.data);
     if (d.event === 'done') {{
       source.close();
+      resolve();
       document.getElementById('done').style.display = 'block';
       return;
     }}

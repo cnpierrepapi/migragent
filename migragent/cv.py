@@ -78,6 +78,11 @@ class CV:
     text_layer: bool = False
     error: str | None = None
 
+    # pdf, ocr or none. See migragent/documents.py for why the difference
+    # between "the document's own text" and "a reading of the pixels" is carried
+    # rather than flattened into a boolean.
+    text_source: str = "none"
+
     @property
     def verified(self) -> list[Claim]:
         return [c for c in self.claims if c.verified]
@@ -95,6 +100,7 @@ class CV:
             "filename": self.filename,
             "read_at": self.read_at,
             "text_layer": self.text_layer,
+            "text_source": self.text_source,
             "claims": [c.to_dict() for c in self.claims],
             "dropped": self.dropped,
             "error": self.error,
@@ -135,9 +141,11 @@ class CVReader:
         self._credentials = credentials
 
     def read(self, filename: str, data: bytes, mime: str,
-             extractable_text: str = "") -> CV:
+             extractable_text: str = "", text_source: str = "") -> CV:
         now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        cv = CV(filename=filename, read_at=now, text_layer=bool(extractable_text.strip()))
+        has_text = bool(extractable_text.strip())
+        cv = CV(filename=filename, read_at=now, text_layer=has_text,
+                text_source=text_source or ("pdf" if has_text else "none"))
 
         if len(data) > MAX_BYTES:
             cv.error = f"file is {len(data):,} bytes, over the {MAX_BYTES:,} limit"
@@ -176,6 +184,13 @@ class CVReader:
             if quote and _normalise(quote) in haystack:
                 cv.claims.append(Claim(kind=kind, value=value, quote=quote,
                                        verified=True, detail=detail))
+            elif cv.text_source == "ocr":
+                # Same rule as documents.py: a miss against text read off a
+                # photograph is not evidence of invention. OCR reads columns, and
+                # a two-column CV comes back interleaved, so a true line can fail
+                # a contiguity check. Kept and marked rather than dropped.
+                cv.claims.append(Claim(kind=kind, value=value, quote=quote,
+                                       verified=False, detail=detail))
             else:
                 cv.dropped.append({"kind": kind, "value": value, "quote": quote,
                                    "why": "the quote is not in the CV text"})
@@ -205,6 +220,7 @@ class CVStore:
             filename=row.get("filename", ""),
             read_at=row.get("read_at", ""),
             text_layer=bool(row.get("text_layer")),
+            text_source=row.get("text_source", "none"),
             error=row.get("error"),
             dropped=row.get("dropped", []),
             claims=[Claim(**c) for c in row.get("claims", [])],
