@@ -234,7 +234,7 @@ def cases_documents(db, case_id: str) -> list:
 # returns nothing for every country.
 #
 # That is the honest failure and not a placeholder: a study country appears when
-# a school on its register can be shown to teach this level with an intake open,
+# a school on its register can be shown to teach this level,
 # and inventing a country because we have not looked yet would be exactly the
 # claim this product exists not to make. The screen says the reading is under
 # way rather than showing an empty list with no explanation.
@@ -403,9 +403,8 @@ def _eligible_for(db, case) -> tuple[list, Any, str, str]:
     if not eligible:
         return [], reading, assumed, (
             "We have not read enough about individual schools yet to say which of them "
-            "teach this at the level you need, with an intake open. That reading is "
-            "under way. Nothing is shown here until it can be shown with the school's "
-            "own words behind it.")
+            "teach this at the level you need. That reading is under way. Nothing is "
+            "shown here until it can be shown with the school's own words behind it.")
     return eligible, reading, assumed, ""
 
 

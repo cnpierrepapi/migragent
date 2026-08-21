@@ -228,6 +228,10 @@ def main() -> int:
             "intl_year": year,
             "intl_publisher": publisher,
             "intl_source_url": page,
+            # The counterpart of the UK rows' "inferred". These two fields are
+            # the only thing stopping a later author treating a measured count
+            # and a neighbourhood proxy as the same number.
+            "intl_basis": "published",
             # WHAT THE NUMBER ACTUALLY COUNTS, stored beside it, because
             # "international students" would overstate it and somebody would
             # eventually put it on a screen. IRCC's monthly file counts study

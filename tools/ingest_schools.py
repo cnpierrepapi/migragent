@@ -94,7 +94,7 @@ def rank(db) -> list[dict[str, Any]]:
         if code == "CA":
             score = float(row.get("intl_students") or 0)
         else:
-            score = float(row.get("area_migrant_share") or 0)
+            score = float(row.get("intl_share_local") or 0)
         if score <= 0:
             continue
         row["_score"] = score
@@ -248,7 +248,7 @@ def main() -> int:
         for i, row in enumerate(rows[:limit], 1):
             basis = (f"{int(row['_score']):,} permit holders"
                      if row.get("jurisdiction") == "CA"
-                     else f"{row['_score'] * 100:.1f}% migrant area")
+                     else f"{row['_score']:.1f}% migrant area")
             print(f"  {i:>3}. {row.get('jurisdiction')} {row.get('name', '')[:44]:46}"
                   f"{basis}")
         return 0

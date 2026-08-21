@@ -137,17 +137,30 @@ def study_countries(level: str, subjects: list[str],
                     requirements: dict[str, int] | None = None) -> list[Eligible]:
     """Countries with a school teaching this level and subject, intake open.
 
-    Three gates, all from data a school or a government published:
+    Two gates, both from data a school or a government published:
 
       the level      a transcript pointing at a bachelor's does not produce a
                      country whose matching courses are all doctorates
       the subject    word overlap again, against the course title
-      the intake     a course whose next intake is closed is not an option for
-                     somebody planning the coming year, however good it is
 
-    A country with no course data returns nothing rather than everything. That
-    is the difference between "we checked and there is nothing" and "we did not
-    check", and only the first is worth putting in front of somebody.
+    THE INTAKE IS NOT A GATE, and that is a deliberate reversal.
+
+    It was one: a course whose next intake was not open did not appear. That
+    made the whole study path collapse to nothing, because course index pages
+    list names and put dates on the individual course pages, so almost no course
+    carried an intake at all. The effect was a person being told there is
+    nowhere for them to go, when what had actually happened is that we had not
+    read a date yet. Absence of a date is not a closed door.
+
+    Intake dates are also the thing somebody subscribes for: they arrive with
+    the alerts, which is what the subscription is. Using them to decide who sees
+    a country at all would mean withholding the existence of an option to sell
+    the timing of it, and that is not a trade this product makes. Everybody sees
+    every country they qualify for. Paying tells you when to move.
+
+    A country with no course data still returns nothing rather than everything.
+    That is the difference between "we checked and there is nothing" and "we did
+    not check", and only the first is worth putting in front of somebody.
     """
     requirements = requirements or {}
     subject_words = [(s, _words(s)) for s in subjects if s and s.strip()]
@@ -159,8 +172,6 @@ def study_countries(level: str, subjects: list[str],
 
         for course in courses:
             if level and (course.get("level") or "") != level:
-                continue
-            if not course.get("intake_open"):
                 continue
 
             title = course.get("title") or ""
