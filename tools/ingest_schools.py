@@ -2,7 +2,8 @@
 
     python -m tools.ingest_schools --shallow --limit 300
     python -m tools.ingest_schools --deep --limit 20
-    python -m tools.ingest_schools --details --limit 200
+    python -m tools.ingest_schools --details            # top 60 schools
+    python -m tools.ingest_schools --details --top 0    # every course, ~a day
     python -m tools.ingest_schools --plan
 
 TWO PASSES, AND WHY
@@ -64,6 +65,20 @@ LOCATION = "global"
 # course index plus a handful of listing pages is enough to know what it teaches
 # at each level. Reading a whole prospectus would spend the budget on one school.
 PAGES_PER_SCHOOL = 4
+
+# How many schools the detail pass enriches, unless told otherwise.
+#
+# Details cost 26 seconds a course, measured, and the corpus is heading for four
+# thousand courses: about a day of runtime for a field that comes back thin.
+# 119 detail pages produced 43 fees and 43 of those were one college.
+#
+# So the default is bounded. The best-ranked schools are the ones people
+# actually choose, and every other course is still shown in full with the "ask
+# the school" link on whatever it is missing, which is what migragent/gaps.py is
+# for: coverage does not have to be total before the product is useful.
+#
+# `--top 0` reads everything, for when there is a day to spend.
+DEFAULT_TOP = 60
 
 
 def rank(db) -> list[dict[str, Any]]:
@@ -280,7 +295,7 @@ def deep(db, fetcher: Fetcher, reader: CourseReader, rows: list[dict],
 
 
 def details(db, fetcher: Fetcher, reader: CourseReader, limit: int,
-            browser: Any = None) -> None:
+            browser: Any = None, top: int = 0) -> None:
     """Open each course's own page and read the fee and the intake off it.
 
     A course index gives names. The money and the calendar are one click in, on
@@ -298,7 +313,24 @@ def details(db, fetcher: Fetcher, reader: CourseReader, limit: int,
     store = Courses(db)
     rows = [{**d.to_dict(), "id": d.id}
             for d in db.collection(store.COLLECTION).stream()]
-    todo = [r for r in rows if not r.get("detail_read_at")][:limit]
+    todo = [r for r in rows if not r.get("detail_read_at")]
+
+    # --top N reads details only for courses at the N best-ranked schools.
+    #
+    # Measured at 26 seconds a course, the whole corpus is about a day of
+    # runtime for a field that comes back thin: 119 detail pages produced 43
+    # fees and 43 of those were one college. The schools at the top of the rank
+    # are the ones most people will actually choose, and every other course is
+    # still shown in full with the "ask the school" link on whatever it is
+    # missing. That mechanism exists precisely so coverage does not have to be
+    # total before the product is useful.
+    if top:
+        best = {r.get("name", "") for r in rank(db)[:top]}
+        before = len(todo)
+        todo = [r for r in todo if r.get("institution", "") in best]
+        print(f"top {top} schools: {len(todo)} of {before} outstanding courses\n")
+
+    todo = todo[:limit]
     print(f"{len(rows)} courses held, {len(todo)} without a detail read\n")
 
     # Grouped by the index page they came from, so each index is fetched once
@@ -446,8 +478,10 @@ def main() -> int:
     if "--details" in sys.argv:
         reader = CourseReader(PROJECT, MODEL, LOCATION,
                               identity.credentials_for(identity.RESEARCHER, PROJECT))
+        top = (int(sys.argv[sys.argv.index("--top") + 1])
+               if "--top" in sys.argv else DEFAULT_TOP)
         with BrowserFetcher(fetcher=fetcher) as browser:
-            details(db, fetcher, reader, limit, browser=browser)
+            details(db, fetcher, reader, limit, browser=browser, top=top)
 
     if "--retry" in sys.argv:
         # Schools the deep pass reached and got nothing from. Before the link
