@@ -12,7 +12,8 @@ WHAT IS BEING CHECKED
   - a country appears only when its own published list matches the CV
   - every reason carries the role from the CV that produced it
   - a country with no course data produces nothing, rather than everything
-  - a closed intake is not an option
+  - an intake nobody has read is NOT a reason to hide a country, and the date
+    itself is withheld from anybody who has not subscribed
   - the rubric prefers the country we can actually deliver in today
   - a cheaper school overturns the route weights, which is the one behaviour
     the rubric was specified around
@@ -25,6 +26,7 @@ sys.path.insert(0, ".")
 
 from migragent.eligibility import (Eligible, next_level, study_countries,  # noqa: E402
                                    work_countries)
+from migragent.entitlements import redact_intake  # noqa: E402
 from migragent.rubric import best, score_study, score_work  # noqa: E402
 
 SHORTAGES = {
@@ -61,9 +63,12 @@ COURSES = {
     "UK": [{"title": "MSc Civil Engineering", "level": "masters", "intake_open": True,
             "institution": "A British university", "quote": "MSc Civil Engineering",
             "source_url": "https://example.uk/course"},
-           {"title": "MSc Civil Engineering (closed)", "level": "masters",
-            "intake_open": False, "institution": "A closed school",
-            "quote": "x", "source_url": "https://example.uk/shut"}],
+           # No intake recorded, which is the normal case rather than the edge:
+           # almost no course page carries one. It must still be offered.
+           {"title": "MSc Civil Engineering (no intake closed recorded)",
+            "level": "masters", "intake_open": False,
+            "institution": "A school we have no date for",
+            "quote": "x", "source_url": "https://example.uk/nodate"}],
     # A country on the register with nothing read for it. It must not appear.
     "AU": [],
 }
@@ -108,9 +113,29 @@ def main() -> int:
         failures.append("Australia appeared with no course data read for it")
     if sorted(places) != ["CA", "UK"]:
         failures.append(f"expected Canada and the UK, got {places}")
-    shut = [r for e in eligible for r in e.reasons if "closed" in r.matched]
-    if shut:
-        failures.append("a course whose intake is closed was offered as an option")
+    # THE INTAKE IS NOT A GATE any more, and this asserts the reversal rather
+    # than the old rule. A course with no intake date recorded still appears:
+    # index pages list names and put dates on individual course pages, so gating
+    # on the date told people there was nowhere to go when the truth was that we
+    # had not read a date yet. Absence of a date is not a closed door.
+    no_date = [r for e in eligible for r in e.reasons if "closed" in r.matched]
+    if not no_date:
+        failures.append("a course with no open intake was hidden, and the intake "
+                        "is no longer a gate: it is what the subscription sells")
+
+    # And the timing really is withheld from somebody who has not paid, which is
+    # the other half of the same decision.
+    sample = {"title": "MSc Civil Engineering", "intake": "January 2027",
+              "level": "masters"}
+    free = redact_intake(sample, subscriber=False)
+    paid = redact_intake(sample, subscriber=True)
+    if "intake" in free or not free.get("intake_withheld"):
+        failures.append("a free case could see an intake date, which is the "
+                        "one thing the subscription is")
+    if paid.get("intake") != "January 2027":
+        failures.append("a subscriber could not see the intake date they paid for")
+    if sample.get("intake") != "January 2027":
+        failures.append("redaction mutated the stored row; the watch needs that date")
 
     # Route weights alone: Canada wins, which is the general case in the spec.
     even = score_study(eligible, costs={"CA": 20000, "UK": 21000}, has_partner=True)
@@ -134,9 +159,17 @@ def main() -> int:
     taught = score_study(eligible, costs={"CA": 20000, "UK": 20000}, has_partner=True)
     research = score_study(eligible, costs={"CA": 20000, "UK": 20000},
                            has_partner=True, research=True)
-    gap_taught = taught[0].total - taught[-1].total
-    gap_research = research[0].total - research[-1].total
-    print(f"\ndependant gap: taught {gap_taught:.1f}, research {gap_research:.1f}")
+    # Measured on the dependants term itself rather than on the totals. The
+    # totals also carry match and corpus, which differ between these two
+    # countries for reasons that have nothing to do with dependants, and reading
+    # that difference as a result is how an earlier version of this test passed
+    # for the wrong reason and then failed for the wrong reason.
+    def dependants(scores: list) -> dict[str, float]:
+        return {s.jurisdiction: s.parts.get("dependants", 0.0) for s in scores}
+
+    gap_taught = abs(dependants(taught)["CA"] - dependants(taught)["UK"])
+    gap_research = abs(dependants(research)["CA"] - dependants(research)["UK"])
+    print(f"\ndependants gap: taught {gap_taught:.1f}, research {gap_research:.1f}")
     if gap_research >= gap_taught:
         failures.append("a research degree did not narrow the gap between the two, "
                         "and the countries that removed dependants kept them for research")
