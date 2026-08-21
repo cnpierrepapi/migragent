@@ -446,6 +446,51 @@ FEE_WORDS = ("fee", "fees", "tuition", "cost", "costs", "funding",
              "fees-and-funding", "tuition-fees", "international-fees")
 
 
+# Where to send somebody with a question we cannot answer. See gaps.py: every
+# field we could not read becomes a question with a link to the school attached,
+# so the school's contact page has to be found once, on the shallow pass.
+CONTACT_WORDS = ("contact", "contact-us", "enquiries", "enquiry", "inquiries",
+                 "ask", "admissions-contact", "get-in-touch", "international-office")
+
+# An admissions or international office is the right desk for these questions.
+# A general "contact us" reaches a switchboard, which is better than nothing and
+# worse than the office that answers this exact question all day.
+CONTACT_PREFERRED = ("international", "admissions", "enquiries", "enquiry")
+
+
+def contact_links(html: str, base_url: str, limit: int = 2) -> list[str]:
+    """Links that lead to somebody at the school who answers questions.
+
+    Ranked so an international office beats an admissions desk beats a general
+    switchboard. Same host only: a link to an agent or a recruitment partner is
+    somebody else's business, and sending a person there under the school's name
+    would be the worst possible use of this feature.
+    """
+    from urllib.parse import urljoin, urlparse
+
+    base_host = urlparse(base_url).netloc.lower()
+    scored: list[tuple[int, str]] = []
+    seen: set[str] = set()
+
+    for match in re.finditer(r'<a\s[^>]*href="([^"]+)"[^>]*>(.*?)</a>', html, re.S | re.I):
+        href, label = match.group(1), re.sub(r"<[^>]+>", " ", match.group(2)).lower()
+        url = urljoin(base_url, href)
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            continue
+        if parsed.netloc.lower() != base_host or url in seen:
+            continue
+        haystack = f"{parsed.path.lower()} {label}"
+        if not any(word in haystack for word in CONTACT_WORDS):
+            continue
+        seen.add(url)
+        score = sum(2 for word in CONTACT_PREFERRED if word in haystack)
+        scored.append((score, url))
+
+    scored.sort(key=lambda pair: -pair[0])
+    return [url for _score, url in scored[:limit]]
+
+
 def fee_links(html: str, base_url: str, limit: int = 3) -> list[str]:
     """Links from a course page that plausibly lead to its tuition.
 

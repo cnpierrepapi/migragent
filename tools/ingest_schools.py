@@ -53,7 +53,8 @@ from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.institutions import Institutions  # noqa: E402
 from migragent.render import BrowserFetcher  # noqa: E402
 from migragent.schools import (Course, CourseReader, Courses, anchor_map,  # noqa: E402
-                               course_links, fee_links, match_course_url)
+                               contact_links, course_links, fee_links,
+                               match_course_url)
 
 PROJECT = "project-e0928f2f-5abf-46a3-b8a"
 MODEL = "gemini-3.5-flash"
@@ -180,6 +181,12 @@ def shallow(db, fetcher: Fetcher, rows: list[dict], limit: int) -> None:
             indexed += 1
             payload["courses_url"] = links[0]
             payload["courses_url_options"] = links[:6]
+        # Where to send somebody with a question we cannot answer. Every course
+        # we read will have gaps, and gaps.py turns each one into a question
+        # pointed at this address. Found once here rather than per course.
+        contacts = contact_links(html, site)
+        if contacts:
+            payload["contact_url"] = contacts[0]
         db.collection(Institutions.COLLECTION).document(row["id"]).set(payload, merge=True)
         print(f"  {done:>4} ok          {name[:44]:46} {len(links)} course links",
               flush=True)
@@ -363,6 +370,35 @@ def details(db, fetcher: Fetcher, reader: CourseReader, limit: int,
           f"{intakes} with an intake, {skipped} skipped")
 
 
+def contacts(db, fetcher: Fetcher, rows: list[dict], limit: int) -> None:
+    """Backfill the contact page for schools whose homepage was already read.
+
+    A separate pass because contact discovery arrived after the shallow pass had
+    already run over two hundred schools, and re-running the whole thing to pick
+    up one field would re-fetch two hundred homepages for no other reason.
+    """
+    done = found = 0
+    for row in rows[:limit]:
+        if row.get("contact_url") or not row.get("website"):
+            continue
+        if row.get("site_state") not in (None, "reachable"):
+            continue
+        done += 1
+        page = fetcher.fetch(row["website"])
+        if not page.ok:
+            continue
+        html = page.body.decode("utf-8", "replace")
+        links = contact_links(html, row["website"])
+        if not links:
+            continue
+        found += 1
+        db.collection(Institutions.COLLECTION).document(row["id"]).set(
+            {"contact_url": links[0]}, merge=True)
+        print(f"  {row.get('name','')[:44]:46} {links[0][:60]}", flush=True)
+
+    print(f"\ncontacts: {done} checked, {found} with a contact page")
+
+
 def main() -> int:
     db = firestore.Client(project=PROJECT,
                           credentials=identity.credentials_for(identity.WEB, PROJECT))
@@ -373,7 +409,7 @@ def main() -> int:
         limit = int(sys.argv[sys.argv.index("--limit") + 1])
 
     if "--plan" in sys.argv or not any(
-            f in sys.argv for f in ("--shallow", "--deep", "--details")):
+            f in sys.argv for f in ("--shallow", "--deep", "--details", "--contacts")):
         print(f"{len(rows)} schools eligible for deep reading\n")
         for i, row in enumerate(rows[:limit], 1):
             if row.get("jurisdiction") == "CA":
@@ -394,6 +430,9 @@ def main() -> int:
 
     if "--shallow" in sys.argv:
         shallow(db, fetcher, rows, limit)
+
+    if "--contacts" in sys.argv:
+        contacts(db, fetcher, rows, limit)
 
     if "--details" in sys.argv:
         reader = CourseReader(PROJECT, MODEL, LOCATION,
