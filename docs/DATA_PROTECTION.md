@@ -57,6 +57,37 @@ from under you.
 
 ---
 
+## The one thing that is kept: a profile picture
+
+Everything above is about documents, and for documents the promise is unchanged: read in memory,
+fields survive, file does not.
+
+A profile picture is different, and pretending otherwise would be the dishonest option. Its whole
+purpose is to be kept and shown back to you. So:
+
+- **It is resized to 256 pixels square in your own browser before it is sent.** The original file is
+  never uploaded. The full resolution photograph does not reach this server, does not appear in a
+  request log, and never has to be trusted to a deletion path.
+- **What is stored is that thumbnail**, in your case's own row, as a data URI. No bucket, no second
+  storage identity, no signed URLs for what is a thumbnail.
+- **It is checked before it is stored.** The prefix, the media type, the decoded size and the file's
+  own magic number all have to agree. The browser's good behaviour is a convenience, not a control:
+  anybody can post to that endpoint.
+- **SVG is refused**, because it can carry script and this is the one field rendered back to
+  whoever looks at the page.
+- **It is deleted with the case**, on the same path as everything else, and `tools/test_delete.py`
+  counts it before and after like every other collection.
+
+A name and an optional contact address are stored the same way and go the same way. None of it is
+verified, none of it is required, and nothing is sent anywhere.
+
+So the precise version of the promise, which is what the pages now say:
+
+> Documents you upload are never kept. A profile picture is, because it exists to be shown to you,
+> and it is deleted with everything else.
+
+---
+
 ## The watch
 
 Turning the watch on stores one more row: which country and which route this case is about, when
@@ -126,6 +157,9 @@ real pieces of work and none of them exists yet.
 | The watch is off until you turn it on | true in code; there is no default-on path |
 | Alerts go when the case goes | true; `tools/test_delete.py` counts them before and after |
 | Nothing is emailed or sent off the platform | true; no sender exists |
+| Documents are never kept | true in code, unchanged |
+| A profile picture is kept, resized in the browser first | true in code |
+| The picture is deleted with the case | true; counted before and after in the delete test |
 | Encrypted at rest and in transit, Google managed keys | true, by default, nothing configured |
 
 **The sweeper now exists**, and `tools/test_retention.py` proves it in the direction that matters.

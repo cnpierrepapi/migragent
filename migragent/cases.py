@@ -42,6 +42,10 @@ ALERTS = "alerts"
 # listed here or the delete quietly stopped being true.
 CV_CLONES = "case_cv_clones"
 
+# A name and a picture. The picture is the one thing in this product that is
+# deliberately kept, which makes listing it here more important rather than less.
+PROFILES = "case_profiles"
+
 # Long enough to come back and finish, short enough that nothing sits around for
 # a reason nobody could defend. docs/DATA_PROTECTION.md explains the choice.
 RETENTION_DAYS = 30
@@ -162,8 +166,8 @@ class Cases:
         broken delete, so the numbers are the point and the test asserts on them.
         """
         removed = {"documents": 0, "coverage": 0, "result": 0, "cv": 0,
-                   "fits": 0, "board_items": 0, "cv_clones": 0, "watch": 0,
-                   "alerts": 0, "case": 0}
+                   "fits": 0, "board_items": 0, "cv_clones": 0, "profile": 0,
+                   "watch": 0, "alerts": 0, "case": 0}
 
         query = self._db.collection(CASE_DOCUMENTS).where(
             filter=firestore.FieldFilter("case_id", "==", case_id))
@@ -208,6 +212,11 @@ class Cases:
                     batch.commit()
                     batch = self._db.batch()
             batch.commit()
+
+        profile = self._db.collection(PROFILES).document(case_id)
+        if profile.get().exists:
+            profile.delete()
+            removed["profile"] = 1
 
         watch = self._db.collection(WATCHES).document(case_id)
         if watch.get().exists:

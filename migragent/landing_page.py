@@ -324,7 +324,7 @@ opens, or a job you qualify for is posted.">
           <a class="cta" href="/start">Start free</a>
           <a class="cta ghost" href="#watch">What it tells you</a>
         </div>
-        <p class="under">No account needed. Nothing you upload is kept.</p>
+        <p class="under">No account needed. Your documents are never kept.</p>
       </div>
       <div class="figures">
         <video class="shot" style="aspect-ratio:5 / 4" autoplay muted loop playsinline

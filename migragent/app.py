@@ -27,12 +27,16 @@ from .alerts import Alerts, Watches
 from .alerts_page import alerts_html
 from .board import Board, Piece
 from .cases import RETENTION_DAYS, Cases
-from .cv import CVReader, CVStore
-from .drafts import Drafter, PeopleDrafter
+from .cv import CVClones, CVReader, CVStore
+from .cv_builder import FIELDS as CV_FIELDS, build as build_cv, missing_for_matching
+from .cv_builder_page import clone_html, cv_builder_html
+from .dashboard_page import dashboard_html
+from .drafts import CLONE_INTO, Drafter, PeopleDrafter
 from .fetcher import Fetcher
 from .fit import FitScorer, Fits
 from .listings import Listings, matched_for, occupations_matching
 from .occupations import Shortages
+from .profile import AvatarRejected, Profiles
 from .corpus import Corpus
 from .coverage import Matcher, document_worth
 from .detect import agreement, detect
@@ -314,7 +318,17 @@ def delete_case() -> Response:
     if case is None:
         return jsonify({"error": "no case"}), 400
     removed = cases.delete(case.case_id)
-    response = make_response(jsonify({"removed": removed}))
+
+    # Two callers, two answers. The upload screen deletes with fetch and wants
+    # the counts back to show them; the dashboard deletes with a plain form and
+    # wants to land somewhere. A form post that returned JSON would drop
+    # somebody on a page of braces immediately after the most consequential
+    # button in the product.
+    wants_json = request.headers.get("X-Requested-With") == "fetch" or request.is_json
+    if wants_json or "text/html" not in (request.headers.get("Accept") or ""):
+        response = make_response(jsonify({"removed": removed}))
+    else:
+        response = make_response(redirect("/"))
     response.delete_cookie("migragent_case")
     return response
 
@@ -492,6 +506,155 @@ def interested() -> Response:
     fit = Fits(db).get(case.case_id, listing_id) or {}
     Board(db).add(case.case_id, snap.to_dict(), fit.get("score"))
     return redirect("/board")
+
+
+@app.get("/dashboard")
+def dashboard() -> Response:
+    """Everything made for one person, in one place.
+
+    Assembled from what already exists rather than from a new store: the clones,
+    the board, the watch and the guide are all read where they live. A dashboard
+    with its own copy of any of that would be a second version of the truth,
+    drifting from the first.
+    """
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/start")
+
+    clones = CVClones(db).for_case(case.case_id)
+    columns = Board(db).for_case(case.case_id)
+
+    # The drafts written for particular jobs live on board items. Flattened here
+    # with the job they were written for, so a card can say which it belongs to.
+    pieces: list[dict] = []
+    for items in columns.values():
+        for item in items:
+            for piece in getattr(item, "pieces", []):
+                pieces.append({"kind": piece.kind, "title": piece.title,
+                               "for": f"Written for {item.title}"
+                                      f"{' at ' + item.employer if item.employer else ''}."})
+
+    return Response(dashboard_html(
+        profile=Profiles(db).get(case.case_id),
+        place=JURISDICTIONS.get(case.jurisdiction, {}).get("name", case.jurisdiction),
+        clones=clones,
+        pieces=pieces,
+        has_guide=cases.result(case.case_id) is not None,
+        watch=Watches(db).get(case.case_id),
+        unseen=Alerts(db).unseen_count(case.case_id),
+        columns=columns,
+        has_cv=CVStore(db).get(case.case_id) is not None,
+        saved=request.args.get("saved", ""),
+        error=request.args.get("error", ""),
+    ), mimetype="text/html")
+
+
+@app.post("/profile")
+def save_profile() -> Response:
+    """A name, an address and a picture. All optional, none of it verified.
+
+    The picture arrives as a data URI the browser already resized. It is checked
+    again here, properly, because the browser's good behaviour is a convenience
+    and not a control: the prefix, the media type, the decoded size and the
+    file's own magic number all have to agree before anything is stored.
+    """
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/start")
+
+    avatar = request.form.get("avatar")
+    try:
+        Profiles(db).save(
+            case.case_id,
+            name=request.form.get("name", ""),
+            email=request.form.get("email", ""),
+            # An empty field means "not sent" here, not "delete my picture".
+            avatar=avatar if avatar else None,
+        )
+    except AvatarRejected as exc:
+        return redirect(f"/dashboard?error={html_module.escape(str(exc))}")
+
+    cases.touch(case.case_id)
+    return redirect("/dashboard?saved=Saved.")
+
+
+@app.get("/cv/new")
+def cv_form() -> Response:
+    """The CV builder, prefilled when there is already one to edit."""
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/start")
+
+    profile = Profiles(db).get(case.case_id)
+    cv = CVStore(db).get(case.case_id)
+
+    answers: dict[str, str] = {}
+    if cv is not None:
+        for kind, _label, _hint, _many in CV_FIELDS:
+            answers[kind] = "\n".join(c.value for c in cv.of_kind(kind))
+
+    return Response(cv_builder_html(answers=answers, name=profile.name,
+                                    editing=cv is not None),
+                    mimetype="text/html")
+
+
+@app.post("/cv/new")
+def cv_create() -> Response:
+    """Turn what somebody typed into the same CV an upload would have produced.
+
+    Then clone it into each country's shape, which is the point of having it at
+    all. The clones borrow the researcher, because the web identity has no model
+    access of its own, and the borrowing is visible here at the point of use.
+    """
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/start")
+
+    name = request.form.get("name", "")
+    answers = {kind: request.form.get(kind, "") for kind, _l, _h, _m in CV_FIELDS}
+    cv = build_cv(answers, name=name)
+
+    problem = missing_for_matching(cv)
+    if problem:
+        return Response(cv_builder_html(answers=answers, name=name, error=problem,
+                                        editing=True), mimetype="text/html")
+
+    CVStore(db).put(case.case_id, cv)
+    if name.strip():
+        Profiles(db).save(case.case_id, name=name)
+
+    drafter = Drafter(_project(), MODEL, MODEL_LOCATION,
+                      identity.credentials_for(identity.RESEARCHER, _project()))
+    clones = CVClones(db)
+    for code in CLONE_INTO:
+        clones.put(case.case_id, code, drafter.clone(cv, code))
+
+    cases.touch(case.case_id)
+    return redirect("/dashboard?saved=Your CV is written, and shaped for three places.")
+
+
+@app.get("/cv/<code>")
+def read_clone(code: str) -> Response:
+    """One country's version of the CV, as plain text on a plain page."""
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/start")
+
+    clone = CVClones(db).get(case.case_id, code.upper())
+    if clone is None:
+        return redirect("/dashboard")
+
+    return Response(clone_html(clone), mimetype="text/html")
 
 
 @app.get("/alerts")

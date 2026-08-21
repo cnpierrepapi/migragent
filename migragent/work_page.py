@@ -121,6 +121,15 @@ def jobs_html(cv, listings: list[dict[str, Any]], fits: dict[str, dict],
           never keep the file. A photo has no text to check against, so what we read from it is
           marked unverified.</p>
         </form>
+        <!-- The other half of the audience, and until now the product had nothing
+             for them. A great many people who can do the work a country has said
+             it is short of have never needed a CV, because the document is a
+             convention of a labour market they have not been in yet. Telling
+             them to come back with one is telling them to solve the problem they
+             came here with. -->
+        <p class="sub" style="margin-top:22px">Do not have a CV?
+        <a href="/cv/new">Create one here</a> &mdash; five questions, and we shape the
+        answers into a Canadian CV, a British one and a Europass one.</p>
         <script>
           var d = document.getElementById('drop'), i = document.getElementById('cv');
           i.addEventListener('change', function () {{ if (i.files.length) d.submit(); }});

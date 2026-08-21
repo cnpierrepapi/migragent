@@ -188,6 +188,6 @@ def result_html(case, coverage: dict, result: dict, documents: list) -> str:
 
   <h2>Your data</h2>
   <p class="sub">The files themselves were never kept. This case is deleted 30 days after you last
-  touch it, and you can delete it now. <a href="/data">What happens to your documents</a>.</p>
+  touch it, and you can delete it now. <a href="/dashboard">Your dashboard</a> &middot; <a href="/data">What happens to your documents</a>.</p>
 </main></body></html>
 '''

@@ -19,20 +19,26 @@ from migragent.board import Board  # noqa: E402
 from migragent.alerts import Alert, Alerts, Watches, alert_id  # noqa: E402
 from migragent.board import Piece  # noqa: E402
 from migragent.cases import (ALERTS, BOARD_ITEMS, CASE_DOCUMENTS, CASES, COVERAGE,
-                             CV_CLONES, CV_FIELDS, FITS, RESULTS, WATCHES,
-                             Cases)  # noqa: E402
+                             CV_CLONES, CV_FIELDS, FITS, PROFILES, RESULTS,
+                             WATCHES, Cases)  # noqa: E402
 from migragent.cv import CVClones  # noqa: E402
+from migragent.profile import Profiles  # noqa: E402
 from migragent.cv import CV, Claim, CVStore  # noqa: E402
 from migragent.fit import Fit, Fits, Match  # noqa: E402
 from migragent.documents import Field, ReadDocument  # noqa: E402
 
 PROJECT = "project-e0928f2f-5abf-46a3-b8a"
 
+# A real one-pixel PNG. It has to survive migragent.profile's signature check,
+# so a string of the right length would not do.
+_PROBE_PNG = ("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmM"
+              "IQAAAABJRU5ErkJggg==")
+
 
 def count(db, collection: str, case_id: str) -> int:
     if collection == CASES:
         return 1 if db.collection(CASES).document(case_id).get().exists else 0
-    if collection in (COVERAGE, RESULTS, CV_FIELDS, WATCHES):
+    if collection in (COVERAGE, RESULTS, CV_FIELDS, WATCHES, PROFILES):
         return 1 if db.collection(collection).document(case_id).get().exists else 0
     q = db.collection(collection).where(
         filter=firestore.FieldFilter("case_id", "==", case_id))
@@ -88,14 +94,19 @@ def main() -> int:
         CVClones(db).put(case.case_id, code, Piece(
             kind="cv_clone", title=f"CV shaped for {code}", body="probe", note="draft"))
 
+    # A name and a picture: the one thing here that is deliberately kept, which
+    # makes proving it is deleted more important rather than less.
+    Profiles(db).save(case.case_id, name="Probe Person",
+                      avatar="data:image/png;base64," + _PROBE_PNG)
+
     watched = (CASES, CASE_DOCUMENTS, COVERAGE, RESULTS, CV_FIELDS, FITS,
-               BOARD_ITEMS, CV_CLONES, WATCHES, ALERTS)
+               BOARD_ITEMS, CV_CLONES, PROFILES, WATCHES, ALERTS)
     before = {c: count(db, c, case.case_id) for c in watched}
     print(f"before delete: {before}")
     if (before[CASE_DOCUMENTS] != 3 or before[CASES] != 1 or before[COVERAGE] != 1
             or before[CV_FIELDS] != 1 or before[FITS] != 2 or before[BOARD_ITEMS] != 2
             or before[WATCHES] != 1 or before[ALERTS] != 2
-            or before[CV_CLONES] != 3):
+            or before[CV_CLONES] != 3 or before[PROFILES] != 1):
         print("FAIL  the fixture did not write what it meant to, so a clean")
         print("      delete afterwards would prove nothing")
         return 1
@@ -111,8 +122,8 @@ def main() -> int:
         print(f"\nFAIL  rows survived the delete: {survivors}")
         return 1
     if removed != {"documents": 3, "coverage": 1, "result": 1, "cv": 1,
-                   "fits": 2, "board_items": 2, "cv_clones": 3, "watch": 1,
-                   "alerts": 2, "case": 1}:
+                   "fits": 2, "board_items": 2, "cv_clones": 3, "profile": 1,
+                   "watch": 1, "alerts": 2, "case": 1}:
         print(f"\nFAIL  delete reported {removed}, which does not match what was written")
         return 1
 
