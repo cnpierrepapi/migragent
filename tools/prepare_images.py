@@ -43,12 +43,16 @@ def main() -> int:
         image = Image.open(still).convert("RGB")
         total_before += still.stat().st_size
 
-        for width in WIDTHS:
-            if image.width < width:
-                continue
+        for label in WIDTHS:
+            # Never upscale, but never skip either. Skipping is what broke the
+            # front page: the source is 1344 wide, no -1600 file was written, the
+            # srcset offered one anyway, and every screen big enough to want it
+            # got a 404 and showed nothing. A missing candidate in a srcset is
+            # not a graceful degradation, it is a broken image.
+            width = min(label, image.width)
             height = round(image.height * width / image.width)
             resized = image.resize((width, height), Image.LANCZOS)
-            out = OUT / f"{still.stem}-{width}.webp"
+            out = OUT / f"{still.stem}-{label}.webp"
             resized.save(out, "WEBP", quality=QUALITY, method=6)
             total_after += out.stat().st_size
             print(f"  {out.name:<44} {out.stat().st_size / 1024:>6.0f} KB")

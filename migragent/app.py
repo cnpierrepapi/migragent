@@ -37,6 +37,7 @@ from .detect import agreement, detect
 from .documents import KINDS, MIME_BY_SUFFIX, DocumentReader, extract_text
 from .form import FormBuilder
 from .intake_page import intake_html, working_html
+from .landing_page import landing_html
 from .result_page import result_html
 from .routes import RouteFinder
 from .run import Run, sse_done
@@ -95,7 +96,7 @@ def brand(name: str) -> Response:
     return send_from_directory(BRAND_DIR, name)
 
 
-@app.get("/")
+@app.get("/start")
 def home() -> Response:
     """Two questions and a drop zone. The lane is derived behind it.
 
@@ -165,6 +166,49 @@ def home() -> Response:
                     mimetype="text/html")
 
 
+def _coverage() -> tuple[dict, int, int]:
+    """What the two front pages both need: coverage per lane, and two totals."""
+    db = _db()
+    extracted: dict[tuple[str, str], int] = {}
+    for row in db.collection("requirements").select(
+            ["jurisdiction", "lane", "retired_at"]).stream():
+        d = row.to_dict()
+        if d.get("retired_at"):
+            continue
+        key = (d.get("jurisdiction", ""), d.get("lane", ""))
+        extracted[key] = extracted.get(key, 0) + 1
+    return extracted, sum(extracted.values()), Registry(db).total_sources()
+
+
+@app.get("/")
+def landing() -> Response:
+    """What this is, for somebody who has never heard of it.
+
+    The form is not here. It is at /start, and every call to action points
+    there, so this page can be about the product rather than about a fieldset.
+    """
+    extracted, live, sources = _coverage()
+
+    places = []
+    open_lanes = 0
+    for code, meta in JURISDICTIONS.items():
+        counts = {lane: extracted.get((code, lane), 0) for lane in ("study", "work")}
+        total = sum(counts.values())
+        offered = total >= 1
+        open_lanes += len([1 for n in counts.values() if n])
+        if total:
+            note = f"{total:,} requirements read"
+        else:
+            note = "coming soon"
+        places.append((meta["name"], note, offered))
+
+    # Offered first, then the largest, so the page opens on what actually works.
+    places.sort(key=lambda p: (not p[2], p[1]))
+
+    return Response(landing_html(live=live, sources=sources, lanes_open=open_lanes,
+                                 places=places), mimetype="text/html")
+
+
 def _case_or_none(cases: Cases):
     cid = request.cookies.get("migragent_case")
     return cases.get(cid) if cid else None
@@ -215,7 +259,7 @@ def working() -> Response:
     cases = Cases(_db())
     case = _case_or_none(cases)
     if case is None:
-        return redirect("/")
+        return redirect("/start")
     return Response(working_html(case, len(cases.documents(case.case_id))),
                     mimetype="text/html")
 
@@ -251,7 +295,7 @@ def result() -> Response:
     cases = Cases(db)
     case = _case_or_none(cases)
     if case is None:
-        return redirect("/")
+        return redirect("/start")
     return Response(
         result_html(case, cases.coverage(case.case_id) or {},
                     cases.result(case.case_id) or {},
@@ -316,7 +360,7 @@ def guide() -> Response:
     jurisdiction = (request.args.get("jurisdiction") or "").upper()
     lane = (request.args.get("lane") or "").lower()
     if jurisdiction not in JURISDICTIONS or lane not in ("study", "work"):
-        return redirect("/")
+        return redirect("/start")
 
     db = _db()
     corpus, registry = Corpus(db), Registry(db)
@@ -345,7 +389,7 @@ def work() -> Response:
     cases = Cases(db)
     case = _case_or_none(cases)
     if case is None:
-        return redirect("/")
+        return redirect("/start")
 
     cv = CVStore(db).get(case.case_id)
     place = JURISDICTIONS.get(case.jurisdiction, {}).get("name", case.jurisdiction)
@@ -381,7 +425,7 @@ def upload_cv() -> Response:
     cases = Cases(db)
     case = _case_or_none(cases)
     if case is None:
-        return redirect("/")
+        return redirect("/start")
 
     uploaded = request.files.get("cv")
     if uploaded is None or not uploaded.filename:
@@ -408,7 +452,7 @@ def score_fit() -> Response:
     cases = Cases(db)
     case = _case_or_none(cases)
     if case is None:
-        return redirect("/")
+        return redirect("/start")
 
     listing_id = request.form.get("listing") or ""
     listing = db.collection("listings").document(listing_id).get()
@@ -435,7 +479,7 @@ def interested() -> Response:
     cases = Cases(db)
     case = _case_or_none(cases)
     if case is None:
-        return redirect("/")
+        return redirect("/start")
 
     listing_id = request.form.get("listing") or ""
     snap = db.collection("listings").document(listing_id).get()
@@ -453,7 +497,7 @@ def board() -> Response:
     cases = Cases(db)
     case = _case_or_none(cases)
     if case is None:
-        return redirect("/")
+        return redirect("/start")
     return Response(board_html(Board(db).for_case(case.case_id)), mimetype="text/html")
 
 
@@ -464,7 +508,7 @@ def move_item() -> Response:
     cases = Cases(db)
     case = _case_or_none(cases)
     if case is None:
-        return redirect("/")
+        return redirect("/start")
     Board(db).advance(case.case_id, request.form.get("item") or "",
                       request.form.get("column") or "")
     return redirect("/board")
@@ -482,7 +526,7 @@ def draft_piece() -> Response:
     cases = Cases(db)
     case = _case_or_none(cases)
     if case is None:
-        return redirect("/")
+        return redirect("/start")
 
     kind = request.form.get("kind") or ""
     identifier = request.form.get("item") or ""

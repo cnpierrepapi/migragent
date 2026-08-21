@@ -167,24 +167,12 @@ def intake_html(coverage_by_lane: dict, total_sources: int, live: int = 0) -> st
   .counts {{ font-family: var(--font-mono); font-size: .76rem; color: var(--ink-soft);
              border-top: 1px solid var(--rule); margin-top: 26px; padding-top: 13px }}
 </style></head>
-<body>
-  <header class="hero">
-    <video autoplay muted loop playsinline preload="none"
-           poster="/brand/video/hero.jpg" aria-hidden="true">
-      <source src="/brand/video/hero.webm" type="video/webm">
-      <source src="/brand/video/hero.mp4" type="video/mp4">
-    </video>
-    <div class="hero-top"><div class="brand">{LOGO}<span>MIGRAGENT</span></div></div>
-    <div class="hero-in">
-      <h1>Nothing is stated without a source.</h1>
-      <p>Answer two questions, add whatever paperwork you already have, and an agent reads the
-      official pages for you. What comes back is a guide with the source and the date on every
-      single line, and a PDF you can keep.</p>
-      <a class="jump" href="#start">Start with two questions</a>
-    </div>
-  </header>
+<body><main class="band">
+  <div class="brand" style="padding-top:34px">{LOGO}<span>MIGRAGENT</span></div>
+  <h1>Two questions, and we start reading.</h1>
+  <p class="sub">Tell us where you are going and whether it is study or work. Add whatever
+  paperwork you already have, or none at all. <a href="/">What this is</a>.</p>
 
-<main class="band">
   <figure class="figure">
     <img src="/brand/images/web/02-sorted-stack-daylight-800.webp"
          srcset="/brand/images/web/02-sorted-stack-daylight-800.webp 800w,

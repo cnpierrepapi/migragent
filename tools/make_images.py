@@ -46,42 +46,58 @@ BANS = (
     " Absolutely no text, no lettering, no signage, no logos, no government crest, no seal, "
     "no coat of arms, no flag. No readable document: any paper is blurred or out of focus. "
     "No passport interior page, no photo page, no document number, no name. "
-    "No recognisable face. No aeroplane, no globe, no world map, no pins, no suitcase."
+    "No recognisable face."
+    # Aeroplanes, suitcases and departure halls used to be banned here as
+    # cliche. That ban survived into a set whose whole job was to say "this is
+    # about leaving a country", and it is why the page could have been about
+    # anything. The bans that remain are the ones about not forging documents,
+    # which is a different question from taste.
+    " No globe, no world map, no pins in a map."
 )
 
+# Rewritten again on 21 August 2026. The bright set was better light and still
+# the wrong subject: tables, paper, a plant, an open door. Nothing in it said
+# this was about leaving one country for another, which is the only thing the
+# product is about. A person landing on the page could not tell what it was for.
+#
+# So the scenes now carry the actual subject. The bans below still hold, because
+# they are about not forging anything: no readable document, no crest, no seal.
+# What is no longer banned is the ordinary iconography of going: luggage,
+# airports, a window seat, an unfamiliar street. Avoiding it was a stylistic
+# preference, and it cost the page its meaning.
 SHOTS = {
-    # The home page hero still, and the poster the video falls back to.
-    "01-morning-table-paper":
-        "Hands laying a single sheet of blank paper flat on a sunlit wooden table beside a glass "
-        "of water, wide morning light from a window on the left, seen from just above and behind "
-        "the shoulder so the face is out of frame.",
-    # Above the guide.
-    "02-sorted-stack-daylight":
-        "A neat stack of blank printed pages squared off on a pale desk in full daylight, a plain "
-        "unmarked folder beside it, shot from a low three-quarter angle, clean bright surfaces, "
-        "no booklet and no passport anywhere in the frame.",
-    # The documents step.
-    "03-two-hands-sorting":
-        "Two hands sorting blank sheets into two small piles on a light table, bright even "
-        "daylight, motion soft in the fingers, shot straight down from above.",
-    # The work and board screens: getting somewhere, not waiting.
-    "04-workshop-daylight":
-        "A bright workshop bench by a tall window, tools laid in order, sawdust in the light, "
-        "nobody in frame, warm timber and pale walls.",
-    "05-open-window-desk":
-        "A tidy desk beside an open window with daylight and a plant, a closed notebook and a "
-        "pen, no screen visible, shot from a low angle so the light fills the frame.",
-    # The board, quietly: things in order, room to move.
-    "06-pinned-cards-wall":
-        "Half a dozen blank cards pinned in a loose column on a pale wall in daylight, slight "
-        "shadows under each card, shot square on, no writing on any card.",
-    # Endings that are not grim: a door held open, a corridor with light in it.
-    "07-open-door-light":
-        "An interior door standing open onto a bright room, daylight spilling across the "
-        "threshold onto a wooden floor, nobody in frame.",
-    "08-counter-daylight":
-        "A clean public service counter in daylight, the far side soft and out of focus, pale "
-        "surfaces, one blank sheet on the counter, nobody recognisable in frame.",
+    # Hero still and the video poster: leaving, at the start of a day.
+    "01-departure-hall-morning":
+        "A person seen from behind walking through a bright airport departure hall with a wheeled "
+        "case, tall windows and morning light, the crowd soft and out of focus, warm clean colour.",
+    # The guide: preparing, at home, before any of it.
+    "02-packed-case-hallway":
+        "A packed suitcase standing closed by the front door of a small flat in daylight, a coat "
+        "over it, warm wooden floor, nobody in frame.",
+    # Documents: the folder people actually carry to an appointment.
+    "03-folder-and-hands":
+        "Hands holding a slim plain folder of blank papers while waiting, seated, daylight from a "
+        "tall window, the face out of frame, calm and unhurried.",
+    # Work: arriving into a job in a new country.
+    "04-new-city-street-morning":
+        "A person with a shoulder bag walking a wide unfamiliar city street in early morning "
+        "light, seen from behind, low sun between buildings, warm and open.",
+    # Study: a campus, plainly, without anybody's crest on it.
+    "05-campus-courtyard-daylight":
+        "A university courtyard in bright daylight, students crossing at a distance and out of "
+        "focus, stone and glass, no signage and no lettering anywhere in frame.",
+    # The appointment itself.
+    "06-consulate-waiting-daylight":
+        "A calm official waiting area in daylight, a row of chairs, one person seated at a "
+        "distance and out of focus, pale walls, no signage and no crest anywhere.",
+    # Arrival: the flat, the keys, the boxes.
+    "07-keys-new-flat":
+        "A hand setting a set of keys on the counter of an empty sunlit flat with two cardboard "
+        "boxes on the floor behind, warm light, hopeful and plain.",
+    # The window seat, which is the moment everything before it was for.
+    "08-window-seat-cloud":
+        "The view past a shoulder through an aeroplane window onto bright cloud and blue, warm "
+        "cabin interior soft and out of focus, no branding anywhere in frame.",
 }
 
 
