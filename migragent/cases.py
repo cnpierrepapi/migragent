@@ -38,6 +38,10 @@ BOARD_ITEMS = "board_items"
 WATCHES = "watches"
 ALERTS = "alerts"
 
+# Build 7 clones the CV into each country's shape on upload. Same rule again:
+# listed here or the delete quietly stopped being true.
+CV_CLONES = "case_cv_clones"
+
 # Long enough to come back and finish, short enough that nothing sits around for
 # a reason nobody could defend. docs/DATA_PROTECTION.md explains the choice.
 RETENTION_DAYS = 30
@@ -158,7 +162,8 @@ class Cases:
         broken delete, so the numbers are the point and the test asserts on them.
         """
         removed = {"documents": 0, "coverage": 0, "result": 0, "cv": 0,
-                   "fits": 0, "board_items": 0, "watch": 0, "alerts": 0, "case": 0}
+                   "fits": 0, "board_items": 0, "cv_clones": 0, "watch": 0,
+                   "alerts": 0, "case": 0}
 
         query = self._db.collection(CASE_DOCUMENTS).where(
             filter=firestore.FieldFilter("case_id", "==", case_id))
@@ -189,7 +194,8 @@ class Cases:
             removed["cv"] = 1
 
         # Fits and board items are per case and there can be many of each.
-        for collection, key in ((FITS, "fits"), (BOARD_ITEMS, "board_items")):
+        for collection, key in ((FITS, "fits"), (BOARD_ITEMS, "board_items"),
+                                (CV_CLONES, "cv_clones")):
             rows = self._db.collection(collection).where(
                 filter=firestore.FieldFilter("case_id", "==", case_id))
             batch = self._db.batch()

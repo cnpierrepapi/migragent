@@ -56,7 +56,19 @@ CONVENTIONS = {
     "DE": ("Germany", "A tabular CV in reverse date order. Gaps are expected to be explained."),
     "AE": ("the United Arab Emirates", "Two pages. Nationality and visa status are commonly "
                                        "asked for and it is your choice whether to give them."),
+    # The one entry here that is not an observed habit. Europass is a format the
+    # European Commission actually publishes, which makes it the only row in this
+    # table with a document behind it, and it is what most EU public sector and
+    # academic applications expect to receive.
+    "EU": ("the European Union", "The Europass shape: personal details, then work experience "
+                                 "in reverse date order, then education, then language skills "
+                                 "on the CEFR scale. Tabular, plain, no design."),
 }
+
+# Which shapes a CV is cloned into when it is uploaded. Three, because these are
+# the three the shortage lists we hold actually belong to, and a fourth would be
+# a file somebody scrolls past. Adding one means a row above and a code here.
+CLONE_INTO = ("CA", "UK", "EU")
 
 CONVENTION_NOTE = ("This shape is convention, not a rule, and no government publishes a required "
                    "CV format. Nothing here is guidance from an official source.")
@@ -101,6 +113,31 @@ Return JSON: {"headline": "...", "summary": "...", "sections": [{"heading": "...
 
 "summary" is two sentences at most, in the person's own register, saying what
 they do and what this job asks for that they have.
+"""
+
+CLONE_PROMPT = """You are re-shaping one person's CV to the conventions of one country.
+
+There is no job here. Do not aim it at a role, do not guess what they want to do
+next, and do not write an objective. This is the same CV, laid out the way
+employers in this country expect to receive it.
+
+You may use ONLY the claims listed below. They were read out of the person's own
+CV and checked against it. You may reorder them and group them under headings
+that suit the convention, and you may drop nothing. You may not add anything
+else: not a skill, not a date, not a duty that "obviously" goes with the job
+title.
+
+Never invent a number. Do not state years of experience, team sizes, percentages
+or salaries unless that exact number appears in a claim below.
+
+Where the convention asks for something the claims do not contain, leave a
+labelled gap the person can fill, exactly like this: [add your date of birth].
+Never fill one in yourself.
+
+Return JSON: {"headline": "...", "summary": "...", "sections": [{"heading": "...", "lines": ["..."]}]}
+
+"summary" is two sentences at most, in the person's own register, saying what
+they do. Not what they are looking for.
 """
 
 LETTER_PROMPT = """You are drafting a cover letter for one person for one job.
@@ -169,6 +206,43 @@ class Drafter:
         text = "\n".join(line for line in body if line is not None).strip()
 
         return Piece(kind="cv", title=f"CV for this job, shaped for {place}",
+                     body=text, note=self._note(text, cv, convention))
+
+    def clone(self, cv: CV, jurisdiction: str) -> Piece:
+        """The same CV, in one country's shape. No job, no target, no invention.
+
+        This runs once when a CV is uploaded, for each country in CLONE_INTO,
+        rather than per job. Somebody applying to Canada needs a Canadian CV
+        before they have found a Canadian job, and making them wait until they
+        have one is making them do the work in the wrong order.
+
+        It goes through the same number guard as every other draft here, because
+        the failure it catches is identical: a model handed a list of true claims
+        and asked to lay them out nicely will occasionally decide the person has
+        eight years of experience.
+        """
+        place, convention = CONVENTIONS.get(
+            jurisdiction, (jurisdiction, "No convention is recorded for this country here."))
+
+        prompt = (CLONE_PROMPT
+                  + f"\n\nTHE CLAIMS (all you may use):\n{_claims_block(cv)}"
+                  + f"\n\nShaped for {place}. {convention}")
+
+        try:
+            parsed = self._call(prompt)
+        except Exception as exc:  # noqa: BLE001
+            return Piece(kind="cv_clone", title=f"CV shaped for {place}",
+                         body="", note=f"This could not be drafted: {exc}")
+
+        body = [str(parsed.get("headline") or "").strip(),
+                str(parsed.get("summary") or "").strip(), ""]
+        for section in parsed.get("sections", []):
+            body.append(str(section.get("heading") or "").upper())
+            body += [f"  {str(line).strip()}" for line in section.get("lines", [])]
+            body.append("")
+        text = "\n".join(line for line in body if line is not None).strip()
+
+        return Piece(kind="cv_clone", title=f"CV shaped for {place}",
                      body=text, note=self._note(text, cv, convention))
 
     def cover_letter(self, cv: CV, listing: dict[str, Any], jurisdiction: str) -> Piece:

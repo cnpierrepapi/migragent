@@ -17,8 +17,11 @@ from google.cloud import firestore  # noqa: E402
 from migragent import identity  # noqa: E402
 from migragent.board import Board  # noqa: E402
 from migragent.alerts import Alert, Alerts, Watches, alert_id  # noqa: E402
+from migragent.board import Piece  # noqa: E402
 from migragent.cases import (ALERTS, BOARD_ITEMS, CASE_DOCUMENTS, CASES, COVERAGE,
-                             CV_FIELDS, FITS, RESULTS, WATCHES, Cases)  # noqa: E402
+                             CV_CLONES, CV_FIELDS, FITS, RESULTS, WATCHES,
+                             Cases)  # noqa: E402
+from migragent.cv import CVClones  # noqa: E402
 from migragent.cv import CV, Claim, CVStore  # noqa: E402
 from migragent.fit import Fit, Fits, Match  # noqa: E402
 from migragent.documents import Field, ReadDocument  # noqa: E402
@@ -79,13 +82,20 @@ def main() -> int:
         case_id=case.case_id, kind="rule", headline="probe",
         observed_at=case.created_at, created_at=case.created_at) for i in range(2)])
 
+    # Build 7 clones the CV into each country's shape. Three more documents
+    # holding what somebody's CV says, and they go with everything else.
+    for code in ("CA", "UK", "EU"):
+        CVClones(db).put(case.case_id, code, Piece(
+            kind="cv_clone", title=f"CV shaped for {code}", body="probe", note="draft"))
+
     watched = (CASES, CASE_DOCUMENTS, COVERAGE, RESULTS, CV_FIELDS, FITS,
-               BOARD_ITEMS, WATCHES, ALERTS)
+               BOARD_ITEMS, CV_CLONES, WATCHES, ALERTS)
     before = {c: count(db, c, case.case_id) for c in watched}
     print(f"before delete: {before}")
     if (before[CASE_DOCUMENTS] != 3 or before[CASES] != 1 or before[COVERAGE] != 1
             or before[CV_FIELDS] != 1 or before[FITS] != 2 or before[BOARD_ITEMS] != 2
-            or before[WATCHES] != 1 or before[ALERTS] != 2):
+            or before[WATCHES] != 1 or before[ALERTS] != 2
+            or before[CV_CLONES] != 3):
         print("FAIL  the fixture did not write what it meant to, so a clean")
         print("      delete afterwards would prove nothing")
         return 1
@@ -101,7 +111,8 @@ def main() -> int:
         print(f"\nFAIL  rows survived the delete: {survivors}")
         return 1
     if removed != {"documents": 3, "coverage": 1, "result": 1, "cv": 1,
-                   "fits": 2, "board_items": 2, "watch": 1, "alerts": 2, "case": 1}:
+                   "fits": 2, "board_items": 2, "cv_clones": 3, "watch": 1,
+                   "alerts": 2, "case": 1}:
         print(f"\nFAIL  delete reported {removed}, which does not match what was written")
         return 1
 

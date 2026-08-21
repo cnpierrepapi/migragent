@@ -41,6 +41,9 @@ MAX_BYTES = 10 * 1024 * 1024
 
 CV_FIELDS = "case_cv"
 
+# The CV re-shaped for each country, one document per case and country.
+CV_CLONES = "case_cv_clones"
+
 
 def _normalise(s: str) -> str:
     s = unicodedata.normalize("NFKC", s)
@@ -209,3 +212,39 @@ class CVStore:
 
     def delete(self, case_id: str) -> None:
         self._db.collection(CV_FIELDS).document(case_id).delete()
+
+
+class CVClones:
+    """The same CV, in each country's shape, kept so it is not redrafted daily.
+
+    One document per case and country. They are drafts and are stored as drafts:
+    the body, the note that says it is a draft, and nothing that could be
+    mistaken for a fact about the person that their own CV did not already say.
+    """
+
+    COLLECTION = CV_CLONES
+
+    def __init__(self, client) -> None:
+        self._db = client
+
+    def put(self, case_id: str, jurisdiction: str, piece) -> None:
+        self._db.collection(CV_CLONES).document(f"{case_id}-{jurisdiction}").set({
+            "case_id": case_id,
+            "jurisdiction": jurisdiction,
+            "title": piece.title,
+            "body": piece.body,
+            "note": piece.note,
+        })
+
+    def get(self, case_id: str, jurisdiction: str) -> dict[str, Any] | None:
+        snap = self._db.collection(CV_CLONES).document(f"{case_id}-{jurisdiction}").get()
+        return snap.to_dict() if snap.exists else None
+
+    def for_case(self, case_id: str) -> list[dict[str, Any]]:
+        from google.cloud import firestore
+
+        query = self._db.collection(CV_CLONES).where(
+            filter=firestore.FieldFilter("case_id", "==", case_id))
+        rows = [s.to_dict() for s in query.stream()]
+        rows.sort(key=lambda r: r.get("jurisdiction", ""))
+        return rows
