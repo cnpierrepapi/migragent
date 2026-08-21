@@ -25,10 +25,18 @@ MODEL = "gemini-2.5-flash-image"
 OUT = Path("web/brand/images")
 
 # The look, repeated on every prompt so the set hangs together as one shoot.
+# The look. Rewritten on 21 August 2026, because the first set was wrong.
+#
+# It was documentary, muted, desaturated and mostly shot at night, and it was
+# good photography of the wrong feeling: it said immigration is grim and lonely.
+# A person using this has already got enough of that. What the product actually
+# offers is a clear morning and a stack of paper that finally makes sense, so
+# the set is bright, warm and unhurried, and the person in it is getting
+# somewhere rather than sitting in the dark.
 LOOK = (
-    "Documentary editorial photograph, photorealistic, 35mm, natural available light only, "
-    "no flash, muted desaturated colour, cool neutral white balance, shallow depth of field, "
-    "quiet and unposed, nobody looking at the camera, no smiling, no stock-photo styling. "
+    "Bright editorial photograph, photorealistic, 35mm, generous natural daylight, warm clean "
+    "colour, light wood and pale paper, airy and uncluttered, shallow depth of field, calm and "
+    "unhurried, unposed, nobody looking at the camera, no stock-photo grinning, no flash. "
 )
 
 # The bans exist because this product's whole claim is that it does not fake
@@ -42,30 +50,38 @@ BANS = (
 )
 
 SHOTS = {
-    "01-kitchen-table-form":
-        "A person's hands resting on a paper form on a scratched kitchen table, a cold mug of tea "
-        "beside it, late afternoon light through a window, seen from just above and behind the "
-        "shoulder so the face is out of frame.",
-    # Regenerated: the first version put a gold emblem and lettering on a
-    # passport cover, which breaks this set's own rule. No passport in frame at
-    # all now. See D4 in docs/DEFECTS.md.
-    "02-printed-guide-desk":
-        "A thick stack of printed pages squared off on a plain desk beside a pair of reading "
-        "glasses and a plain unmarked manila folder, shot from a low three-quarter angle, "
-        "morning light from the left. There is no passport and no booklet anywhere in the frame.",
-    "03-bank-counter-queue":
-        "The back of a person waiting at a bank counter, shot from further back in the queue, the "
-        "counter and clerk soft and out of focus, cool fluorescent interior light.",
-    "04-waiting-room-chairs":
-        "A row of empty moulded plastic chairs against a scuffed institutional wall in an official "
-        "waiting room, one chair holding a folded coat, hard morning light across the floor.",
-    "05-night-desk-laptop":
-        "A person alone at a desk late at night, lit only by a laptop screen, papers spread around "
-        "the keyboard, shot from behind so the face is not visible, deep shadows, warm screen glow "
-        "against a dark room.",
-    "06-hallway-envelope":
-        "A single envelope lying on a doormat in a narrow flat hallway, morning light falling from "
-        "a frosted door pane, shot from standing height looking down.",
+    # The home page hero still, and the poster the video falls back to.
+    "01-morning-table-paper":
+        "Hands laying a single sheet of blank paper flat on a sunlit wooden table beside a glass "
+        "of water, wide morning light from a window on the left, seen from just above and behind "
+        "the shoulder so the face is out of frame.",
+    # Above the guide.
+    "02-sorted-stack-daylight":
+        "A neat stack of blank printed pages squared off on a pale desk in full daylight, a plain "
+        "unmarked folder beside it, shot from a low three-quarter angle, clean bright surfaces, "
+        "no booklet and no passport anywhere in the frame.",
+    # The documents step.
+    "03-two-hands-sorting":
+        "Two hands sorting blank sheets into two small piles on a light table, bright even "
+        "daylight, motion soft in the fingers, shot straight down from above.",
+    # The work and board screens: getting somewhere, not waiting.
+    "04-workshop-daylight":
+        "A bright workshop bench by a tall window, tools laid in order, sawdust in the light, "
+        "nobody in frame, warm timber and pale walls.",
+    "05-open-window-desk":
+        "A tidy desk beside an open window with daylight and a plant, a closed notebook and a "
+        "pen, no screen visible, shot from a low angle so the light fills the frame.",
+    # The board, quietly: things in order, room to move.
+    "06-pinned-cards-wall":
+        "Half a dozen blank cards pinned in a loose column on a pale wall in daylight, slight "
+        "shadows under each card, shot square on, no writing on any card.",
+    # Endings that are not grim: a door held open, a corridor with light in it.
+    "07-open-door-light":
+        "An interior door standing open onto a bright room, daylight spilling across the "
+        "threshold onto a wooden floor, nobody in frame.",
+    "08-counter-daylight":
+        "A clean public service counter in daylight, the far side soft and out of focus, pale "
+        "surfaces, one blank sheet on the counter, nobody recognisable in frame.",
 }
 
 
@@ -107,22 +123,61 @@ def generate(name: str, scene: str, bearer: str) -> Path | None:
     return None
 
 
+# Eight images back to back is enough to hit the quota, and three of the first
+# eight did. This file calls Vertex directly instead of going through
+# migragent/model.py, so it never learned D20: a 429 is weather, and a generator
+# that gives up on the first one leaves a half drawn set that looks like a model
+# refusing to draw a door.
+ATTEMPTS = 4
+BASE_DELAY = 8.0
+
+
+def generate_with_retry(name: str, scene: str, bearer: str):
+    import random
+    import time
+    import urllib.error
+
+    for attempt in range(1, ATTEMPTS + 1):
+        try:
+            return generate(name, scene, bearer)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (429, 500, 502, 503, 504) or attempt == ATTEMPTS:
+                raise
+            wait = BASE_DELAY * attempt + random.uniform(0, 4)
+            print(f"  HTTP {exc.code}, waiting {wait:.0f}s and asking again "
+                  f"({attempt} of {ATTEMPTS})", flush=True)
+            time.sleep(wait)
+    return None
+
+
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     bearer = token()
-    made = 0
+    force = "--force" in sys.argv
+    made = kept = 0
+
     for name, scene in SHOTS.items():
+        existing = OUT / f"{name}.png"
+        if existing.exists() and not force:
+            # Re-running to fill the gaps should not pay again for the ones that
+            # already worked. `--force` redraws the whole set.
+            print(f"keeping {name}")
+            kept += 1
+            continue
+
         print(f"generating {name} ...", flush=True)
         try:
-            path = generate(name, scene, bearer)
+            path = generate_with_retry(name, scene, bearer)
         except Exception as exc:  # noqa: BLE001
             print(f"  failed: {exc}")
             continue
         if path:
             print(f"  wrote {path} ({path.stat().st_size:,} bytes)")
             made += 1
-    print(f"\n{made} of {len(SHOTS)} images generated")
-    return 0 if made else 1
+
+    missing = len(SHOTS) - made - kept
+    print(f"\n{made} drawn, {kept} kept, {missing} still missing")
+    return 0 if made or kept else 1
 
 
 if __name__ == "__main__":

@@ -46,9 +46,45 @@ LOGO = ('<svg viewBox="0 0 64 64"><path d="M10 36 V8 L32 28 L54 8 V36" fill="non
         'stroke-linejoin="round"/><path d="M19 50 Q32 61 45 50" fill="none" '
         'stroke="currentColor" stroke-width="7.5" stroke-linecap="round"/></svg>')
 
+HERO_CSS = '''
+  .hero { position: relative; min-height: min(78vh, 620px); display: grid; align-items: end;
+          overflow: hidden; background: var(--ink) }
+  .hero video, .hero img.bg { position: absolute; inset: 0; width: 100%; height: 100%;
+                              object-fit: cover; z-index: 0 }
+  /* The scrim exists for contrast, not for mood: white display type over a sunlit
+     table fails every contrast check without it. Warm rather than black, so the
+     daylight in the picture survives. */
+  .hero::after { content: ""; position: absolute; inset: 0; z-index: 1;
+                 background: linear-gradient(178deg, rgba(20,14,6,.10) 0%,
+                             rgba(20,14,6,.34) 46%, rgba(20,14,6,.72) 100%) }
+  .hero-in { position: relative; z-index: 2; max-width: 720px; margin: 0 auto;
+             padding: 0 24px 46px; width: 100% }
+  .hero h1 { color: #fff; font-size: clamp(2.1rem, 6vw, 3.4rem); line-height: 1.03;
+             margin: 0 0 14px; text-wrap: balance }
+  .hero p { color: rgba(255,255,255,.92); font-size: 1.06rem; line-height: 1.6;
+            margin: 0 0 22px; max-width: 52ch }
+  .hero .brand { color: #fff; margin: 0 0 auto; padding-top: 26px }
+  .hero .brand span { color: #fff }
+  .hero-top { position: absolute; inset: 0 0 auto 0; z-index: 2; max-width: 720px;
+              margin: 0 auto; padding: 0 24px; width: 100% }
+  .jump { display: inline-flex; align-items: center; gap: 9px; padding: 13px 24px;
+          border-radius: var(--radius); background: var(--accent); color: #20160A;
+          text-decoration: none; font: 600 .97rem var(--font-body) }
+  .band { max-width: 720px; margin: 0 auto; padding: 0 24px }
+  .figure { margin: 40px 0 34px; border-radius: var(--radius); overflow: hidden;
+            background: var(--paper-raised); border: 1px solid var(--rule) }
+  .figure img { display: block; width: 100%; height: clamp(150px, 26vw, 240px);
+                object-fit: cover }
+  .figure figcaption { padding: 12px 16px; font-family: var(--font-mono); font-size: .73rem;
+                       color: var(--ink-soft) }
+  @media (prefers-reduced-motion: reduce) { .hero video { display: none } }
+'''
+
+
 SHARED_CSS = '''
   * { box-sizing: border-box }
-  body { margin: 0; padding: 52px 24px 96px }
+  body { margin: 0; padding: 0 0 96px }
+  .wrap { padding: 0 24px }
   main { max-width: 720px; margin: 0 auto }
   a { color: var(--link) }
   .brand { display: flex; align-items: center; gap: 11px; color: var(--primary); margin-bottom: 34px }
@@ -80,7 +116,7 @@ SHARED_CSS = '''
 '''
 
 
-def intake_html(coverage_by_lane: dict, total_sources: int) -> str:
+def intake_html(coverage_by_lane: dict, total_sources: int, live: int = 0) -> str:
     """One page: what you want, and what you already have."""
     # A place is offered when either of its lanes can be answered, and the note
     # says how well rather than whether. "Ready" used to mean extraction had run
@@ -120,7 +156,7 @@ def intake_html(coverage_by_lane: dict, total_sources: int) -> str:
 
     return f'''<!doctype html>
 <html lang="en" data-theme="light"><head>{HEAD}<title>MIGRAGENT</title>
-<style>{SHARED_CSS}
+<style>{HERO_CSS}{SHARED_CSS}
   .drop {{ border: 1.5px dashed var(--rule); border-radius: var(--radius); padding: 26px;
            text-align: center; background: var(--paper-raised); cursor: pointer }}
   .drop:hover, .drop.over {{ border-color: var(--primary) }}
@@ -131,14 +167,35 @@ def intake_html(coverage_by_lane: dict, total_sources: int) -> str:
   .counts {{ font-family: var(--font-mono); font-size: .76rem; color: var(--ink-soft);
              border-top: 1px solid var(--rule); margin-top: 26px; padding-top: 13px }}
 </style></head>
-<body><main>
-  <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
-  <h1>Nothing is stated<br>without a source.</h1>
-  <p class="sub">Answer two questions, add whatever paperwork you already have, and an agent goes
-  and reads the official pages. What comes back is a guide you can save as a PDF, with the source
-  and the date on every line.</p>
+<body>
+  <header class="hero">
+    <video autoplay muted loop playsinline preload="none"
+           poster="/brand/video/hero.jpg" aria-hidden="true">
+      <source src="/brand/video/hero.webm" type="video/webm">
+      <source src="/brand/video/hero.mp4" type="video/mp4">
+    </video>
+    <div class="hero-top"><div class="brand">{LOGO}<span>MIGRAGENT</span></div></div>
+    <div class="hero-in">
+      <h1>Nothing is stated without a source.</h1>
+      <p>Answer two questions, add whatever paperwork you already have, and an agent reads the
+      official pages for you. What comes back is a guide with the source and the date on every
+      single line, and a PDF you can keep.</p>
+      <a class="jump" href="#start">Start with two questions</a>
+    </div>
+  </header>
+
+<main class="band">
+  <figure class="figure">
+    <img src="/brand/images/web/02-sorted-stack-daylight-800.webp"
+         srcset="/brand/images/web/02-sorted-stack-daylight-800.webp 800w,
+                 /brand/images/web/02-sorted-stack-daylight-1600.webp 1600w"
+         sizes="(max-width: 760px) 100vw, 720px" alt="" loading="lazy" width="1600" height="900">
+    <figcaption>{live:,} requirements read from official pages, each one carrying the sentence it
+    came from.</figcaption>
+  </figure>
 
   <form id="f" method="post" action="/begin">
+    <span id="start"></span>
     <fieldset style="margin-top:36px">
       <legend>What are you trying to do?</legend>
       <div class="choices">

@@ -158,7 +158,10 @@ def home() -> Response:
             else:
                 coverage_by_lane[key] = ("uncovered", "no readable official source")
 
-    return Response(intake_html(coverage_by_lane, registry.total_sources()),
+    # The number on the front page is the same number the lanes are built from,
+    # summed, rather than a figure typed into a template and left to rot.
+    return Response(intake_html(coverage_by_lane, registry.total_sources(),
+                                live=sum(extracted.values())),
                     mimetype="text/html")
 
 
