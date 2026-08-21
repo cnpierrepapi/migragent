@@ -34,9 +34,28 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def requirement_id(source_url: str, quote: str) -> str:
-    """Stable across re-reads of the same page saying the same thing."""
-    digest = hashlib.sha256(f"{source_url}\n{quote}".encode()).hexdigest()[:24]
+def requirement_id(source_url: str, quote: str, lane: str = "") -> str:
+    """Stable across re-reads of the same page saying the same thing, per lane.
+
+    THE LANE USED TO BE MISSING AND IT COST A GUIDE ITS FRONT PAGE.
+
+    A government page can belong to two lanes. `gov.uk/skilled-worker-visa` is
+    the work lane's entry page, and the study walk reaches it as well. With
+    identity as url plus quote, both lanes shared one document, so whichever
+    round ran last owned it and anything done to it in one lane happened in the
+    other.
+
+    That turned a correct fix into a regression. D32 retired the Skilled Worker
+    requirements from the study guide, where they did not belong, and because
+    they were the same documents it retired them from the work guide, where they
+    are the whole point. The UK work guide lost its own front page, and no count
+    on any screen so much as flinched.
+
+    So a requirement is identified by the page, the sentence, and the question it
+    answers. Rows written before this carry the old id and are moved by
+    tools/migrate_requirement_ids.py rather than left to drift.
+    """
+    digest = hashlib.sha256(f"{source_url}\n{quote}\n{lane}".encode()).hexdigest()[:24]
     return digest
 
 
@@ -77,11 +96,20 @@ class Corpus:
 
         for req in extraction.requirements:
             doc = self._db.collection(REQUIREMENTS).document(
-                requirement_id(req.source_url, req.quote)
+                requirement_id(req.source_url, req.quote, lane)
             )
             payload = req.to_dict()
             payload["source_id"] = source_id
             payload["last_confirmed_at"] = extraction.read_at
+
+            # A page that still says it un-retires it. Without this a retirement
+            # is permanent whatever the page goes on to say: `merge=True` leaves
+            # alone the fields it is not given, so re-reading a page updated the
+            # date on a row that stayed invisible for good. That is D25b's shape
+            # again, a field that can be set and never cleared.
+            payload["retired_at"] = firestore.DELETE_FIELD
+            payload["retired_reason"] = firestore.DELETE_FIELD
+
             batch.set(doc, payload, merge=True)
             written += 1
             if written % 400 == 0:

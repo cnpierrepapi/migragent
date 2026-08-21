@@ -1289,3 +1289,65 @@ Recorded as unknown rather than blocked, which is correct, and it is not fixed b
 verification off.
 
 **Status:** the permanent block is closed. The TLS chain is open.
+
+---
+
+## D37 — The work guide lost its own front page, and my fix for D32 did it
+
+**Found:** 21 August 2026, while comparing the agent against the walk. The comparison was measuring
+something else entirely and reported that `gov.uk/skilled-worker-visa` held nothing.
+
+Twelve of the offered lanes had an entry page with zero live requirements. Not obscure pages: the
+front doors. `gov.uk/skilled-worker-visa`, `gov.uk/student-visa`, `canada.ca` study permit and work
+permit. The guides were built from everything the walk found *around* those pages while the pages
+themselves contributed nothing, and no count anywhere went down, because a requirement that was never
+recorded is not a requirement that went missing.
+
+**Two defects, stacked, and the second hid the first.**
+
+**The identity had no lane in it.** `requirement_id` was a digest of the page URL and the quote. A
+government page can serve two lanes: gov.uk/skilled-worker-visa is the work lane's entry page and the
+study walk reaches it too. Both lanes therefore shared one document, and whichever round ran last
+owned its `lane` and `source_id` fields.
+
+So D32, which was a correct fix, became a regression. It retired the Skilled Worker page's
+requirements from the study guide, where they did not belong. They were the same documents as the
+work guide's, so they left the work guide too, where they are the entire point.
+
+**A retirement could never be undone.** `Corpus.record` writes with `merge=True`, which leaves
+untouched any field it is not given, and it was never given `retired_at`. Re-reading a page updated
+`last_confirmed_at` on a row that stayed invisible. Exactly D25b's shape: a field that can be set and
+never cleared, and the second time this project has been bitten by it.
+
+**Why it was reported as working.** I re-extracted that page on 19 August with the agent, saw
+`researched kept 30`, and said so. Thirty requirements were written. All thirty merged into retired
+documents and none of them appeared anywhere. The round's own counter was telling the truth about
+what it wrote and nothing about what a reader would see.
+
+**Fix.**
+- `requirement_id(source_url, quote, lane)`. A sentence answers a question, and the question is part
+  of what it is.
+- `record` clears `retired_at` and `retired_reason` with `DELETE_FIELD`. A page that still says
+  something un-retires it, which is the only rule that makes retirement safe to use.
+- `tools/migrate_requirement_ids.py` moved all 2,152 rows onto lane-scoped ids. Nothing lost, nothing
+  merged: 2,152 in, 2,152 out.
+- The twelve entry pages are being read again by the agent, which is the reader they should have had.
+
+**The lesson, and it is not the one about lanes.** Every check in this pipeline verifies that what we
+wrote is what the page said. Nothing verified that what we wrote is what a reader gets. Between the
+two sits retirement, identity and merge semantics, and all three were wrong at once without a single
+number on a single screen looking odd.
+
+**Fixed and measured.** The six lanes with empty front pages were read again by the agent and the
+corpus went from 2,094 live requirements to 2,186. Every offered lane now holds a guide: UK study
+357, UK work 174, CA study 576, CA work 126, ES work 115, ES study 109, FR work 150, FR study 76,
+AE study 22, AE work 7.
+
+**Status:** closed.
+
+**Postscript, because it nearly became a second false alarm.** Reading the per-lane counts back, I
+piped the output through `tail` and lost the first three lines, which were the two UAE lanes and
+Canada's study lane. For about a minute the evidence in front of me said Canada's study guide, the
+largest in the product, had been wiped by the migration. It had not: 576 requirements, untouched. The
+lesson is small and keeps recurring in this log. A truncated view of the evidence is not evidence,
+and the cost of checking was one more query.
