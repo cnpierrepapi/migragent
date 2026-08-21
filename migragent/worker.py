@@ -58,6 +58,18 @@ MODEL = os.environ.get("MIGRAGENT_MODEL", "gemini-3.5-flash")
 MODEL_LOCATION = os.environ.get("MIGRAGENT_MODEL_LOCATION", "global")
 MODE = os.environ.get("MIGRAGENT_MODE", "extract")
 
+# Every mode this job knows. A mode that is not on this list is refused, and the
+# reason is D38: the deploy workflow updates the service and not this job, so the
+# job can be running an older image than the repository. Ask that older image for
+# a mode it has never heard of and, before this list existed, it fell through to
+# the round with `mode="digest"`, which is not "watch", which means extract. A
+# scheduler firing a new mode at an old image started a full extraction round
+# over UK study and got thirteen pages deep before it was cancelled.
+#
+# An unknown mode is now a refusal rather than the most expensive thing this
+# codebase can do by accident.
+MODES = ("extract", "watch", "digest", "selftest", "robots")
+
 # Who reads an entry page: the agent that chooses what to open next, or the flat
 # extractor that reads whatever the walk queued. Off unless asked for, so the
 # daily round does not change what it does because a dependency was installed.
@@ -250,6 +262,12 @@ def digest() -> int:
 def main() -> int:
     if not PROJECT:
         raise SystemExit("GOOGLE_CLOUD_PROJECT is not set")
+
+    if MODE not in MODES:
+        print(f"this image does not know the mode {MODE!r}; it knows "
+              f"{', '.join(MODES)}. Refusing rather than guessing: see D38.",
+              file=sys.stderr, flush=True)
+        return 64
 
     if MODE == "selftest":
         return selftest()

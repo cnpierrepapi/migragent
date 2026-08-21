@@ -1351,3 +1351,44 @@ Canada's study lane. For about a minute the evidence in front of me said Canada'
 largest in the product, had been wiped by the migration. It had not: 576 requirements, untouched. The
 lesson is small and keeps recurring in this log. A truncated view of the evidence is not evidence,
 and the cost of checking was one more query.
+
+---
+
+## D38 — A new mode fired at an old image started the most expensive thing here
+
+**What happened.** The digest was written, tested against the real store, committed, and the deploy
+went green. The scheduler fired it, and instead of exiting in a second with "no active watches", the
+job started reading gov.uk and had extracted thirteen UK study pages before it was cancelled.
+
+**Why.** The deploy workflow deploys `migragent` the *service*. It has never deployed
+`migragent-ingest` the *job*, which is built and pushed by hand. So the job was running an older
+image with no `digest` branch, and `MODE` fell all the way through to `round_.run(..., mode=MODE)`,
+where anything that is not `"watch"` means extract.
+
+Two separate faults, and only one of them was about the missing branch:
+
+- **A green deploy said nothing about the job.** The pipeline that reads government websites and
+  spends model calls is deployed by a person remembering to, and nothing anywhere reports the drift.
+- **An unrecognised mode did the most expensive available thing.** Not an error, not a refusal: a
+  full extraction round. The worst possible default, chosen by accident, because `mode` was passed
+  straight through to a function whose contract is "watch, or else".
+
+**Fix.**
+- `MODES` in `migragent/worker.py`, checked before anything else runs. An unknown mode prints what
+  this image does know and exits 64. An old image asked for a new mode now says so in one line in
+  its own logs rather than crawling a country.
+- The job is deployed from the same source as the service, and the drift is a known manual step
+  rather than an assumption.
+
+**What was NOT fixed, and why.** The job is deliberately not added to the deploy workflow. Updating
+a job whose template names `migragent-watcher` needs `iam.serviceAccounts.actAs` on the watcher, and
+granting that to the deploy identity would mean a GitHub Actions run could become the watcher. That
+is the exact property Decision 5 claims and `tools/test_isolation.py` measures. A convenience is not
+worth turning a tested isolation boundary into a paragraph of good intentions, so the job stays a
+manual deploy and this entry is where somebody finds out why.
+
+**Cost.** Thirteen pages of UK study re-extracted. No damage to the corpus: requirement ids are
+derived from the source, the quote and the lane, so the rows merged with themselves and the read
+dates it wrote were true. Model calls spent for nothing, and a reminder that "it deployed" and "it
+is running this code" are two different claims.
+

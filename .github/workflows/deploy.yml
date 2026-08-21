@@ -9,6 +9,18 @@
 # The deploy identity is migragent-deployer. It can build an image and move a
 # Cloud Run revision. It cannot read Firestore, so it cannot see a case or a
 # document, and it cannot become the watcher.
+#
+# THIS DEPLOYS THE SERVICE AND NOT THE INGEST JOB, ON PURPOSE.
+# `migragent-ingest` runs as the watcher, and updating a job whose template names
+# a service account needs iam.serviceAccounts.actAs on that account. Granting the
+# deploy identity actAs on the watcher would mean a workflow run could become the
+# watcher, which is the one thing Decision 5 says nothing can do and
+# tools/test_isolation.py measures. So the job is deployed by hand:
+#
+#   gcloud run jobs deploy migragent-ingest --source . --region us-central1 #     --project PROJECT --service-account migragent-watcher@PROJECT.iam.gserviceaccount.com
+#
+# Which means a green run here does NOT mean the pipeline is on this commit. That
+# gap has already cost something once: see D38.
 name: Deploy
 
 on:
