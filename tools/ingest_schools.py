@@ -456,8 +456,7 @@ def main() -> int:
         # being written off as teaching nothing.
         rows = [r for r in rows
                 if r.get("site_state") == "reachable" and not r.get("courses_found")]
-        print(f"{len(rows)} schools were reachable and produced no courses
-")
+        print(f"{len(rows)} schools were reachable and produced no courses\n")
         reader = CourseReader(PROJECT, MODEL, LOCATION,
                               identity.credentials_for(identity.RESEARCHER, PROJECT))
         with BrowserFetcher(fetcher=fetcher) as browser:
