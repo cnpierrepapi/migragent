@@ -1,0 +1,273 @@
+"""Read the schools: shallow over all of them, deep over the ranked few.
+
+    python -m tools.ingest_schools --shallow --limit 300
+    python -m tools.ingest_schools --deep --limit 20
+    python -m tools.ingest_schools --plan
+
+TWO PASSES, AND WHY
+-------------------
+SHALLOW is one request per school: fetch the homepage through the robots gate
+and find the link to its course listing. It costs no model calls, it establishes
+which schools are reachable and willing at all, and it leaves a `courses_url` on
+the row so the deep pass has somewhere to start.
+
+DEEP reads that course listing and the pages it links to, and turns them into
+courses with quotes. It costs a model call per page, so it is spent on a ranked
+list rather than on whoever happens to sort first.
+
+HOW THE RANKING WORKS, AND WHAT IT IS ALLOWED TO BE
+----------------------------------------------------
+Canada: study permit holders per institution, published by IRCC. A real count of
+the real thing.
+
+The United Kingdom: HESA's equivalent is behind a Cloudflare challenge this
+project will not defeat, so UK schools are ordered by the share of residents born
+outside the UK in the local authority they sit in. That is an inference and a
+sizeable one. It is acceptable ONLY because it decides which schools we read and
+never appears anywhere: being wrong means reading the wrong hundred schools.
+
+Both are filtered to higher education, because the UK register is half
+independent secondary schools and a person applying for a BSc will never go to
+one. That filter is imperfect too, and the deep read is the real one: a school
+with no degree-level courses produces no courses and drops out by itself.
+
+THE GATE IS THE GATE
+--------------------
+Universities are not governments and this changes nothing. A school that will not
+serve robots.txt is not crawled, one that disallows us is not crawled, and the
+outcome is recorded on the row so a later run does not try again for nothing.
+"""
+from __future__ import annotations
+
+import sys
+import time
+from typing import Any
+
+sys.path.insert(0, ".")
+
+from google.cloud import firestore  # noqa: E402
+
+from migragent import identity  # noqa: E402
+from migragent.fetcher import Fetcher  # noqa: E402
+from migragent.institutions import Institutions  # noqa: E402
+from migragent.render import BrowserFetcher  # noqa: E402
+from migragent.schools import Course, CourseReader, Courses, course_links  # noqa: E402
+
+PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+MODEL = "gemini-3.5-flash"
+LOCATION = "global"
+
+# Pages read per school on the deep pass. Each is a model call, and a school's
+# course index plus a handful of listing pages is enough to know what it teaches
+# at each level. Reading a whole prospectus would spend the budget on one school.
+PAGES_PER_SCHOOL = 4
+
+
+def rank(db) -> list[dict[str, Any]]:
+    """The deep reading order. See the module docstring for what it rests on."""
+    rows = [{**d.to_dict(), "id": d.id}
+            for d in db.collection(Institutions.COLLECTION).stream()]
+
+    def eligible(row: dict) -> bool:
+        if not row.get("website") or not row.get("higher_ed"):
+            return False
+        routes = row.get("routes") or []
+        # Child Student only is a school, not a university. The register says so
+        # itself, and it is the one part of this filter that comes from the
+        # government rather than from Wikidata.
+        if routes and "Student" not in routes:
+            return False
+        return True
+
+    # RANKED WITHIN EACH COUNTRY, THEN INTERLEAVED, because the two scores are
+    # not the same kind of number and comparing them directly is meaningless.
+    # Canada's is a headcount of permit holders; the UK's is a percentage of a
+    # local population. Multiplying the percentage by a thousand to make the
+    # magnitudes look similar, which is what this did first, put every London
+    # school above every Canadian one except Toronto. That was a units error
+    # dressed as a judgement.
+    per_country: dict[str, list[dict]] = {}
+    for row in rows:
+        if not eligible(row):
+            continue
+        code = row.get("jurisdiction", "")
+        if code == "CA":
+            score = float(row.get("intl_students") or 0)
+        else:
+            score = float(row.get("area_migrant_share") or 0)
+        if score <= 0:
+            continue
+        row["_score"] = score
+        per_country.setdefault(code, []).append(row)
+
+    for code, group in per_country.items():
+        # Name as the tiebreak so a run is reproducible. Every London school
+        # shares one area figure, so within London the order IS arbitrary; it is
+        # at least arbitrary the same way every time.
+        group.sort(key=lambda r: (-r["_score"], r.get("name", "")))
+
+    # Alternate, so a budget spent early still covers both countries. Neither
+    # country is more deserving and the reading order should not decide that.
+    ranked: list[dict] = []
+    queues = [list(g) for g in per_country.values()]
+    while any(queues):
+        for queue in queues:
+            if queue:
+                ranked.append(queue.pop(0))
+    return ranked
+
+
+def shallow(db, fetcher: Fetcher, rows: list[dict], limit: int) -> None:
+    """One fetch per school: is it reachable, and where does it list courses."""
+    done = reachable = indexed = 0
+
+    for row in rows[:limit]:
+        site = row.get("website")
+        name = row.get("name", "")
+        done += 1
+
+        state, why = fetcher.permission(site)
+        if state != "allowed":
+            db.collection(Institutions.COLLECTION).document(row["id"]).set(
+                {"site_state": state, "site_note": why[:200]}, merge=True)
+            print(f"  {done:>4} {state:<11} {name[:44]}", flush=True)
+            continue
+
+        page = fetcher.fetch(site)
+        if not page.ok:
+            db.collection(Institutions.COLLECTION).document(row["id"]).set(
+                {"site_state": "unreadable",
+                 "site_note": f"{page.outcome}: {getattr(page, 'reason', '') or ''}"[:200]},
+                merge=True)
+            print(f"  {done:>4} unreadable  {name[:44]}", flush=True)
+            continue
+
+        reachable += 1
+        html = page.body.decode("utf-8", "replace")
+        links = course_links(html, site)
+        payload = {"site_state": "reachable", "site_note": ""}
+        if links:
+            indexed += 1
+            payload["courses_url"] = links[0]
+            payload["courses_url_options"] = links[:6]
+        db.collection(Institutions.COLLECTION).document(row["id"]).set(payload, merge=True)
+        print(f"  {done:>4} ok          {name[:44]:46} {len(links)} course links",
+              flush=True)
+
+    print(f"\nshallow: {done} tried, {reachable} reachable, {indexed} with a course index")
+
+
+def deep(db, fetcher: Fetcher, reader: CourseReader, rows: list[dict],
+         limit: int, browser: Any = None) -> None:
+    """Read the course pages and store what they can be shown to say."""
+    store = Courses(db)
+    schools = kept = dropped = 0
+
+    for row in rows[:limit]:
+        start = row.get("courses_url") or row.get("website")
+        if not start or row.get("site_state") not in (None, "reachable"):
+            continue
+
+        name, code = row.get("name", ""), row.get("jurisdiction", "")
+        schools += 1
+        print(f"\n  {name[:56]}  ({code})", flush=True)
+
+        queue = [start]
+        seen: set[str] = set()
+        got: list[Course] = []
+
+        while queue and len(seen) < PAGES_PER_SCHOOL:
+            url = queue.pop(0)
+            if url in seen:
+                continue
+            seen.add(url)
+
+            state, _why = fetcher.permission(url)
+            if state != "allowed":
+                continue
+            page = fetcher.fetch(url)
+            if not page.ok:
+                continue
+
+            html = page.body.decode("utf-8", "replace")
+            courses, misses = reader.read(url, page, code, name)
+
+            # A course catalogue is usually a JavaScript application: the HTML
+            # that arrives is a shell, a search box and a footer, and the courses
+            # are fetched afterwards. Reading the shell finds nothing and
+            # concludes the school teaches nothing, which is wrong about the
+            # school rather than honest about the page.
+            #
+            # So a page that yields nothing is rendered and read again. The
+            # BrowserFetcher checks the robots gate itself before it opens
+            # anything, and identifies as MIGRAGENT rather than impersonating
+            # somebody's Chrome: this is for meeting a transport, never for
+            # getting past a policy or a bot check.
+            if not courses and browser is not None:
+                rendered = browser.fetch(url)
+                if rendered.ok:
+                    courses, misses = reader.read(url, rendered, code, name)
+                    html = rendered.body.decode("utf-8", "replace")
+                    if courses:
+                        print(f"      {len(courses):>3} kept after rendering   {url[:56]}",
+                              flush=True)
+
+            got += courses
+            dropped += len(misses)
+            if courses or misses:
+                print(f"      {len(courses):>3} kept, {len(misses):>3} dropped   {url[:60]}",
+                      flush=True)
+
+            if len(seen) < PAGES_PER_SCHOOL:
+                for link in course_links(html, url, limit=6):
+                    if link not in seen:
+                        queue.append(link)
+
+        if got:
+            store.record(got)
+            kept += len(got)
+            db.collection(Institutions.COLLECTION).document(row["id"]).set(
+                {"courses_read_at": got[0].read_at, "courses_found": len(got)},
+                merge=True)
+
+    print(f"\ndeep: {schools} schools, {kept} courses kept, {dropped} dropped")
+    print(f"courses now held: {store.counts()}")
+
+
+def main() -> int:
+    db = firestore.Client(project=PROJECT,
+                          credentials=identity.credentials_for(identity.WEB, PROJECT))
+    rows = rank(db)
+
+    limit = 25
+    if "--limit" in sys.argv:
+        limit = int(sys.argv[sys.argv.index("--limit") + 1])
+
+    if "--plan" in sys.argv or not any(f in sys.argv for f in ("--shallow", "--deep")):
+        print(f"{len(rows)} schools eligible for deep reading\n")
+        for i, row in enumerate(rows[:limit], 1):
+            basis = (f"{int(row['_score']):,} permit holders"
+                     if row.get("jurisdiction") == "CA"
+                     else f"{row['_score'] * 100:.1f}% migrant area")
+            print(f"  {i:>3}. {row.get('jurisdiction')} {row.get('name', '')[:44]:46}"
+                  f"{basis}")
+        return 0
+
+    # One host at a time, and a real pause. These are not government sites with
+    # a crawl budget to spare, and there are hundreds of them.
+    fetcher = Fetcher(delay_seconds=1.5)
+
+    if "--shallow" in sys.argv:
+        shallow(db, fetcher, rows, limit)
+
+    if "--deep" in sys.argv:
+        reader = CourseReader(PROJECT, MODEL, LOCATION,
+                              identity.credentials_for(identity.RESEARCHER, PROJECT))
+        with BrowserFetcher(fetcher=fetcher) as browser:
+            deep(db, fetcher, reader, rows, limit, browser=browser)
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
