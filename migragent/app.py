@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import html as html_module
 import os
+from typing import Any
 from pathlib import Path
 
 from flask import (Flask, Response, jsonify, make_response, redirect, request,
@@ -32,11 +33,15 @@ from .cv_builder import FIELDS as CV_FIELDS, build as build_cv, missing_for_matc
 from .cv_builder_page import clone_html, cv_builder_html
 from .dashboard_page import dashboard_html
 from .drafts import CLONE_INTO, Drafter, PeopleDrafter
+from .eligibility import next_level, study_countries, work_countries
 from .fetcher import Fetcher
+from .flow_page import choose_html, documents_html, places_html
 from .fit import FitScorer, Fits
 from .listings import Listings, matched_for, occupations_matching
 from .occupations import Shortages
+from .level import from_documents as level_from_documents
 from .profile import AvatarRejected, Profiles
+from .rubric import best, score_study, score_work
 from .corpus import Corpus
 from .coverage import Matcher, document_worth
 from .detect import agreement, detect
@@ -135,7 +140,24 @@ def brand(name: str) -> Response:
 
 @app.get("/start")
 def home() -> Response:
-    """Two questions and a drop zone. The lane is derived behind it.
+    """Step one of the flow: what are you trying to do.
+
+    This used to be the whole intake: pick a lane, pick a country off a list of
+    fourteen, drop your documents in. The country question has moved to the end
+    and become an answer rather than a question, so what is left here is one
+    tap. See migragent/flow_page.py.
+    """
+    _extracted, live, sources = _coverage()
+    return Response(choose_html(live=live, sources=sources), mimetype="text/html")
+
+
+@app.get("/start/old")
+def home_old() -> Response:
+    """The previous intake, kept while the new flow beds in.
+
+    Not linked from anywhere. It is here so a comparison is one URL away rather
+    than one git revert away, and it goes when the new flow has been through a
+    few real people.
 
     The first version of this page listed fourteen jurisdiction and lane rows
     labelled ready, watched and uncovered. That is our filing system. Nobody
@@ -201,6 +223,240 @@ def home() -> Response:
     return Response(intake_html(coverage_by_lane, registry.total_sources(),
                                 live=sum(extracted.values())),
                     mimetype="text/html")
+
+
+def cases_documents(db, case_id: str) -> list:
+    return Cases(db).documents(case_id)
+
+
+# The course corpus the study path is built against. It is read from a
+# collection the school ingestion fills, and until that ingestion has run this
+# returns nothing for every country.
+#
+# That is the honest failure and not a placeholder: a study country appears when
+# a school on its register can be shown to teach this level with an intake open,
+# and inventing a country because we have not looked yet would be exactly the
+# claim this product exists not to make. The screen says the reading is under
+# way rather than showing an empty list with no explanation.
+COURSES = "courses"
+
+
+def _courses_by_country(db, level: str) -> dict[str, list]:
+    from google.cloud import firestore
+
+    out: dict[str, list] = {}
+    try:
+        query = (db.collection(COURSES)
+                 .where(filter=firestore.FieldFilter("level", "==", level))
+                 .limit(2000))
+        for snap in query.stream():
+            row = snap.to_dict()
+            out.setdefault(row.get("jurisdiction", ""), []).append(row)
+    except Exception:  # noqa: BLE001
+        return {}
+    return {k: v for k, v in out.items() if k}
+
+
+def _requirement_counts(db) -> dict[tuple[str, str], int]:
+    """Live requirements per country and lane, which several screens want."""
+    counts: dict[tuple[str, str], int] = {}
+    for row in db.collection("requirements").select(
+            ["jurisdiction", "lane", "retired_at"]).stream():
+        d = row.to_dict()
+        if d.get("retired_at"):
+            continue
+        key = (d.get("jurisdiction", ""), d.get("lane", ""))
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+@app.post("/start/lane")
+def start_lane() -> Response:
+    """Step one. A case exists from here on, with no country yet.
+
+    That is the whole inversion: a case used to be impossible without a country,
+    because a country was the first thing anybody was asked for.
+    """
+    intent = (request.form.get("intent") or "").lower()
+    if intent not in ("study", "work", "both"):
+        return redirect("/start")
+
+    lane = (request.form.get("lane") or "").lower()
+    if intent != "both":
+        lane = intent
+    elif lane not in ("study", "work"):
+        # "Both" without saying which matters more is the one answer the form
+        # will not accept, because everything downstream answers one lane first
+        # and picking for them would be picking the wrong one half the time.
+        return redirect("/start")
+
+    case = Cases(_db()).create("", lane, intent=intent)
+    response = make_response(redirect("/start/documents"))
+    response.set_cookie("migragent_case", case.case_id, max_age=60 * 60 * 24 * 30,
+                        httponly=True, samesite="Lax", secure=True)
+    return response
+
+
+@app.get("/start/documents")
+def start_documents() -> Response:
+    cases = Cases(_db())
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/start")
+    return Response(documents_html(case.lane, case.intent or case.lane),
+                    mimetype="text/html")
+
+
+@app.post("/start/documents")
+def read_documents() -> Response:
+    """Read what they uploaded, then send them to the countries it opened.
+
+    A CV goes to the CV store and is cloned into each country's shape here,
+    because the clones are what the work path is for and waiting until they have
+    found a job to produce them is the wrong order.
+    """
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/start")
+
+    creds = identity.credentials_for(identity.RESEARCHER, _project())
+    uploads = [u for u in request.files.getlist("file") if u and u.filename]
+
+    if case.lane == "work":
+        reader = CVReader(_project(), MODEL, MODEL_LOCATION, creds)
+        for uploaded in uploads[:1]:
+            mime = MIME_BY_SUFFIX.get(Path(uploaded.filename).suffix.lower())
+            if mime is None:
+                continue
+            data = uploaded.read()
+            text, source, _note = _text_for(data, mime)
+            cv = reader.read(uploaded.filename, data, mime, text, text_source=source)
+            del data
+            if cv.claims:
+                CVStore(db).put(case.case_id, cv)
+                drafter = Drafter(_project(), MODEL, MODEL_LOCATION, creds)
+                clones = CVClones(db)
+                for code in CLONE_INTO:
+                    clones.put(case.case_id, code, drafter.clone(cv, code))
+    else:
+        reader = DocumentReader(_project(), MODEL, MODEL_LOCATION, creds)
+        for uploaded in uploads:
+            mime = MIME_BY_SUFFIX.get(Path(uploaded.filename).suffix.lower())
+            if mime is None:
+                continue
+            data = uploaded.read()
+            text, source, note = _text_for(data, mime)
+            doc = reader.read(uploaded.filename, data, mime, text,
+                              text_source=source, text_note=note)
+            del data
+            if not doc.error:
+                cases.add_document(case.case_id, doc)
+
+    return redirect("/start/places")
+
+
+def _eligible_for(db, case) -> tuple[list, Any, str, str]:
+    """The countries this case's own documents opened, and why.
+
+    Returns (eligible, level reading, assumed level, why nothing) so the screen
+    can explain an empty list rather than showing an empty list.
+    """
+    counts = _requirement_counts(db)
+
+    if case.lane == "work":
+        cv = CVStore(db).get(case.case_id)
+        if cv is None:
+            return [], None, "", ("We have not read a CV yet, so there is nothing to match "
+                                  "against what countries say they are short of. "
+                                  "Upload one, or answer five questions and we will build it.")
+
+        roles = ([c.value for c in cv.of_kind("role")]
+                 + [c.value for c in cv.of_kind("licence")])
+        shortages = {code: Shortages(db).for_jurisdiction(code) for code in JURISDICTIONS}
+        shortages = {k: v for k, v in shortages.items() if v}
+
+        eligible = work_countries(
+            roles, shortages,
+            requirements={k: counts.get((k, "work"), 0) for k in JURISDICTIONS},
+            postings=Listings(db).counts(),
+        )
+        if not eligible:
+            held = ", ".join(roles[:4]) or "nothing we could read"
+            return [], None, "", (
+                f"No country we have read publishes a shortage that matches {held}. "
+                f"That is an answer about their lists, not about you: we hold shortage "
+                f"lists for a small number of countries so far, and yours may simply not "
+                f"be among them yet.")
+        return eligible, None, "", ""
+
+    # Study.
+    documents = cases_documents(db, case.case_id)
+    reading = level_from_documents(documents)
+    assumed = next_level(reading.held) if reading.found else "bachelors"
+
+    courses = _courses_by_country(db, assumed)
+    eligible = study_countries(assumed, [], courses,
+                               requirements={k: counts.get((k, "study"), 0)
+                                             for k in JURISDICTIONS})
+    if not eligible:
+        return [], reading, assumed, (
+            "We have not read enough about individual schools yet to say which of them "
+            "teach this at the level you need, with an intake open. That reading is "
+            "under way. Nothing is shown here until it can be shown with the school's "
+            "own words behind it.")
+    return eligible, reading, assumed, ""
+
+
+@app.get("/start/places")
+def start_places() -> Response:
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/start")
+
+    eligible, reading, assumed, nothing = _eligible_for(db, case)
+    return Response(places_html(case.lane, eligible, reading, assumed, nothing),
+                    mimetype="text/html")
+
+
+@app.post("/start/places")
+def choose_places() -> Response:
+    """Save what they picked, and let the rubric decide which is answered first.
+
+    The primary is not the first one they ticked. Which order somebody taps
+    checkboxes in carries no information about where they should start, and the
+    rubric has an opinion built from what we can actually deliver.
+    """
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/start")
+
+    picked = [p.upper() for p in request.form.getlist("place") if p.upper() in JURISDICTIONS]
+    if not picked:
+        return redirect("/start/places")
+
+    eligible, _reading, _assumed, _why = _eligible_for(db, case)
+    mine = [e for e in eligible if e.jurisdiction in picked]
+
+    if case.lane == "work":
+        ranked = score_work(mine)
+    else:
+        ranked = score_study(mine)
+
+    # The score never reaches a screen. It reaches the log, so a decision about
+    # somebody's future is at least auditable by us. See migragent/rubric.py.
+    for score in ranked:
+        app.logger.info("rubric %s %s", case.lane, score.explain())
+
+    primary = best(ranked) or picked[0]
+    ordered = [s.jurisdiction for s in ranked] or picked
+    cases.set_places(case.case_id, ordered, primary)
+    return redirect("/working")
 
 
 def _coverage() -> tuple[dict, int, int]:
@@ -300,6 +556,12 @@ def working() -> Response:
     case = _case_or_none(cases)
     if case is None:
         return redirect("/start")
+    # A case exists from step one now, before any country is chosen. Running it
+    # in that state would build a guide for nowhere, so it goes back to the step
+    # it has not finished rather than failing on an empty jurisdiction.
+    if not case.ready:
+        return redirect("/start/places")
+
     documents = len(cases.documents(case.case_id))
     return Response(working_html(case, documents,
                                  RunTimes(_db()).estimate(case.lane, documents)),
@@ -316,6 +578,9 @@ def run_stream() -> Response:
         return Response(sse_done(), mimetype="text/event-stream")
 
     creds = identity.credentials_for(identity.RESEARCHER, _project())
+    if not case.ready:
+        return Response(sse_done(), mimetype="text/event-stream")
+
     run = Run(
         cases=cases,
         corpus=Corpus(db),

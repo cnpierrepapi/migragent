@@ -61,6 +61,25 @@ def _now() -> datetime:
 
 @dataclass
 class Case:
+    """One person's case.
+
+    `jurisdiction` and `lane` are the PRIMARY country and route: the one the
+    guide is built for and the one the watch follows. They were the whole of a
+    case until Build 7, when the order of the product was inverted.
+
+    Nobody picks a country first any more. They say what they are trying to do,
+    they upload what they have, and the countries that fit come out of their own
+    documents. So a case now exists for a while with no country at all, which is
+    why `jurisdiction` may be empty, and it ends up with several, which is why
+    `jurisdictions` exists beside it.
+
+    The two are kept rather than collapsed into a list because everything built
+    before this — the guide, the board, the fit scores, the alerts — answers a
+    question about one country, and giving them a list would have meant changing
+    all of it to say "which one" at every call site. The primary is chosen by
+    migragent/rubric.py out of the ones the person picked.
+    """
+
     case_id: str
     jurisdiction: str
     lane: str
@@ -69,6 +88,26 @@ class Case:
     expires_at: str
     document_count: int = 0
     score: int = 0
+
+    # study, work, or both. Distinct from `lane`: somebody doing both has one
+    # primary route, and that is what `lane` holds. This is what they said they
+    # wanted, and `lane` is which half is being answered first.
+    intent: str = ""
+
+    # Every country they chose, primary included. Ordered by the rubric.
+    jurisdictions: list[str] = field(default_factory=list)
+
+    @property
+    def chosen(self) -> list[str]:
+        """The countries, always as a list, even for a case made before this existed."""
+        if self.jurisdictions:
+            return self.jurisdictions
+        return [self.jurisdiction] if self.jurisdiction else []
+
+    @property
+    def ready(self) -> bool:
+        """Has this case got far enough through the flow to be run?"""
+        return bool(self.jurisdiction and self.lane)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -80,9 +119,12 @@ class Cases:
     def __init__(self, client: firestore.Client) -> None:
         self._db = client
 
-    def create(self, jurisdiction: str, lane: str) -> Case:
+    def create(self, jurisdiction: str, lane: str, intent: str = "",
+               jurisdictions: list[str] | None = None) -> Case:
         now = _now()
         case = Case(
+            intent=intent or lane,
+            jurisdictions=list(jurisdictions or ([jurisdiction] if jurisdiction else [])),
             case_id=new_case_id(),
             jurisdiction=jurisdiction,
             lane=lane,
@@ -97,7 +139,23 @@ class Cases:
         snap = self._db.collection(CASES).document(case_id).get()
         if not snap.exists:
             return None
-        return Case(**snap.to_dict())
+        row = snap.to_dict() or {}
+        # Only the fields Case actually declares. A stored row that gained a key
+        # from a later build must not make every earlier screen raise.
+        return Case(**{k: v for k, v in row.items() if k in Case.__annotations__})
+
+    def set_places(self, case_id: str, jurisdictions: list[str], primary: str) -> None:
+        """Which countries they chose, and which one is answered first.
+
+        The primary is not the first one they ticked. It is whichever the rubric
+        ranked highest out of the ones they ticked, because the order somebody
+        taps checkboxes carries no information about where they should start.
+        """
+        self._db.collection(CASES).document(case_id).update({
+            "jurisdictions": list(jurisdictions),
+            "jurisdiction": primary,
+        })
+        self.touch(case_id)
 
     def touch(self, case_id: str) -> None:
         """Restart the retention countdown. Using a case keeps it alive."""
