@@ -94,18 +94,46 @@ def rank(db) -> list[dict[str, Any]]:
             continue
         code = row.get("jurisdiction", "")
         if code == "CA":
+            # Canada publishes the real thing: permit holders per institution.
             score = float(row.get("intl_students") or 0)
         else:
-            score = float(row.get("intl_share_local") or 0)
-        if score <= 0:
-            continue
+            # THE UK, IN ORDER OF HOW CLOSE THE NUMBER IS TO THE QUESTION.
+            #
+            # 1. international_share, where an earlier build already stored it:
+            #    the institution's own international student percentage, with a
+            #    quote and a source. It is a Times Higher Education figure, so a
+            #    commercial estimate rather than a government statistic, and it
+            #    can never be displayed for that reason. For deciding which
+            #    schools to READ it is far better than the alternative, because
+            #    it is the actual quantity being asked about.
+            # 2. intl_share_local, the census proxy: how many people in this
+            #    town were born abroad. A real number about the wrong subject.
+            #
+            # Both are internal ranking only. The difference between them is
+            # recorded on the row, not flattened into one field, so a later
+            # reader can see which of the two produced an order.
+            score = float(row.get("international_share") or 0)
+            if score <= 0:
+                # Scaled under the THE range on purpose: a school with a real
+                # percentage should outrank one carried only by its postcode,
+                # and 100 is the ceiling of the first scale.
+                score = float(row.get("intl_share_local") or 0) / 100.0
+        # A school with no score is not unreadable, it is unranked. Canada has
+        # institutions IRCC suppressed the count for; the UK has towns the census
+        # does not name as a local authority. Dropping them meant 155 readable
+        # schools were never read because we did not know where to put them in a
+        # queue, which is the tail wagging the dog.
+        #
+        # They go after everything scored, in name order, and get read when the
+        # ranked ones are done.
         row["_score"] = score
         per_country.setdefault(code, []).append(row)
 
     for code, group in per_country.items():
         # Name as the tiebreak so a run is reproducible. Every London school
         # shares one area figure, so within London the order IS arbitrary; it is
-        # at least arbitrary the same way every time.
+        # at least arbitrary the same way every time. Unscored schools sort last
+        # because -0.0 is the smallest key here, not because they are worth less.
         group.sort(key=lambda r: (-r["_score"], r.get("name", "")))
 
     # Alternate, so a budget spent early still covers both countries. Neither
@@ -348,9 +376,14 @@ def main() -> int:
             f in sys.argv for f in ("--shallow", "--deep", "--details")):
         print(f"{len(rows)} schools eligible for deep reading\n")
         for i, row in enumerate(rows[:limit], 1):
-            basis = (f"{int(row['_score']):,} permit holders"
-                     if row.get("jurisdiction") == "CA"
-                     else f"{row['_score']:.1f}% migrant area")
+            if row.get("jurisdiction") == "CA":
+                basis = f"{int(row['_score']):,} permit holders"
+            elif row.get("international_share"):
+                basis = f"{row['international_share']:.0f}% international (THE)"
+            elif row.get("intl_share_local"):
+                basis = f"{row['intl_share_local']:.1f}% migrant area"
+            else:
+                basis = "unranked"
             print(f"  {i:>3}. {row.get('jurisdiction')} {row.get('name', '')[:44]:46}"
                   f"{basis}")
         return 0
