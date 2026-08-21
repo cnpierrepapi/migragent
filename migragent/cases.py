@@ -97,6 +97,13 @@ class Case:
     # Every country they chose, primary included. Ordered by the rubric.
     jurisdictions: list[str] = field(default_factory=list)
 
+    # What they are studying next, when they have corrected what we read off
+    # their documents. Empty means "use what the transcripts said", which is the
+    # normal case: this exists because "most likely" is not "certainly" and
+    # plenty of people change field between qualifications.
+    level: str = ""
+    subjects: list[str] = field(default_factory=list)
+
     @property
     def chosen(self) -> list[str]:
         """The countries, always as a list, even for a case made before this existed."""
@@ -154,6 +161,15 @@ class Cases:
         self._db.collection(CASES).document(case_id).update({
             "jurisdictions": list(jurisdictions),
             "jurisdiction": primary,
+        })
+        self.touch(case_id)
+
+    def set_study_choice(self, case_id: str, level: str,
+                         subjects: list[str]) -> None:
+        """Their correction to what we read. Overrides the documents, not adds."""
+        self._db.collection(CASES).document(case_id).update({
+            "level": level,
+            "subjects": list(subjects),
         })
         self.touch(case_id)
 

@@ -292,12 +292,15 @@ def places_html(lane: str, eligible: list, reading=None, assumed_level: str = ""
 
     level_line = ""
     if lane == "study" and assumed_level:
+        subjects = list(getattr(reading, "subjects", []) or []) if reading else []
+        studied = (f' in <b>{_e(", ".join(subjects))}</b>' if subjects else "")
         if reading is not None and getattr(reading, "found", False):
             level_line = (
                 f'<p class="level">Your documents say you hold <b>{_e(reading.held)}</b>, '
                 f'from <q>{_e(reading.quote[:90])}</q> on {_e(reading.filename)}. '
-                f'So we are showing courses at <b>{_e(assumed_level)}</b> level. '
-                f'<a href="/start/level">Not right? Change it.</a></p>')
+                f'So we are showing courses at <b>{_e(assumed_level)}</b> level'
+                f'{studied}. '
+                f'<a href="/start/level">Studying something else? Change it.</a></p>')
         else:
             level_line = (
                 f'<p class="level">We could not tell what you already hold from what you '
@@ -328,4 +331,64 @@ def places_html(lane: str, eligible: list, reading=None, assumed_level: str = ""
   because showing them would waste your time and your money.</p>
   {level_line}
   {body}
+</main></body></html>'''
+
+def level_html(held: str, assumed: str, subjects: list[str],
+               quote: str = "", filename: str = "") -> str:
+    """Correct what we read off the documents.
+
+    Linked from the countries screen, because that is where somebody discovers
+    we got it wrong: they see courses at the wrong level, or in a field they left
+    behind. Two controls, no more. The level is a choice of four and the subject
+    is free text, because a list of subjects long enough to be useful is longer
+    than anybody will read.
+    """
+    from .eligibility import LEVEL_NAMES
+
+    read = ""
+    if held and quote:
+        read = (f'<p class="level">We read <b>{_e(held)}</b> from '
+                f'<q>{_e(quote[:80])}</q> on {_e(filename)}.</p>')
+
+    options = []
+    for key in ("bachelors", "masters", "doctorate"):
+        checked = " checked" if key == assumed else ""
+        options.append(
+            f'<label class="pick"><input type="radio" name="level" '
+            f'value="{key}"{checked}>'
+            f'<span class="box"><b>{_e(LEVEL_NAMES.get(key, key)).capitalize()}</b>'
+            f'</span></label>')
+
+    return f'''<!doctype html>
+<html lang="en" data-theme="dark"><head>{HEAD}<title>What are you studying?</title>
+<style>{STYLE}</style></head>
+<body><main>
+  <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
+  {_crumbs(3)}
+  <h1>What are you applying for?</h1>
+  <p class="sub">We worked this out from your documents. If it is wrong, change it
+  here and the countries will be worked out again.</p>
+  {read}
+
+  <form method="post" action="/start/level">
+    <fieldset style="border:0;padding:0;margin:0 0 26px">
+      <legend style="font:600 1rem var(--font-body);margin-bottom:12px">Which level?</legend>
+      <div class="picks">{"".join(options)}</div>
+    </fieldset>
+
+    <label style="display:block;margin-bottom:26px">
+      <b style="display:block;font:600 1rem var(--font-body);margin-bottom:4px">
+        What do you want to study?</b>
+      <em style="display:block;font-style:normal;font-family:var(--font-mono);
+                 font-size:.71rem;color:var(--ink-soft);margin-bottom:9px">
+        A subject or two. Leave it empty to see everything at this level.</em>
+      <input type="text" name="subjects" value="{_e(", ".join(subjects))}"
+             placeholder="Civil engineering, nursing"
+             style="width:100%;padding:13px 14px;border:1px solid var(--rule);
+                    border-radius:var(--radius-sm);background:var(--paper-raised);
+                    color:var(--ink);font:.96rem var(--font-body)"></label>
+
+    <button class="go" type="submit">Show me the countries</button>
+    <a class="quiet" href="/start/places">Back</a>
+  </form>
 </main></body></html>'''

@@ -35,11 +35,13 @@ from .dashboard_page import dashboard_html
 from .drafts import CLONE_INTO, Drafter, PeopleDrafter
 from .eligibility import next_level, study_countries, work_countries
 from .fetcher import Fetcher
-from .flow_page import choose_html, documents_html, places_html
+from .flow_page import (choose_html, documents_html, level_html,
+                        places_html)
 from .fit import FitScorer, Fits
 from .listings import Listings, matched_for, occupations_matching
 from .occupations import Shortages
 from .level import from_documents as level_from_documents
+from .level import subjects_from_documents
 from .profile import AvatarRejected, Profiles
 from .rubric import best, score_study, score_work
 from .corpus import Corpus
@@ -396,16 +398,88 @@ def _eligible_for(db, case) -> tuple[list, Any, str, str]:
     reading = level_from_documents(documents)
     assumed = next_level(reading.held) if reading.found else "bachelors"
 
+    # WHAT THEY STUDIED, not just what level they reached. Without this the
+    # subject filter received an empty list and did nothing, so a school leaver
+    # was shown 1,293 bachelors courses across two countries: every course we
+    # hold at their level. That is a phone book, not a shortlist, and it is the
+    # exact failure this product exists to remove.
+    #
+    # A degree certificate names a field and is a strong signal. A school
+    # certificate lists the subjects everybody sits and is a weak one, so
+    # English and Mathematics are dropped before matching. Either way the screen
+    # says what was taken and lets it be changed: people move field between
+    # qualifications and this must not quietly hide the courses they came for.
+    subjects = subjects_from_documents(documents)
+
+    # A correction they typed beats anything we read. `assumed` is our reading of
+    # a transcript; `case.level` is somebody telling us what they are actually
+    # applying for, and there is no contest between those two.
+    if getattr(case, "level", ""):
+        assumed = case.level
+    if getattr(case, "subjects", None):
+        subjects = list(case.subjects)
+
     courses = _courses_by_country(db, assumed)
-    eligible = study_countries(assumed, [], courses,
+    eligible = study_countries(assumed, subjects, courses,
                                requirements={k: counts.get((k, "study"), 0)
                                              for k in JURISDICTIONS})
+    # Nothing matched the subjects but the level has courses: show the level
+    # rather than nothing. A missed subject match is our word overlap being
+    # narrow, not the country being closed to them.
+    if not eligible and subjects:
+        eligible = study_countries(assumed, [], courses,
+                                   requirements={k: counts.get((k, "study"), 0)
+                                                 for k in JURISDICTIONS})
+        subjects = []
     if not eligible:
         return [], reading, assumed, (
             "We have not read enough about individual schools yet to say which of them "
             "teach this at the level you need. That reading is under way. Nothing is "
             "shown here until it can be shown with the school's own words behind it.")
+    reading.subjects = subjects
     return eligible, reading, assumed, ""
+
+
+@app.get("/start/level")
+def study_level() -> Response:
+    """Correct the level and subject we read off the documents."""
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/start")
+
+    documents = cases_documents(db, case.case_id)
+    reading = level_from_documents(documents)
+    assumed = case.level or (next_level(reading.held) if reading.found else "bachelors")
+    subjects = list(case.subjects) or subjects_from_documents(documents)
+
+    return Response(level_html(held=reading.held, assumed=assumed, subjects=subjects,
+                               quote=reading.quote, filename=reading.filename),
+                    mimetype="text/html")
+
+
+@app.post("/start/level")
+def save_study_level() -> Response:
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/start")
+
+    level = (request.form.get("level") or "").strip().lower()
+    if level not in ("bachelors", "masters", "doctorate"):
+        level = ""
+
+    # Free text, split on commas. Nothing is matched against a controlled list,
+    # because a list of subjects long enough to cover what people study is
+    # longer than anybody will read, and rejecting a subject we do not recognise
+    # would be telling somebody their field does not exist.
+    raw = request.form.get("subjects") or ""
+    subjects = [s.strip() for s in raw.split(",") if s.strip()][:6]
+
+    cases.set_study_choice(case.case_id, level, subjects)
+    return redirect("/start/places")
 
 
 @app.get("/start/places")

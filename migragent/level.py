@@ -111,6 +111,10 @@ class Reading:
     field_name: str = ""
     candidates: list[str] = field(default_factory=list)
 
+    # What they studied, filled in by the caller from subjects_from_documents.
+    # Carried here so the screen can show it beside the level it assumed.
+    subjects: list[str] = field(default_factory=list)
+
     @property
     def found(self) -> bool:
         return bool(self.held)
@@ -171,3 +175,63 @@ def from_documents(documents: list[Any]) -> Reading:
 
     best.candidates = sorted(seen, key=lambda x: RANK[x])
     return best
+
+# Words that are a qualification, not a field of study. "Bachelor of Science in
+# Mechanical Engineering" is about mechanical engineering; the first three words
+# are the certificate talking about itself.
+_AWARD_WORDS = {
+    "bachelor", "bachelors", "master", "masters", "doctor", "doctorate", "phd",
+    "bsc", "ba", "beng", "btech", "msc", "ma", "meng", "mtech", "mba", "llb",
+    "llm", "hnd", "nd", "diploma", "certificate", "degree", "honours", "honors",
+    "science", "arts", "of", "in", "the", "and", "with", "study", "studies",
+    "national", "higher", "senior", "school", "examination", "council", "west",
+    "african", "general", "advanced", "ordinary", "level",
+}
+
+# Subjects a secondary school certificate lists that say nothing about what
+# somebody wants to do next. Everybody sits these.
+_CORE_SCHOOL_SUBJECTS = {"english", "english language", "mathematics", "maths",
+                         "civic education", "general paper"}
+
+
+def subjects_from_documents(documents: list[Any]) -> list[str]:
+    """What this person has studied, as words to match course titles against.
+
+    A degree certificate is the strong signal: "BSc Mechanical Engineering"
+    names a field, and somebody with that degree is overwhelmingly likely to be
+    looking at that field next. A school certificate is the weak one: it lists
+    the subjects everybody sits, and English and Mathematics tell us nothing.
+
+    This is a starting point and never a decision. The screen shows what was
+    taken from the documents and lets it be changed, because plenty of people
+    move field between qualifications and this must not quietly hide the courses
+    they actually came for.
+    """
+    found: list[str] = []
+    seen: set[str] = set()
+
+    for doc in documents or []:
+        if (getattr(doc, "kind", "") or "") not in KINDS:
+            continue
+        for f in getattr(doc, "fields", []) or []:
+            name = (getattr(f, "name", "") or "").lower()
+            value = (getattr(f, "value", "") or "").strip()
+            if not value or len(value) > 90:
+                continue
+            if name not in FIELDS and "qualif" not in name and "subject" not in name:
+                continue
+
+            # Strip the award out and keep the field of study.
+            words = [w for w in re.split(r"[^A-Za-z]+", value) if w]
+            kept = [w for w in words if w.lower() not in _AWARD_WORDS]
+            phrase = " ".join(kept).strip()
+            if not phrase or len(phrase) < 3:
+                continue
+            if phrase.lower() in _CORE_SCHOOL_SUBJECTS:
+                continue
+            if phrase.lower() in seen:
+                continue
+            seen.add(phrase.lower())
+            found.append(phrase)
+
+    return found[:6]
