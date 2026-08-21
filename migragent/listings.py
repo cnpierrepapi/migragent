@@ -310,6 +310,21 @@ class Listings:
                 break
         return rows[:limit]
 
+    def total(self) -> int:
+        """How many postings are held, without reading them.
+
+        The front page prints this number on every request. `counts()` streams
+        the whole collection to get it, which is a couple of thousand document
+        reads for one line of a stat strip; the aggregation is one. If the
+        aggregation is unavailable for any reason the page loses a number rather
+        than failing, because a stat strip is not worth a 500.
+        """
+        try:
+            result = self._db.collection(LISTINGS).count().get()
+            return int(result[0][0].value)
+        except Exception:  # noqa: BLE001
+            return 0
+
     def counts(self) -> dict[str, int]:
         counts: dict[str, int] = {}
         for doc in self._db.collection(LISTINGS).stream():

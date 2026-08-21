@@ -206,7 +206,8 @@ def landing() -> Response:
     places.sort(key=lambda p: (not p[2], p[1]))
 
     return Response(landing_html(live=live, sources=sources, lanes_open=open_lanes,
-                                 places=places), mimetype="text/html")
+                                 places=places, openings=Listings(_db()).total()),
+                    mimetype="text/html")
 
 
 def _case_or_none(cases: Cases):

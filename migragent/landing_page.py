@@ -1,33 +1,36 @@
 """The landing page: what this is, for somebody who has never heard of it.
 
-WHAT THIS PAGE IS ABOUT, HAVING GOT IT WRONG TWICE
---------------------------------------------------
-It is not about sources. Sources are how the product keeps its promise, not the
-promise. The promise is that somebody who wants to move, study or work in another
-country can stop guessing: an agent goes and reads the official rules every day
-and hands them what they actually need to do, in order, with what it costs and
-what changed.
+WHAT THE PRODUCT ACTUALLY IS, HAVING GOT THIS WRONG THREE TIMES
+---------------------------------------------------------------
+Version one led with "nothing is stated without a source". That is a sentence
+about our internal discipline, and nobody arrives caring about our discipline.
 
-The first version of this page led with "nothing is stated without a source",
-which is a sentence about our internal discipline. A person deciding whether to
-move to Canada does not arrive caring about our discipline. They arrive wanting
-to know if they can go, what it takes, and whether the thing they read last month
-is still true.
+Version two led with the guide. Closer, and still only half of it: a guide is a
+document, and a document is a thing you read once and then have to keep checking
+yourself, which is exactly the labour this is supposed to remove.
 
-It also has to look like what it is. The earlier art direction was a table, some
-paper and a plant: calm, well lit, and it could have been an accounting product.
-Nothing on the page said anybody was leaving anywhere.
+The product is an agent that keeps working after you close the tab. You tell it
+who you are and where you want to go, it carves a route out of the official
+rules for your case, and then it stays on watch: when a rule moves, when an
+intake opens, when a job in a shortage occupation you actually qualify for is
+posted, it tells you. The guide is the first thing it gives you. The alerts are
+why you keep it.
+
+So this page is ordered that way. The hero says what it does. The second beat is
+the watch, because that is the part nobody else does. The evidence discipline
+comes after, as the reason the alerts are worth opening, which is where it
+belongs rather than at the top.
 
 THE FORM IS NOT HERE
 --------------------
 This page sells; `/start` does the work. Every call to action points there.
 
-LIGHT, DELIBERATELY
--------------------
-An earlier hero filled four fifths of the first screen with a dark scrim over a
-video, and the page read as dark mode whether or not the theme said so. The photo
-sits beside the words now rather than under them, so the first screen is the
-colour of the paper it is printed on.
+DARK, DELIBERATELY
+------------------
+The tokens carry two faces and this page asks for the mature one. Note that in
+dark `--primary` is a pale blue, so anything painting text on it uses
+`var(--paper)` and never `#fff`, or the label disappears into its own background.
+That is why this could not be the light page with one attribute changed.
 """
 from __future__ import annotations
 
@@ -61,91 +64,172 @@ CSS = '''
   body { margin: 0; background: var(--paper); color: var(--ink);
          font-family: var(--font-body) }
   a { color: inherit }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px }
 
   .top { display: flex; align-items: center; justify-content: space-between;
-         padding: 20px 0 8px }
+         padding: 22px 0 8px }
   .brand { display: flex; align-items: center; gap: 11px; color: var(--primary) }
   .brand svg { width: 26px; height: 26px }
-  .brand span { font-family: var(--font-display); font-size: 1.16rem; color: var(--ink) }
+  .brand span { font-family: var(--font-display); font-size: 1.16rem; color: var(--ink);
+                letter-spacing: .02em }
 
-  .cta { display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px;
-         border-radius: var(--radius); background: var(--primary); color: #fff;
-         text-decoration: none; font: 600 .95rem var(--font-body); border: 0; cursor: pointer }
+  /* On dark, --primary is pale. White on pale blue is unreadable, so the label
+     takes the page colour instead. */
+  .cta { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px;
+         border-radius: var(--radius); background: var(--primary); color: var(--paper);
+         text-decoration: none; font: 600 .95rem var(--font-body); border: 0; cursor: pointer;
+         transition: background var(--motion-fast) var(--ease) }
   .cta.small { padding: 9px 16px; font-size: .88rem }
   .cta.ghost { background: transparent; color: var(--ink); border: 1px solid var(--rule) }
+  .cta.ghost:hover { border-color: var(--primary); background: var(--paper-raised) }
   .cta:hover { background: var(--primary-hot) }
 
-  .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 46px; align-items: center;
-          padding: 40px 0 56px }
-  .hero h1 { font-family: var(--font-display); font-size: clamp(2.2rem, 4.6vw, 3.5rem);
-             line-height: 1.04; margin: 0 0 18px; letter-spacing: var(--display-tracking);
+  .hero { display: grid; grid-template-columns: 1.02fr 1fr; gap: 48px; align-items: center;
+          padding: 44px 0 60px }
+  .kicker { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .1em;
+            text-transform: uppercase; color: var(--accent); margin: 0 0 16px }
+  .hero h1 { font-family: var(--font-display); font-size: clamp(2.2rem, 4.7vw, 3.6rem);
+             line-height: 1.05; margin: 0 0 18px; letter-spacing: var(--display-tracking);
              text-wrap: balance }
-  .hero p { font-size: 1.1rem; line-height: 1.62; color: var(--ink-soft); margin: 0 0 26px;
-            max-width: 46ch }
+  .hero h1 em { font-style: normal; color: var(--primary) }
+  .hero p { font-size: 1.09rem; line-height: 1.62; color: var(--ink-soft); margin: 0 0 26px;
+            max-width: 48ch }
   .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center }
-  .under { font-family: var(--font-mono); font-size: .74rem; color: var(--ink-soft);
-           margin-top: 16px }
+  .under { font-family: var(--font-mono); font-size: .73rem; color: var(--ink-soft);
+           margin-top: 18px }
 
   .shot { display: block; width: 100%; object-fit: cover; border-radius: var(--radius);
-          background: var(--rule) }
-
-  .figures { position: relative }
-  .figures .shot { box-shadow: var(--shadow) }
+          background: var(--paper-raised) }
+  /* Photographs shot in daylight sit on a near-black page like open windows. A
+     hair of contrast and a border settles them into it rather than letting them
+     glare out of it. */
+  .figures .shot, .step .shot, .split .shot { box-shadow: var(--shadow);
+          border: 1px solid var(--rule); filter: saturate(.94) contrast(1.03) }
 
   .strip { border-block: 1px solid var(--rule); background: var(--paper-raised) }
-  .strip .wrap { display: flex; gap: 34px; flex-wrap: wrap; justify-content: space-between;
-                 padding-block: 18px }
-  .stat b { font-family: var(--font-display); font-size: 1.5rem; display: block;
+  .strip .wrap { display: flex; gap: 30px; flex-wrap: wrap; justify-content: space-between;
+                 padding-block: 20px }
+  .stat b { font-family: var(--font-display); font-size: 1.55rem; display: block;
             font-variant-numeric: tabular-nums; line-height: 1.1 }
-  .stat span { font-family: var(--font-mono); font-size: .72rem; color: var(--ink-soft) }
+  .stat span { font-family: var(--font-mono); font-size: .71rem; color: var(--ink-soft) }
 
-  section { padding: 62px 0 }
-  h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2.1rem); margin: 0 0 10px;
-       line-height: 1.12 }
-  .lede { color: var(--ink-soft); line-height: 1.6; margin: 0 0 30px; max-width: 60ch }
+  section { padding: 68px 0 }
+  h2 { font-family: var(--font-display); font-size: clamp(1.55rem, 3vw, 2.2rem); margin: 0 0 12px;
+       line-height: 1.13; text-wrap: balance }
+  h2 em { font-style: normal; color: var(--primary) }
+  .lede { color: var(--ink-soft); line-height: 1.62; margin: 0 0 32px; max-width: 62ch;
+          font-size: 1.02rem }
 
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px }
-  .step .shot { aspect-ratio: 4 / 3; margin-bottom: 14px }
-  .step b { display: block; font: 600 1.02rem var(--font-body); margin-bottom: 6px }
-  .step p { margin: 0; color: var(--ink-soft); line-height: 1.55; font-size: .95rem }
-  .step em { font-style: normal; font-family: var(--font-mono); font-size: .7rem;
-             color: var(--primary); display: block; margin-bottom: 8px }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px }
+  .step .shot { aspect-ratio: 4 / 3; margin-bottom: 15px }
+  .step b { display: block; font: 600 1.03rem var(--font-body); margin-bottom: 6px }
+  .step p { margin: 0; color: var(--ink-soft); line-height: 1.56; font-size: .95rem }
+  .step em { font-style: normal; font-family: var(--font-mono); font-size: .69rem;
+             color: var(--accent); display: block; margin-bottom: 8px; letter-spacing: .08em;
+             text-transform: uppercase }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 46px; align-items: center }
+  .split .shot { aspect-ratio: 5 / 4 }
+
+  .routes { display: grid; grid-template-columns: 1fr 1fr; gap: 22px }
+  .route { border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden;
+           background: var(--paper-raised) }
+  .route .shot { border-radius: 0; border: 0; aspect-ratio: 16 / 9 }
+  .route div { padding: 20px 22px 24px }
+  .route b { display: block; font-family: var(--font-display); font-size: 1.2rem;
+             margin-bottom: 7px }
+  .route p { margin: 0; color: var(--ink-soft); line-height: 1.55; font-size: .95rem }
 
   .places { display: flex; gap: 10px; flex-wrap: wrap }
   .place { border: 1px solid var(--rule); border-radius: var(--radius-sm);
-           background: var(--paper-raised); padding: 13px 16px; min-width: 168px }
+           background: var(--paper-raised); padding: 13px 16px; min-width: 172px }
   .place b { display: block; font-weight: 600 }
   .place span { font-family: var(--font-mono); font-size: .71rem; color: var(--ink-soft) }
-  .place.soon { opacity: .55 }
+  /* Places nothing has been read for are named in one line below the grid rather
+     than given a greyed-out card each. A faded card is a promise with a shape,
+     and this product does not make promises with a shape. */
+  .later { font-family: var(--font-mono); font-size: .73rem; color: var(--ink-soft);
+           margin-top: 16px; line-height: 1.7 }
 
-  .end { text-align: center; padding: 76px 0 92px; border-top: 1px solid var(--rule) }
+  .end { text-align: center; padding: 80px 0 96px; border-top: 1px solid var(--rule) }
   .end h2 { margin-bottom: 14px }
-  .end .lede { margin: 0 auto 26px }
+  .end .lede { margin: 0 auto 28px }
 
-  footer { border-top: 1px solid var(--rule); padding: 24px 0 40px;
-           font-family: var(--font-mono); font-size: .72rem; color: var(--ink-soft) }
+  footer { border-top: 1px solid var(--rule); padding: 26px 0 44px;
+           font-family: var(--font-mono); font-size: .72rem; color: var(--ink-soft);
+           line-height: 1.8 }
   footer a { color: var(--link) }
 
   @media (prefers-reduced-motion: reduce) { .figures video { display: none } }
   @media (max-width: 900px) {
-    .hero { grid-template-columns: 1fr; gap: 30px; padding-top: 24px }
-    .steps { grid-template-columns: 1fr }
+    .hero { grid-template-columns: 1fr; gap: 30px; padding-top: 26px }
+    .steps, .routes { grid-template-columns: 1fr }
+    .split { grid-template-columns: 1fr; gap: 28px }
+    section { padding: 48px 0 }
   }
 '''
 
-# The one piece of motion on the page, and it shows the product refusing
-# something rather than producing something. Every other entry will show a thing
-# being generated; almost none will show a thing being rejected.
+# THE MOTION ON THIS PAGE
+# -----------------------
+# There is one animated thing and it is the alert feed, because the watch is the
+# claim this page makes and a still picture of three rows does not say "these
+# arrive". Rows enter on a stagger and the loop restarts, which is what the thing
+# actually does: it is quiet, and then it is not.
+#
+# CSS and SVG only. No library, no canvas, nothing that needs JavaScript to have
+# loaded before the page means anything.
+FEED = '''
+  .feed { border: 1px solid var(--rule); border-radius: var(--radius);
+          background: var(--paper-raised); padding: 8px 20px 14px; box-shadow: var(--shadow) }
+  .feed .head { display: flex; align-items: center; gap: 9px; padding: 12px 0 10px;
+                border-bottom: 1px solid var(--rule); font-family: var(--font-mono);
+                font-size: .71rem; color: var(--ink-soft); letter-spacing: .06em }
+  .feed .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+               animation: pulse 2.6s var(--ease) infinite }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .25 } }
+
+  .alert { display: flex; gap: 13px; align-items: flex-start; padding: 15px 0;
+           border-bottom: 1px solid var(--rule); opacity: 0;
+           animation: arrive 9s var(--ease) infinite }
+  .alert:last-child { border-bottom: 0 }
+  .alert:nth-of-type(1) { animation-delay: .4s }
+  .alert:nth-of-type(2) { animation-delay: 2.2s }
+  .alert:nth-of-type(3) { animation-delay: 4.0s }
+  @keyframes arrive {
+    0%   { opacity: 0; transform: translateY(9px) }
+    7%   { opacity: 1; transform: none }
+    88%  { opacity: 1; transform: none }
+    100% { opacity: 0; transform: none }
+  }
+
+  .alert .mark { flex: 0 0 auto; width: 26px; height: 26px; margin-top: 1px;
+                 color: var(--primary) }
+  .alert.job .mark { color: var(--accent) }
+  .alert .tag { font-family: var(--font-mono); font-size: .66rem; letter-spacing: .09em;
+                text-transform: uppercase; color: var(--ink-soft); display: block;
+                margin-bottom: 4px }
+  .alert .txt { font-size: .98rem; line-height: 1.5; display: block }
+  .alert q { display: block; font-family: var(--font-mono); font-size: .73rem;
+             color: var(--ink-soft); margin-top: 5px; quotes: none }
+
+  @media (prefers-reduced-motion: reduce) {
+    .alert { animation: none; opacity: 1 }
+    .feed .dot { animation: none }
+  }
+'''
+
+# The evidence block. It shows the product refusing something rather than
+# producing something, which is the opposite of what every other entry will show.
 REFUSAL = '''
   .refuse { background: var(--paper-raised); border: 1px solid var(--rule);
-            border-radius: var(--radius); padding: 26px 26px 22px; max-width: 660px }
-  .refuse .line { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0;
+            border-radius: var(--radius); padding: 24px 26px 20px }
+  .refuse .line { display: flex; gap: 12px; align-items: flex-start; padding: 13px 0;
                   border-bottom: 1px solid var(--rule); font-size: .97rem; line-height: 1.5 }
   .refuse .line:last-child { border-bottom: 0 }
   .refuse .mark { flex: 0 0 auto; width: 20px; height: 20px; margin-top: 2px }
-  .refuse .kept .mark circle { fill: rgba(22,70,125,.10); stroke: var(--primary) }
-  .refuse .cut .mark circle { fill: rgba(166,58,34,.10); stroke: var(--warn) }
+  .refuse .kept .mark { color: var(--primary) }
+  .refuse .cut .mark { color: var(--warn) }
+  .refuse .mark circle { fill: none }
   .refuse q { display: block; font-family: var(--font-mono); font-size: .74rem;
               color: var(--ink-soft); margin-top: 5px; quotes: none }
   .refuse .cut .txt { position: relative; color: var(--ink-soft) }
@@ -163,28 +247,64 @@ REFUSAL = '''
 '''
 
 TICK = ('<svg class="mark" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" '
-        'stroke-width="1.5"/><path d="M6 10.4l2.6 2.6L14 7.6" fill="none" stroke="currentColor" '
-        'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>')
+        'stroke="currentColor" stroke-width="1.5"/><path d="M6 10.4l2.6 2.6L14 7.6" fill="none" '
+        'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" '
+        'stroke-linejoin="round"/></svg>')
 CROSS = ('<svg class="mark" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" '
-         'stroke-width="1.5"/><path d="M7 7l6 6M13 7l-6 6" fill="none" stroke="currentColor" '
-         'stroke-width="1.8" stroke-linecap="round"/></svg>')
+         'stroke="currentColor" stroke-width="1.5"/><path d="M7 7l6 6M13 7l-6 6" fill="none" '
+         'stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>')
+
+# Three marks for three kinds of alert: a page that moved, a door that opened, a
+# job that appeared. Drawn rather than fetched, so they cost nothing, carry no
+# licence, and match the type.
+MOVED = ('<svg class="mark" viewBox="0 0 26 26" fill="none" stroke="currentColor" '
+         'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+         '<rect x="4" y="3" width="18" height="20" rx="2.5"/><path d="M8 9h10M8 13h10M8 17h6"/>'
+         '</svg>')
+OPENED = ('<svg class="mark" viewBox="0 0 26 26" fill="none" stroke="currentColor" '
+          'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+          '<path d="M14 22H5V4h9"/><path d="M14 4v18"/><path d="M18 9l4 4-4 4"/>'
+          '<path d="M22 13h-7"/></svg>')
+POSTED = ('<svg class="mark" viewBox="0 0 26 26" fill="none" stroke="currentColor" '
+          'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+          '<rect x="3" y="8" width="20" height="14" rx="2.5"/>'
+          '<path d="M9 8V6a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M3 14h20"/></svg>')
 
 
 def landing_html(live: int, sources: int, lanes_open: int,
-                 places: list[tuple[str, str, bool]]) -> str:
-    """`places` is (name, note, offered), so the page never invents coverage."""
+                 places: list[tuple[str, str, bool]],
+                 openings: int = 0) -> str:
+    """`places` is (name, note, offered), so the page never invents coverage.
+
+    `openings` is how many postings have actually been ingested. It is passed in
+    rather than typed into the template, and where it is zero the stat is
+    replaced instead of printing a nought beside a sentence about opportunities.
+    """
+    offered = [p for p in places if p[2]]
+    later = [p[0] for p in places if not p[2]]
+
     place_cards = "".join(
-        f'<div class="place{"" if offered else " soon"}"><b>{_e(name)}</b>'
-        f'<span>{_e(note)}</span></div>'
-        for name, note, offered in places)
+        f'<div class="place"><b>{_e(name)}</b><span>{_e(note)}</span></div>'
+        for name, note, _ in offered)
+
+    later_line = (f'<p class="later">Being read next: {_e(", ".join(later))}. '
+                  f'Nothing is offered here until it has actually been read.</p>'
+                  if later else "")
+
+    openings_stat = (f'<div class="stat"><b>{openings:,}</b>'
+                     f'<span>live postings matched against cases</span></div>'
+                     if openings else
+                     '<div class="stat"><b>Daily</b>'
+                     '<span>re-read, so it cannot go stale</span></div>')
 
     return f'''<!doctype html>
-<html lang="en" data-theme="light"><head>{HEAD}
-<title>MIGRAGENT: everything you need to move, kept current</title>
-<meta name="description" content="An agent reads the official immigration rules every day and
-tells you what you need to study or work abroad: the steps, the documents, the cost, and what
-changed.">
-<style>{CSS}{REFUSAL}</style></head>
+<html lang="en" data-theme="dark"><head>{HEAD}
+<title>MIGRAGENT: the agent that keeps watch on your move</title>
+<meta name="description" content="Tell it where you want to go. MIGRAGENT reads the official
+immigration rules, builds the route for your case, and tells you when a rule changes, an intake
+opens, or a job you qualify for is posted.">
+<meta name="theme-color" content="#080B12">
+<style>{CSS}{FEED}{REFUSAL}</style></head>
 <body>
   <div class="wrap">
     <div class="top">
@@ -194,13 +314,15 @@ changed.">
 
     <div class="hero">
       <div>
-        <h1>Everything you need to move, kept current.</h1>
-        <p>Studying or working in another country means a hundred rules that change without
-        telling you. An agent reads the official pages every day and gives you the steps, the
-        documents, the money and the deadlines for your case.</p>
+        <p class="kicker">Your immigration agent</p>
+        <h1>Tell it where you want to go. <em>It handles the rest.</em></h1>
+        <p>Give it your details once. It reads the official rules for your case, carves out your
+        route in order, and then keeps watching &mdash; so when a rule moves, an intake opens or
+        a job you qualify for is posted, you hear it from your agent instead of finding out the
+        hard way.</p>
         <div class="row">
           <a class="cta" href="/start">Start free</a>
-          <a class="cta ghost" href="#how">See how it works</a>
+          <a class="cta ghost" href="#watch">What it tells you</a>
         </div>
         <p class="under">No account needed. Nothing you upload is kept.</p>
       </div>
@@ -222,45 +344,111 @@ changed.">
 
   <div class="strip"><div class="wrap">
     <div class="stat"><b>{live:,}</b><span>requirements read from official pages</span></div>
-    <div class="stat"><b>{sources:,}</b><span>government pages watched</span></div>
+    <div class="stat"><b>{sources:,}</b><span>government pages under watch</span></div>
     <div class="stat"><b>{lanes_open}</b><span>routes you can take today</span></div>
-    <div class="stat"><b>Daily</b><span>re-read, so it does not go stale</span></div>
+    {openings_stat}
   </div></div>
 
   <div class="wrap">
+    <section id="watch">
+      <h2>Most of this happens <em>after</em> you close the tab.</h2>
+      <p class="lede">Anyone can hand you a checklist. The hard part is that the checklist stops
+      being true, the intake you were waiting on opens on a Tuesday with no announcement, and the
+      job that would have carried your visa is filled in nine days. Your agent is still reading
+      while you get on with your life.</p>
+      <div class="split">
+        <div class="feed" role="img"
+             aria-label="Example alerts: a salary threshold change, an intake opening, and a matching job posting">
+          <div class="head"><span class="dot"></span> YOUR AGENT &middot; TODAY</div>
+
+          <div class="alert">{MOVED}<div>
+            <span class="tag">A rule moved</span>
+            <span class="txt">The Skilled Worker salary floor went up. Your offer is now
+            &pound;900 under it.</span>
+            <q>read on gov.uk this morning &middot; both versions kept</q></div></div>
+
+          <div class="alert">{OPENED}<div>
+            <span class="tag">A door opened</span>
+            <span class="txt">January intake applications opened at the two colleges on your
+            shortlist.</span>
+            <q>register updated &middot; deadline in 41 days</q></div></div>
+
+          <div class="alert job">{POSTED}<div>
+            <span class="tag">A job you qualify for</span>
+            <span class="txt">Three welding roles posted in a shortage occupation you already
+            match on skills and licence.</span>
+            <q>Job Bank &middot; employer-submitted &middot; posted yesterday</q></div></div>
+        </div>
+        <div>
+          {_picture("08-window-seat-cloud",
+                    "The view through an aeroplane window onto bright cloud")}
+        </div>
+      </div>
+    </section>
+
     <section id="how">
-      <h2>It does the reading. You do the deciding.</h2>
-      <p class="lede">Three steps, and the middle one is the part nobody has time for.</p>
+      <h2>Three things you do. Everything else is the agent.</h2>
+      <p class="lede">You are never asked to search, compare or go and find anything. Nobody
+      moving country has time to become a researcher, and taking that off you is the whole job
+      here.</p>
       <div class="steps">
         <div class="step">
           {_picture("03-folder-and-hands", "Hands holding a folder of papers while waiting")}
           <em>Step one</em>
           <b>Say what you want</b>
-          <p>Where you are going and whether it is study or work. Add whatever paperwork you
+          <p>Where you are going, and whether it is study or work. Drop in the paperwork you
           already have, or none at all.</p>
         </div>
         <div class="step">
           {_picture("06-consulate-waiting-daylight", "A calm official waiting area in daylight")}
           <em>Step two</em>
-          <b>The agent reads the rules</b>
-          <p>It goes to the government's own pages, reads them, and re-reads them every day so a
-          change in the fee or the salary floor reaches you rather than surprising you.</p>
+          <b>It carves your route</b>
+          <p>Not a generic checklist. The steps for your case, in order, with the documents, the
+          money and the waiting times, each one carrying the sentence it came from.</p>
         </div>
         <div class="step">
           {_picture("07-keys-new-flat", "A hand setting keys down in an empty sunlit flat")}
           <em>Step three</em>
-          <b>Get your plan</b>
-          <p>The steps in order, the documents you still need, what it costs, and jobs that match
-          what you can actually do.</p>
+          <b>It keeps you ahead</b>
+          <p>Rule changes, intakes opening, and jobs in shortage occupations you qualify for, as
+          they happen &mdash; not when you next remember to go and check.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>One agent, both reasons for going.</h2>
+      <p class="lede">Study and work are different rulebooks, different registers and different
+      deadlines. You pick the one you want; it knows which of the two it is reading.</p>
+      <div class="routes">
+        <div class="route">
+          {_picture("05-campus-courtyard-daylight",
+                    "A university courtyard in bright daylight", "16 / 9")}
+          <div>
+            <b>To study</b>
+            <p>What the visa needs, what money you have to show, and which institutions the
+            government's own register says can actually take you &mdash; plus a nudge when the
+            next intake opens.</p>
+          </div>
+        </div>
+        <div class="route">
+          {_picture("04-new-city-street-morning",
+                    "A person walking a wide unfamiliar city street at dawn", "16 / 9")}
+          <div>
+            <b>To work</b>
+            <p>The route, the salary floor, the sponsorship rules, and postings on government job
+            boards in occupations the country has publicly said it is short of &mdash; matched
+            against what you can prove you can do.</p>
+          </div>
         </div>
       </div>
     </section>
 
     <section>
       <h2>It would rather tell you nothing than tell you wrong.</h2>
-      <p class="lede">Every line it gives you carries the sentence it came from, on the
-      government's own page, with the date it was read. Anything it cannot show you a sentence
-      for is thrown away before you ever see it.</p>
+      <p class="lede">This is what makes the alerts worth opening. Every line it gives you
+      carries the sentence it came from, on the government's own page, with the date it was read.
+      Anything it cannot show you a sentence for is thrown away before you ever see it.</p>
       <div class="refuse">
         <div class="line kept">{TICK}<div><span class="txt">You must have a confirmed job offer
           before you apply.</span>
@@ -279,6 +467,7 @@ changed.">
       <p class="lede">Each place says how much has actually been read for it. Where that number
       is small, it says so, rather than pretending.</p>
       <div class="places">{place_cards}</div>
+      {later_line}
     </section>
   </div>
 
