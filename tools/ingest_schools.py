@@ -201,15 +201,23 @@ def deep(db, fetcher: Fetcher, reader: CourseReader, rows: list[dict],
     schools = kept = dropped = 0
 
     for row in rows[:limit]:
-        start = row.get("courses_url") or row.get("website")
-        if not start or row.get("site_state") not in (None, "reachable"):
+        # Seed from EVERY candidate index, not just the best-ranked one. Ranking
+        # links is a guess, and a wrong guess used to cost the whole school:
+        # Manchester's queue started at /study/cpd/ and never reached
+        # /study/masters/courses/. Reading four candidates costs the same four
+        # pages the crawl was going to spend anyway, and it stops one bad guess
+        # from silently deleting a university.
+        starts = [u for u in (row.get("courses_url_options") or []) if u]
+        if not starts:
+            starts = [u for u in (row.get("courses_url"), row.get("website")) if u]
+        if not starts or row.get("site_state") not in (None, "reachable"):
             continue
 
         name, code = row.get("name", ""), row.get("jurisdiction", "")
         schools += 1
         print(f"\n  {name[:56]}  ({code})", flush=True)
 
-        queue = [start]
+        queue = list(starts[:PAGES_PER_SCHOOL])
         seen: set[str] = set()
         got: list[Course] = []
 
@@ -409,7 +417,8 @@ def main() -> int:
         limit = int(sys.argv[sys.argv.index("--limit") + 1])
 
     if "--plan" in sys.argv or not any(
-            f in sys.argv for f in ("--shallow", "--deep", "--details", "--contacts")):
+            f in sys.argv for f in ("--shallow", "--deep", "--details",
+                                    "--contacts", "--retry")):
         print(f"{len(rows)} schools eligible for deep reading\n")
         for i, row in enumerate(rows[:limit], 1):
             if row.get("jurisdiction") == "CA":
@@ -439,6 +448,20 @@ def main() -> int:
                               identity.credentials_for(identity.RESEARCHER, PROJECT))
         with BrowserFetcher(fetcher=fetcher) as browser:
             details(db, fetcher, reader, limit, browser=browser)
+
+    if "--retry" in sys.argv:
+        # Schools the deep pass reached and got nothing from. Before the link
+        # ranking was fixed these were mostly real universities whose queue
+        # started at a landing page, so they are worth reading again rather than
+        # being written off as teaching nothing.
+        rows = [r for r in rows
+                if r.get("site_state") == "reachable" and not r.get("courses_found")]
+        print(f"{len(rows)} schools were reachable and produced no courses
+")
+        reader = CourseReader(PROJECT, MODEL, LOCATION,
+                              identity.credentials_for(identity.RESEARCHER, PROJECT))
+        with BrowserFetcher(fetcher=fetcher) as browser:
+            deep(db, fetcher, reader, rows, limit, browser=browser)
 
     if "--deep" in sys.argv:
         reader = CourseReader(PROJECT, MODEL, LOCATION,

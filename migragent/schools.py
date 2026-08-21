@@ -217,8 +217,17 @@ def course_links(html: str, base_url: str, limit: int = 25) -> list[str]:
         # Rank rather than take in document order. A navigation bar lists
         # "Apply" before "Courses" often enough that document order sends the
         # reader to the wrong page on most university sites.
-        strength = next((len(STRONG_WORDS) - i for i, w in enumerate(STRONG_WORDS)
-                         if w in haystack), 0)
+        # Score the PATH above the label. A link whose anchor text says
+        # "Short courses" but whose path says /study/cpd/ is not the course
+        # catalogue, and scoring the two together let it win at Manchester,
+        # McGill and Brunel: /study/cpd/ beat /study/masters/courses/ purely by
+        # being shorter, and those universities produced nothing at all.
+        path = parsed.path.lower()
+        in_path = next((len(STRONG_WORDS) - i for i, w in enumerate(STRONG_WORDS)
+                        if w in path), 0)
+        in_label = next((len(STRONG_WORDS) - i for i, w in enumerate(STRONG_WORDS)
+                         if w in label.lower()), 0)
+        strength = in_path * 2 + in_label
         found.append((strength, len(parsed.path), url))
 
     found.sort(key=lambda item: (-item[0], item[1]))
