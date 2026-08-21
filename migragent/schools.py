@@ -125,6 +125,17 @@ class Course:
 
     verified: bool = False
 
+    # The course's own page, found by matching its title to a link on the index
+    # page it was listed on. Fees and intake dates are almost never on an index:
+    # a listing gives names, and the money and the calendar live one click in.
+    detail_url: str = ""
+    detail_read_at: str = ""
+
+    # The sentences behind the fee and the intake, from the detail page. Same
+    # rule as everywhere else: a number nobody can point at is not kept.
+    fee_quote: str = ""
+    intake_quote: str = ""
+
     def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in asdict(self).items() if v not in (None, "")}
 
@@ -314,6 +325,63 @@ class CourseReader:
         return kept, dropped
 
 
+    def read_detail(self, url: str, page: Any) -> dict[str, Any]:
+        """Fee, intake, duration and entry requirements from one course page.
+
+        Returns only what the page can be shown to say. Both the fee and the
+        intake carry a quote and both quotes are checked against the page text;
+        a value whose quote is not there is dropped and the field stays empty,
+        because a tuition figure nobody can point at is exactly the kind of
+        number somebody would plan a year around.
+        """
+        text = page_text(page)[:MAX_CHARS]
+        if len(text) < 120:
+            return {}
+
+        try:
+            parsed = call_json(
+                project=self._project, model=self._model, location=self._location,
+                credentials=self._credentials,
+                parts=[{"text": DETAIL_PROMPT + "\n\nPAGE:\n" + text}],
+                # 8192, not 2048. Thinking shares this budget, so a small
+                # ceiling truncates the answer before the JSON is finished and
+                # every page returns "the answer was cut off at the token limit
+                # after 146 characters". That is D35 met again at a new call
+                # site: a number that looks generous for six short fields is
+                # not, because the fields are not what is being paid for.
+                max_output_tokens=8192,
+            )
+        except Exception:  # noqa: BLE001
+            return {}
+
+        haystack = _normalise(text)
+        out: dict[str, Any] = {"detail_url": url, "detail_read_at": _now()}
+
+        fee = str(parsed.get("fee_international") or "").strip()
+        fee_quote = str(parsed.get("fee_quote") or "").strip()
+        if fee and fee_quote and _normalise(fee_quote) in haystack:
+            amount, currency = _money(fee)
+            out["fee_international"] = fee
+            out["fee_quote"] = fee_quote
+            if amount:
+                out["fee_amount"] = amount
+                out["fee_currency"] = currency
+
+        intake = str(parsed.get("intake") or "").strip()
+        intake_quote = str(parsed.get("intake_quote") or "").strip()
+        if intake and intake_quote and _normalise(intake_quote) in haystack:
+            out["intake"] = intake
+            out["intake_quote"] = intake_quote
+            out["intake_open"] = True
+
+        for field in ("duration", "entry_requirements"):
+            value = str(parsed.get(field) or "").strip()
+            if value:
+                out[field] = value
+
+        return out
+
+
 _MONEY = re.compile(r"(£|\$|€|C\$|CAD|GBP|USD|EUR)\s?([\d][\d,\.]{2,})", re.I)
 
 _CURRENCIES = {"£": "GBP", "$": "USD", "€": "EUR", "c$": "CAD",
@@ -338,6 +406,117 @@ def _money(text: str) -> tuple[float | None, str]:
     except ValueError:
         return None, ""
     return amount, _CURRENCIES.get(symbol, "")
+
+
+DETAIL_PROMPT = """You are reading one course page from a university or college.
+
+Return what THIS page states about THIS course. Every field is optional and an
+absent field is the correct answer when the page does not say.
+
+  "fee_international": the tuition for international or overseas students, as
+        printed, with the currency and the period, for example
+        "£17,500 per year". NOT the home, domestic or EU fee. If the page shows
+        several years, give the earliest full year stated.
+  "fee_quote": a VERBATIM span from the page containing that fee.
+  "intake": when the course starts, or when applications open or close, AS
+        PRINTED, for example "September 2027" or "Applications open 1 October".
+  "intake_quote": a VERBATIM span from the page containing that.
+  "duration": as printed, for example "1 year full-time"
+  "entry_requirements": what the page says an applicant must already have, in
+        one sentence
+
+RULES
+- Only this page's own words. Both quotes are checked against the page text
+  automatically and anything not found word for word is discarded, so copy
+  exactly.
+- Never convert a currency, never annualise a total, never infer a start month
+  from the academic calendar. If the page gives a total for the whole course,
+  quote it as printed and say so in the fee string.
+- If the page states no fee, omit fee_international and fee_quote. A missing fee
+  is a correct answer. An invented one is the worst thing you could return.
+
+Return only JSON: {"fee_international": ..., "fee_quote": ..., "intake": ...,
+"intake_quote": ..., "duration": ..., "entry_requirements": ...}"""
+
+
+# Where tuition actually lives. A course page states the course; the money is
+# almost always one more click away on a fees page, because universities publish
+# fees centrally and link to them from every course.
+FEE_WORDS = ("fee", "fees", "tuition", "cost", "costs", "funding",
+             "fees-and-funding", "tuition-fees", "international-fees")
+
+
+def fee_links(html: str, base_url: str, limit: int = 3) -> list[str]:
+    """Links from a course page that plausibly lead to its tuition.
+
+    Ranked so "tuition fees" beats "funding your studies", and capped hard: this
+    is a second fetch per course and the point is to find the number, not to
+    walk the finance section of a university website.
+    """
+    from urllib.parse import urljoin, urlparse
+
+    base_host = urlparse(base_url).netloc.lower()
+    scored: list[tuple[int, str]] = []
+    seen: set[str] = set()
+
+    for match in re.finditer(r'<a\s[^>]*href="([^"#]+)"[^>]*>(.*?)</a>', html, re.S | re.I):
+        href, label = match.group(1), re.sub(r"<[^>]+>", " ", match.group(2)).lower()
+        url = urljoin(base_url, href)
+        if urlparse(url).netloc.lower() != base_host or url in seen:
+            continue
+        haystack = f"{urlparse(url).path.lower()} {label}"
+        if not any(word in haystack for word in FEE_WORDS):
+            continue
+        seen.add(url)
+        # International first: a page saying "international tuition fees" is the
+        # one this product needs, and a generic fees page often shows the home
+        # rate at the top.
+        score = 2 if "international" in haystack or "overseas" in haystack else 1
+        if "tuition" in haystack or "fee" in haystack:
+            score += 1
+        scored.append((score, url))
+
+    scored.sort(key=lambda pair: -pair[0])
+    return [url for _score, url in scored[:limit]]
+
+
+def anchor_map(html: str, base_url: str) -> dict[str, str]:
+    """{normalised link text: absolute url} for every link on a page.
+
+    Used to turn a course title into the address of that course's own page. The
+    model is not asked for the URL: it reads text, it does not see hrefs, and a
+    model asked for a link will produce a plausible one. Matching the title it
+    quoted against the anchor that carries the same words is arithmetic.
+    """
+    from urllib.parse import urljoin, urlparse
+
+    base_host = urlparse(base_url).netloc.lower()
+    out: dict[str, str] = {}
+    for match in re.finditer(r'<a\s[^>]*href="([^"#]+)"[^>]*>(.*?)</a>', html, re.S | re.I):
+        href, label = match.group(1), re.sub(r"<[^>]+>", " ", match.group(2))
+        label = _normalise(label)
+        if not label or len(label) < 4:
+            continue
+        url = urljoin(base_url, href)
+        if urlparse(url).netloc.lower() != base_host:
+            continue
+        out.setdefault(label, url)
+    return out
+
+
+def match_course_url(title: str, anchors: dict[str, str]) -> str:
+    """The link whose text is this course, or nothing.
+
+    Exact normalised match first, then a link whose text contains the whole
+    title. Never a fuzzy or best-effort match: pointing the fee reader at the
+    wrong course page would attach one course's money to another course's name,
+    and nothing downstream could tell.
+    """
+    key = _normalise(title)
+    if key in anchors:
+        return anchors[key]
+    contained = [url for text, url in anchors.items() if key and key in text]
+    return contained[0] if len(contained) == 1 else ""
 
 
 class Courses:

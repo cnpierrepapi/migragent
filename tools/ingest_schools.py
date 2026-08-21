@@ -2,6 +2,7 @@
 
     python -m tools.ingest_schools --shallow --limit 300
     python -m tools.ingest_schools --deep --limit 20
+    python -m tools.ingest_schools --details --limit 200
     python -m tools.ingest_schools --plan
 
 TWO PASSES, AND WHY
@@ -51,7 +52,8 @@ from migragent import identity  # noqa: E402
 from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.institutions import Institutions  # noqa: E402
 from migragent.render import BrowserFetcher  # noqa: E402
-from migragent.schools import Course, CourseReader, Courses, course_links  # noqa: E402
+from migragent.schools import (Course, CourseReader, Courses, anchor_map,  # noqa: E402
+                               course_links, fee_links, match_course_url)
 
 PROJECT = "project-e0928f2f-5abf-46a3-b8a"
 MODEL = "gemini-3.5-flash"
@@ -234,6 +236,105 @@ def deep(db, fetcher: Fetcher, reader: CourseReader, rows: list[dict],
     print(f"courses now held: {store.counts()}")
 
 
+def details(db, fetcher: Fetcher, reader: CourseReader, limit: int,
+            browser: Any = None) -> None:
+    """Open each course's own page and read the fee and the intake off it.
+
+    A course index gives names. The money and the calendar are one click in, on
+    the course's own page, which is why the deep pass produced 173 courses with
+    ten intake dates and no fees at all between them.
+
+    The link is found by matching the course title against the anchors on the
+    index page it came from, in plain code. The model is never asked for a URL:
+    it reads text, it does not see hrefs, and a model asked for a link produces a
+    plausible one. A title that matches no anchor, or more than one, is skipped
+    rather than guessed at, because pointing the fee reader at the wrong page
+    would attach one course's money to another course's name and nothing
+    downstream could tell.
+    """
+    store = Courses(db)
+    rows = [{**d.to_dict(), "id": d.id}
+            for d in db.collection(store.COLLECTION).stream()]
+    todo = [r for r in rows if not r.get("detail_read_at")][:limit]
+    print(f"{len(rows)} courses held, {len(todo)} without a detail read\n")
+
+    # Grouped by the index page they came from, so each index is fetched once
+    # for its links rather than once per course listed on it.
+    by_index: dict[str, list[dict]] = {}
+    for row in todo:
+        by_index.setdefault(row.get("source_url", ""), []).append(row)
+
+    found = fees = intakes = skipped = 0
+
+    for index_url, courses in by_index.items():
+        if not index_url:
+            continue
+        page = fetcher.fetch(index_url)
+        html = page.body.decode("utf-8", "replace") if page.ok else ""
+        if not html and browser is not None:
+            rendered = browser.fetch(index_url)
+            if rendered.ok:
+                html = rendered.body.decode("utf-8", "replace")
+        anchors = anchor_map(html, index_url) if html else {}
+        print(f"  {len(anchors)} links on {index_url[:66]}", flush=True)
+
+        for row in courses:
+            url = match_course_url(row.get("title", ""), anchors)
+            if not url:
+                skipped += 1
+                continue
+
+            detail = fetcher.fetch(url)
+            if not detail.ok and browser is not None:
+                detail = browser.fetch(url)
+            if not detail.ok:
+                skipped += 1
+                continue
+
+            read = reader.read_detail(url, detail)
+            if not read:
+                skipped += 1
+                continue
+
+            # A course page states the course; the money is usually one more
+            # click away, because universities publish tuition centrally and
+            # link to it from every course. One hop, at most two pages, and only
+            # when the course page itself gave no fee.
+            if not read.get("fee_amount"):
+                detail_html = detail.body.decode("utf-8", "replace")
+                for fee_url in fee_links(detail_html, url, limit=2):
+                    fee_page = fetcher.fetch(fee_url)
+                    if not fee_page.ok and browser is not None:
+                        fee_page = browser.fetch(fee_url)
+                    if not fee_page.ok:
+                        continue
+                    more = reader.read_detail(fee_url, fee_page)
+                    if more.get("fee_amount"):
+                        # Only the money is taken from the fees page. Its intake
+                        # and entry requirements, if it has any, belong to
+                        # whatever course that page is about, which is usually
+                        # all of them.
+                        for field in ("fee_international", "fee_quote",
+                                      "fee_amount", "fee_currency"):
+                            if more.get(field):
+                                read[field] = more[field]
+                        read["fee_source_url"] = fee_url
+                        break
+
+            found += 1
+            if read.get("fee_amount"):
+                fees += 1
+            if read.get("intake"):
+                intakes += 1
+            db.collection(store.COLLECTION).document(row["id"]).set(read, merge=True)
+            print(f"      {row.get('title','')[:38]:40} "
+                  f"fee={read.get('fee_international','-')[:22]:24} "
+                  f"intake={read.get('intake','-')[:20]}", flush=True)
+
+    print(f"\ndetails: {found} pages read, {fees} with a fee, "
+          f"{intakes} with an intake, {skipped} skipped")
+
+
 def main() -> int:
     db = firestore.Client(project=PROJECT,
                           credentials=identity.credentials_for(identity.WEB, PROJECT))
@@ -243,7 +344,8 @@ def main() -> int:
     if "--limit" in sys.argv:
         limit = int(sys.argv[sys.argv.index("--limit") + 1])
 
-    if "--plan" in sys.argv or not any(f in sys.argv for f in ("--shallow", "--deep")):
+    if "--plan" in sys.argv or not any(
+            f in sys.argv for f in ("--shallow", "--deep", "--details")):
         print(f"{len(rows)} schools eligible for deep reading\n")
         for i, row in enumerate(rows[:limit], 1):
             basis = (f"{int(row['_score']):,} permit holders"
@@ -259,6 +361,12 @@ def main() -> int:
 
     if "--shallow" in sys.argv:
         shallow(db, fetcher, rows, limit)
+
+    if "--details" in sys.argv:
+        reader = CourseReader(PROJECT, MODEL, LOCATION,
+                              identity.credentials_for(identity.RESEARCHER, PROJECT))
+        with BrowserFetcher(fetcher=fetcher) as browser:
+            details(db, fetcher, reader, limit, browser=browser)
 
     if "--deep" in sys.argv:
         reader = CourseReader(PROJECT, MODEL, LOCATION,
