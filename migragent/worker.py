@@ -2,6 +2,7 @@
 
     MIGRAGENT_MODE=extract  python -m migragent.worker
     MIGRAGENT_MODE=watch    python -m migragent.worker
+    MIGRAGENT_MODE=digest   python -m migragent.worker
     MIGRAGENT_LANE="CA study" python -m migragent.worker     # one lane, locally
 
 HOW THE WORK IS SPLIT
@@ -201,12 +202,60 @@ def robots_probe() -> int:
     return 0
 
 
+def digest() -> int:
+    """Turn what the watch round observed into what particular people are told.
+
+        MIGRAGENT_MODE=digest  python -m migragent.worker
+
+    Runs after the watch round, as one task rather than one per lane, because it
+    reads rows the round has already written and the work is grouped by lane
+    inside it. Ten tasks would each need the whole set of watches to know which
+    of them were theirs.
+
+    It makes no model calls and fetches nothing. Every sentence in every alert
+    was written by the round, by a government, or by this file; nothing new is
+    generated at the moment of telling somebody, which is what keeps an alert as
+    checkable as the requirement it came from.
+    """
+    from .alerts import Alerts, Watcher, Watches
+    from .cv import CVStore
+    from .institutions import Institutions
+    from .listings import Listings
+
+    credentials = identity.credentials_for(identity.WATCHER, PROJECT)
+    db = firestore.Client(project=PROJECT, credentials=credentials)
+
+    marks = Watches(db)
+    watches = marks.active()
+    if not watches:
+        print("no active watches, nothing to tell anybody", flush=True)
+        return 0
+
+    watcher = Watcher(
+        db,
+        changes=ChangeWriter(db),
+        shortages=Shortages(db),
+        institutions=Institutions(db),
+        listings=Listings(db),
+        cvs=CVStore(db),
+    )
+    counted = watcher.digest(watches, Alerts(db), marks)
+
+    print(f"{counted['watches']} watches checked, {counted['alerts']} alerts written: "
+          f"{counted.get('rule', 0)} rule, {counted.get('opening', 0)} opening, "
+          f"{counted.get('job', 0)} job", flush=True)
+    return 0
+
+
 def main() -> int:
     if not PROJECT:
         raise SystemExit("GOOGLE_CLOUD_PROJECT is not set")
 
     if MODE == "selftest":
         return selftest()
+
+    if MODE == "digest":
+        return digest()
 
     if MODE == "robots":
         return robots_probe()

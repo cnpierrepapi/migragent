@@ -85,7 +85,7 @@ def upload_html(case, worth, uploaded, coverage, requirement_count,
         for m in matched) or '<li class="none">Nothing matched yet.</li>'
 
     return f'''<!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

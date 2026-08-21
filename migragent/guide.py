@@ -138,7 +138,7 @@ def to_html(guide: Guide) -> str:
                       'by the pages that were read.</p>')
 
     return f'''<!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -189,9 +189,14 @@ def to_html(guide: Guide) -> str:
   .none {{ color: var(--ink-soft); line-height: 1.6 }}
   footer {{ margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--rule);
             color: var(--ink-soft); font-size: .84rem; line-height: 1.65 }}
+  /* The screen is dark and paper is not. Printing a dark theme puts pale ink on
+     white, which is a guide somebody cannot read at the counter they printed it
+     for, so print pins the light values back rather than inheriting them. */
   @media print {{
-    body {{ padding: 0; background: #fff }}
-    .req {{ box-shadow: none }}
+    :root {{ --paper: #fff; --paper-raised: #fff; --ink: #101828; --ink-soft: #475467;
+             --rule: #D0D5DD; --primary: #16467D; --link: #16467D; --warn: #A63A22 }}
+    body {{ padding: 0; background: #fff; color: #101828 }}
+    .req {{ box-shadow: none; background: #fff }}
     a {{ color: inherit }}
   }}
 </style>

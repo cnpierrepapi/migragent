@@ -37,6 +37,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Iterable
 
 from .fetcher import decode_body
+from .newness import unseen_ids
 
 _TAG = re.compile(r"<[^>]+>")
 _ROW = re.compile(rb"<tr[^>]*>(.*?)</tr>", re.S | re.I)
@@ -183,13 +184,30 @@ class Institutions:
         self._db = client
 
     def record(self, items: Iterable[Institution]) -> int:
+        """Store the register, and remember which rows were not on it before.
+
+        A school appearing on the register is a door opening for somebody: an
+        offer from a school that is not licensed is not a route, so a school
+        that becomes licensed is news. That is only visible if we know which
+        rows are new, and a merge write cannot tell us afterwards.
+        """
+        items = list(items)
+        ids = {institution_id(x.jurisdiction, x.name): x for x in items}
+        fresh = unseen_ids(self._db, self.COLLECTION, ids.keys())
+
         batch = self._db.batch()
         n = 0
         for item in items:
+            doc_id = institution_id(item.jurisdiction, item.name)
+            payload = item.to_dict()
+            if doc_id in fresh:
+                # Only ever written once. The read date is on every row already;
+                # this is the date the row first existed, which is a different
+                # fact and the one an alert stands on.
+                payload["first_seen_at"] = item.read_at
             batch.set(
-                self._db.collection(self.COLLECTION).document(
-                    institution_id(item.jurisdiction, item.name)),
-                item.to_dict(), merge=True,
+                self._db.collection(self.COLLECTION).document(doc_id),
+                payload, merge=True,
             )
             n += 1
             if n % 400 == 0:

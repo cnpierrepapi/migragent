@@ -16,8 +16,9 @@ from google.cloud import firestore  # noqa: E402
 
 from migragent import identity  # noqa: E402
 from migragent.board import Board  # noqa: E402
-from migragent.cases import (BOARD_ITEMS, CASE_DOCUMENTS, CASES, COVERAGE, CV_FIELDS,
-                             FITS, RESULTS, Cases)  # noqa: E402
+from migragent.alerts import Alert, Alerts, Watches, alert_id  # noqa: E402
+from migragent.cases import (ALERTS, BOARD_ITEMS, CASE_DOCUMENTS, CASES, COVERAGE,
+                             CV_FIELDS, FITS, RESULTS, WATCHES, Cases)  # noqa: E402
 from migragent.cv import CV, Claim, CVStore  # noqa: E402
 from migragent.fit import Fit, Fits, Match  # noqa: E402
 from migragent.documents import Field, ReadDocument  # noqa: E402
@@ -28,7 +29,7 @@ PROJECT = "project-e0928f2f-5abf-46a3-b8a"
 def count(db, collection: str, case_id: str) -> int:
     if collection == CASES:
         return 1 if db.collection(CASES).document(case_id).get().exists else 0
-    if collection in (COVERAGE, RESULTS, CV_FIELDS):
+    if collection in (COVERAGE, RESULTS, CV_FIELDS, WATCHES):
         return 1 if db.collection(collection).document(case_id).get().exists else 0
     q = db.collection(collection).where(
         filter=firestore.FieldFilter("case_id", "==", case_id))
@@ -69,11 +70,22 @@ def main() -> int:
         Board(db).add(case.case_id, {"listing_id": f"probe-listing-{i}",
                                      "title": "probe", "url": "https://example.gov/probe"})
 
-    watched = (CASES, CASE_DOCUMENTS, COVERAGE, RESULTS, CV_FIELDS, FITS, BOARD_ITEMS)
+    # Build 6 put the watch and its alerts on the case too. The alerts are the
+    # most sensitive rows of the lot: each one says what somebody is applying
+    # for, in which country, and when they were told about it.
+    Watches(db).start(case.case_id, case.jurisdiction, case.lane)
+    Alerts(db).record([Alert(
+        alert_id=alert_id(case.case_id, "rule", f"probe-{i}"),
+        case_id=case.case_id, kind="rule", headline="probe",
+        observed_at=case.created_at, created_at=case.created_at) for i in range(2)])
+
+    watched = (CASES, CASE_DOCUMENTS, COVERAGE, RESULTS, CV_FIELDS, FITS,
+               BOARD_ITEMS, WATCHES, ALERTS)
     before = {c: count(db, c, case.case_id) for c in watched}
     print(f"before delete: {before}")
     if (before[CASE_DOCUMENTS] != 3 or before[CASES] != 1 or before[COVERAGE] != 1
-            or before[CV_FIELDS] != 1 or before[FITS] != 2 or before[BOARD_ITEMS] != 2):
+            or before[CV_FIELDS] != 1 or before[FITS] != 2 or before[BOARD_ITEMS] != 2
+            or before[WATCHES] != 1 or before[ALERTS] != 2):
         print("FAIL  the fixture did not write what it meant to, so a clean")
         print("      delete afterwards would prove nothing")
         return 1
@@ -89,7 +101,7 @@ def main() -> int:
         print(f"\nFAIL  rows survived the delete: {survivors}")
         return 1
     if removed != {"documents": 3, "coverage": 1, "result": 1, "cv": 1,
-                   "fits": 2, "board_items": 2, "case": 1}:
+                   "fits": 2, "board_items": 2, "watch": 1, "alerts": 2, "case": 1}:
         print(f"\nFAIL  delete reported {removed}, which does not match what was written")
         return 1
 

@@ -322,3 +322,43 @@ a live source link. Nomad Hauling: one, the owner, from a legal notices publicat
 result is the edge worth watching. He is the right person to contact about a job at his own company,
 and he is also a private individual at a micro business who was published for an unrelated reason.
 The feature is working as designed and the design has a boundary near there.
+
+---
+
+## The watch: three signals, no fourth
+
+The product's second promise is that it tells you when something changes. Deciding *what* counts as
+something is the whole design, and the answer is: only what the pipeline already observes.
+
+- **A rule moved.** A change row the daily round wrote, where the explainer said the difference is
+  material. Immaterial changes never reach a person. D23 is the reason that flag exists: on the
+  first real watch round, 95 of 143 pages reported a different digest and not one added or removed
+  line of text. A watcher that cries wolf daily teaches somebody to ignore the day it matters.
+- **A door opened.** An occupation added to a country's shortage list, or a school added to the
+  register that licenses it to take international students. Both were invisible before this build,
+  because `merge=True` writes make a row added today and a row added in June look identical. So
+  both stores now ask which ids are new before writing them (`migragent/newness.py`), and stamp
+  `first_seen_at` once. A register loaded before this build has no new rows and produces no alerts,
+  which is correct: we do not know when those schools were added, so we do not say.
+- **A job you qualify for.** A posting first seen since the mark, in an occupation the person's own
+  CV matched. The occupations are recomputed at digest time rather than stored on the watch, so a
+  better CV changes what you are told about.
+
+**There is no fourth signal, and in particular there is no deadline countdown.** "Your application
+closes in 6 days" would need a date we can only sometimes source and would be the one line on the
+screen most likely to be wrong about somebody's future.
+
+**Nothing is generated at the moment of telling somebody.** The digest makes no model calls and
+fetches nothing; every sentence in an alert was written by the round, by a government, or by
+`migragent/alerts.py`. That is what lets an alert carry the same evidence a requirement carries.
+
+**Ids are derived from the case and the thing that happened**, so a digest that runs twice writes
+the same documents rather than a second copy, and `seen_at` is kept off the merge payload so a
+re-run cannot mark something unread that somebody has already read. The mark moves only after the
+alerts are written: a crash between the two repeats harmlessly, and a mark moved first would mean a
+change nobody is ever told about.
+
+**Delivery is in-app and says so.** There is no mail sender in this project. `Alerts.pending()`
+hands out exactly what an email or a push would need and nothing consumes it yet. A notification
+channel that half exists is worse than one that does not, because people plan around it.
+

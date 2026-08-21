@@ -85,7 +85,7 @@ def result_html(case, coverage: dict, result: dict, documents: list) -> str:
       </div>''' for q in questions)
 
     return f'''<!doctype html>
-<html lang="en" data-theme="light"><head>{HEAD}<title>Your guide</title>
+<html lang="en" data-theme="dark"><head>{HEAD}<title>Your guide</title>
 <style>
   * {{ box-sizing: border-box }}
   body {{ margin: 0; padding: 52px 24px 96px }}
@@ -174,6 +174,16 @@ def result_html(case, coverage: dict, result: dict, documents: list) -> str:
   here carries the typing.</p>
   <form method="post" action="/answers">{q_rows}
     <button class="cta" style="border:0;cursor:pointer;margin-top:12px" type="submit">Save my answers</button>
+  </form>
+
+  <h2>Keep it true after today</h2>
+  <p class="sub">A guide is only worth what it was worth on the day it was read. Turn the watch
+  on and the agent re-reads these pages every day: if a rule moves, if a door opens, or if a job
+  you qualify for is posted, it is waiting for you on <a href="/alerts">what moved</a>. It is off
+  until you say so, and off again the moment you say so.</p>
+  <form method="post" action="/watch">
+    <button class="cta" style="border:0;cursor:pointer;margin-top:4px" type="submit">Watch this
+    for me</button>
   </form>
 
   <h2>Your data</h2>

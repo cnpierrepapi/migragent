@@ -23,6 +23,8 @@ from flask import (Flask, Response, jsonify, make_response, redirect, request,
                    send_from_directory)
 
 from . import identity
+from .alerts import Alerts, Watches
+from .alerts_page import alerts_html
 from .board import Board, Piece
 from .cases import RETENTION_DAYS, Cases
 from .cv import CVReader, CVStore
@@ -490,6 +492,58 @@ def interested() -> Response:
     fit = Fits(db).get(case.case_id, listing_id) or {}
     Board(db).add(case.case_id, snap.to_dict(), fit.get("score"))
     return redirect("/board")
+
+
+@app.get("/alerts")
+def alerts() -> Response:
+    """What moved since you last looked.
+
+    Opening the page marks everything read, which is why the unseen flags are
+    computed before `mark_seen` runs: otherwise a person's first view of an
+    alert would be the view that decides it is old news.
+    """
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/start")
+
+    store = Alerts(db)
+    rows = store.for_case(case.case_id)
+    store.mark_seen(case.case_id)
+
+    place = JURISDICTIONS.get(case.jurisdiction, {}).get("name", case.jurisdiction)
+    return Response(alerts_html(rows, Watches(db).get(case.case_id), place),
+                    mimetype="text/html")
+
+
+@app.post("/watch")
+def start_watch() -> Response:
+    """Turn the watch on for this case. Never on by default.
+
+    A product that starts watching somebody the moment they ask a question has
+    decided something for them. This is one button, and `/watch/off` is the
+    same button.
+    """
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/start")
+    Watches(db).start(case.case_id, case.jurisdiction, case.lane)
+    cases.touch(case.case_id)
+    return redirect("/alerts")
+
+
+@app.post("/watch/off")
+def stop_watch() -> Response:
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/start")
+    Watches(db).stop(case.case_id)
+    return redirect("/alerts")
 
 
 @app.get("/board")

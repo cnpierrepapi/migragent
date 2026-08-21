@@ -43,6 +43,7 @@ from typing import Any
 from .extract import MAX_CHARS, _normalise, page_text
 from .fetcher import Fetched
 from .model import call_json
+from .newness import unseen_ids
 
 PROMPT = """You are reading one page published by a government or a public \
 employment service. It concerns occupations that are hard to fill, in shortage, \
@@ -207,13 +208,25 @@ class Shortages:
         self._db = client
 
     def record(self, reading: ShortageReading, source_id: str) -> int:
+        """Store the list, and remember which occupations were not on it before.
+
+        A country adding an occupation to its shortage list is the single most
+        useful thing that can happen to somebody who does that job, and it is
+        invisible in a collection of merge-written rows unless we ask which ids
+        are new before writing them. See migragent/newness.py.
+        """
+        ids = [occupation_id(o.source_url, o.title) for o in reading.occupations]
+        fresh = unseen_ids(self._db, self.COLLECTION, ids)
+
         batch = self._db.batch()
         for i, occ in enumerate(reading.occupations, 1):
+            doc_id = occupation_id(occ.source_url, occ.title)
             payload = occ.to_dict()
             payload["source_id"] = source_id
+            if doc_id in fresh:
+                payload["first_seen_at"] = occ.read_at
             batch.set(
-                self._db.collection(self.COLLECTION).document(
-                    occupation_id(occ.source_url, occ.title)),
+                self._db.collection(self.COLLECTION).document(doc_id),
                 payload, merge=True,
             )
             if i % 400 == 0:

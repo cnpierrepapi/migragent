@@ -31,6 +31,13 @@ CV_FIELDS = "case_cv"
 FITS = "case_fits"
 BOARD_ITEMS = "board_items"
 
+# Build 6 added two more: the watch, and what it has told this person. Same rule
+# as above. A collection written somewhere and not deleted here is a delete that
+# quietly stopped being true, and an alerts row carries what somebody is applying
+# for as surely as a case row does.
+WATCHES = "watches"
+ALERTS = "alerts"
+
 # Long enough to come back and finish, short enough that nothing sits around for
 # a reason nobody could defend. docs/DATA_PROTECTION.md explains the choice.
 RETENTION_DAYS = 30
@@ -151,7 +158,7 @@ class Cases:
         broken delete, so the numbers are the point and the test asserts on them.
         """
         removed = {"documents": 0, "coverage": 0, "result": 0, "cv": 0,
-                   "fits": 0, "board_items": 0, "case": 0}
+                   "fits": 0, "board_items": 0, "watch": 0, "alerts": 0, "case": 0}
 
         query = self._db.collection(CASE_DOCUMENTS).where(
             filter=firestore.FieldFilter("case_id", "==", case_id))
@@ -194,6 +201,25 @@ class Cases:
                 if n % 400 == 0:
                     batch.commit()
                     batch = self._db.batch()
+            batch.commit()
+
+        watch = self._db.collection(WATCHES).document(case_id)
+        if watch.get().exists:
+            watch.delete()
+            removed["watch"] = 1
+
+        alerts = self._db.collection(ALERTS).where(
+            filter=firestore.FieldFilter("case_id", "==", case_id))
+        batch = self._db.batch()
+        n = 0
+        for snap in alerts.stream():
+            batch.delete(snap.reference)
+            removed["alerts"] += 1
+            n += 1
+            if n % 400 == 0:
+                batch.commit()
+                batch = self._db.batch()
+        if n:
             batch.commit()
 
         case = self._db.collection(CASES).document(case_id)

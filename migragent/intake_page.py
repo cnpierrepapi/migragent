@@ -155,7 +155,7 @@ def intake_html(coverage_by_lane: dict, total_sources: int, live: int = 0) -> st
         </label>''')
 
     return f'''<!doctype html>
-<html lang="en" data-theme="light"><head>{HEAD}<title>MIGRAGENT</title>
+<html lang="en" data-theme="dark"><head>{HEAD}<title>MIGRAGENT</title>
 <style>{HERO_CSS}{SHARED_CSS}
   .drop {{ border: 1.5px dashed var(--rule); border-radius: var(--radius); padding: 26px;
            text-align: center; background: var(--paper-raised); cursor: pointer }}
@@ -266,7 +266,7 @@ def intake_html(coverage_by_lane: dict, total_sources: int, live: int = 0) -> st
 def working_html(case, file_count: int) -> str:
     """The agent at work. Every line is a step that really ran."""
     return f'''<!doctype html>
-<html lang="en" data-theme="light"><head>{HEAD}<title>Working</title>
+<html lang="en" data-theme="dark"><head>{HEAD}<title>Working</title>
 <style>{SHARED_CSS}
   .steps {{ list-style: none; margin: 26px 0 0; padding: 0 }}
   .steps li {{ display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; align-items: start;

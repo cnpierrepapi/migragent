@@ -57,11 +57,29 @@ from under you.
 
 ---
 
+## The watch
+
+Turning the watch on stores one more row: which country and which route this case is about, when
+the watch started, and when it last ran. It is off unless you turn it on, and off again the moment
+you turn it off.
+
+What it produces are alerts, and each one holds a headline, the date the thing was observed, and a
+link to the official page it was read from. **An alert says what somebody is applying for, and
+where.** That makes them among the more sensitive rows here, not less, and they are deleted with
+the case like everything else.
+
+Nothing is sent anywhere. There is no mail sender in this project and none is pretended: alerts are
+written to a collection and read on `/alerts` while you are signed in to your own case. If a sender
+is ever added, the address it needs will be asked for at that point, and this section will say so.
+
+---
+
 ## Deleting it yourself
 
 There is a delete path and it deletes. It removes the case, the document fields, the coverage
-result and the guide built from it, and it reports what it removed so the person can see the numbers
-rather than a reassurance.
+result, the guide built from it, the CV claims, the fit scores, the board, the watch and every
+alert, and it reports what it removed so the person can see the numbers rather than a
+reassurance.
 
 **A delete that leaves an orphan somewhere is a broken delete**, so the test for it counts the rows
 before and after in every collection a case touches, and it fails if anything survives.
@@ -105,6 +123,9 @@ real pieces of work and none of them exists yet.
 | Only fields are stored | true in code |
 | 30 day retention with a restarting countdown | true; the sweeper runs and is tested |
 | Delete removes everything and reports counts | built, and tested by counting rows |
+| The watch is off until you turn it on | true in code; there is no default-on path |
+| Alerts go when the case goes | true; `tools/test_delete.py` counts them before and after |
+| Nothing is emailed or sent off the platform | true; no sender exists |
 | Encrypted at rest and in transit, Google managed keys | true, by default, nothing configured |
 
 **The sweeper now exists**, and `tools/test_retention.py` proves it in the direction that matters.

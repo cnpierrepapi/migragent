@@ -317,6 +317,6 @@ def _card(item, column: str) -> str:
 
 
 def _page(title: str, body: str) -> str:
-    return (f'<!doctype html>\n<html lang="en" data-theme="light"><head>{HEAD}'
+    return (f'<!doctype html>\n<html lang="en" data-theme="dark"><head>{HEAD}'
             f'<title>{_e(title)}</title>\n<style>{STYLE}</style></head>\n<body><main>'
             f'{_brand()}{body}</main></body></html>')
