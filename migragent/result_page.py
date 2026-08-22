@@ -157,6 +157,7 @@ def result_html(case, coverage: dict, result: dict, documents: list) -> str:
         {f"&nbsp;·&nbsp; {unverified} unverified" if unverified else ""}</div>
     </div>
     <a class="cta" href="/guide?jurisdiction={_e(case.jurisdiction)}&lane={_e(case.lane)}">Open the guide</a>
+    {'<a class="cta" style="margin-left:10px;background:transparent;color:var(--ink);border:1px solid var(--rule)" href="/courses">Courses you can apply to</a>' if case.lane == "study" else ""}
   </div>
   <p class="sub" style="margin-top:10px;font-size:.9rem">That is the share of requirements a
   document could answer which yours do. It is not a prediction about your application.</p>

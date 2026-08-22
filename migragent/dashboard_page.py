@@ -243,7 +243,8 @@ def dashboard_html(*, profile: Any, place: str, clones: list[dict],
     <h2>Your documents</h2>
     {_document_cards(clones, has_guide, pieces, place)}
     <div class="row" style="margin-top:14px">{cv_block}
-      <a class="btn quiet" href="/work">Jobs you matched</a></div>
+      <a class="btn quiet" href="/work">Jobs you matched</a>
+      <a class="btn quiet" href="/courses">Courses you can apply to</a></div>
   </section>
 
   <section>

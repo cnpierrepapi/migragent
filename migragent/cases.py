@@ -46,6 +46,11 @@ CV_CLONES = "case_cv_clones"
 # deliberately kept, which makes listing it here more important rather than less.
 PROFILES = "case_profiles"
 
+# Somebody saying they would pay for this. One row, their case id and lane, and
+# it goes with the case: an interest list that outlives the person who joined it
+# is a marketing database, which is not what they agreed to.
+SUBSCRIBE_INTEREST = "subscribe_interest"
+
 # Long enough to come back and finish, short enough that nothing sits around for
 # a reason nobody could defend. docs/DATA_PROTECTION.md explains the choice.
 RETENTION_DAYS = 30
@@ -241,7 +246,7 @@ class Cases:
         """
         removed = {"documents": 0, "coverage": 0, "result": 0, "cv": 0,
                    "fits": 0, "board_items": 0, "cv_clones": 0, "profile": 0,
-                   "watch": 0, "alerts": 0, "case": 0}
+                   "interest": 0, "watch": 0, "alerts": 0, "case": 0}
 
         query = self._db.collection(CASE_DOCUMENTS).where(
             filter=firestore.FieldFilter("case_id", "==", case_id))
@@ -286,6 +291,11 @@ class Cases:
                     batch.commit()
                     batch = self._db.batch()
             batch.commit()
+
+        interest = self._db.collection(SUBSCRIBE_INTEREST).document(case_id)
+        if interest.get().exists:
+            interest.delete()
+            removed["interest"] = 1
 
         profile = self._db.collection(PROFILES).document(case_id)
         if profile.get().exists:

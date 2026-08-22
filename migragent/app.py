@@ -44,6 +44,10 @@ from .level import from_documents as level_from_documents
 from .level import subjects_from_documents
 from .profile import AvatarRejected, Profiles
 from .rubric import best, score_study, score_work
+from .courses_page import courses_html
+from .entitlements import is_subscriber, redact_all
+from .gaps import with_gaps
+from .subscribe_page import subscribe_html
 from .corpus import Corpus
 from .coverage import Matcher, document_worth
 from .detect import agreement, detect
@@ -86,6 +90,12 @@ DEEP_ENOUGH = 25
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 24 * 1024 * 1024
+
+
+def _now_iso() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def _project() -> str:
@@ -1030,6 +1040,92 @@ def read_clone(code: str) -> Response:
         return redirect("/dashboard")
 
     return Response(clone_html(clone), mimetype="text/html")
+
+
+@app.get("/courses")
+def courses() -> Response:
+    """The end of the study path: what they can actually apply to.
+
+    Countries in rubric order, which is an opinion the page carries and never
+    prints. Courses carry their gaps and a link to the school for each one, and
+    intake dates are redacted for anybody who has not subscribed. Three rules,
+    three modules, none of them decided here.
+    """
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/start")
+
+    eligible, reading, assumed, _why = _eligible_for(db, case)
+    subjects = list(getattr(reading, "subjects", []) or []) if reading else []
+    chosen = set(case.chosen) or {e.jurisdiction for e in eligible}
+
+    ranked = score_study([e for e in eligible if e.jurisdiction in chosen])
+    order = [s.jurisdiction for s in ranked] or sorted(chosen)
+    for score in ranked:
+        app.logger.info("rubric study %s", score.explain())
+
+    subscriber = is_subscriber(case)
+    schools = {r.get("name", ""): r
+               for r in (d.to_dict() for d in
+                         db.collection("institutions").stream())}
+
+    by_country: list[tuple[str, list]] = []
+    for code in order:
+        rows = _courses_by_country(db, assumed).get(code, [])
+        if subjects:
+            from .listings import _words
+            wanted = [w for s in subjects for w in _words(s)]
+            rows = [r for r in rows
+                    if wanted and _words(r.get("title", "")) & set(wanted)] or rows
+        rows = redact_all(rows, subscriber)
+        rows = with_gaps(rows, schools)
+        if rows:
+            by_country.append((code, rows))
+
+    return Response(courses_html(by_country=by_country, level=assumed,
+                                 subjects=subjects, subscriber=subscriber),
+                    mimetype="text/html")
+
+
+@app.get("/subscribe")
+def subscribe() -> Response:
+    db = _db()
+    case = _case_or_none(Cases(db))
+    lane = (case.lane if case else "study") or "study"
+    profile = Profiles(db).get(case.case_id) if case else None
+    return Response(subscribe_html(lane=lane,
+                                   saved=request.args.get("saved", ""),
+                                   email=getattr(profile, "email", "") or ""),
+                    mimetype="text/html")
+
+
+@app.post("/subscribe")
+def subscribe_interest() -> Response:
+    """Record that somebody wants this. It does not take money and says so.
+
+    The address goes on the profile, which is deleted with the case, rather than
+    into a marketing list that outlives them.
+    """
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        return redirect("/start")
+
+    email = (request.form.get("email") or "").strip()
+    lane = (request.form.get("lane") or "study").strip()
+    if email:
+        Profiles(db).save(case.case_id, email=email)
+        db.collection("subscribe_interest").document(case.case_id).set({
+            "case_id": case.case_id,
+            "lane": lane,
+            "jurisdiction": case.jurisdiction,
+            "at": _now_iso(),
+        })
+        cases.touch(case.case_id)
+    return redirect("/subscribe?saved=Noted. We will write once, when billing opens.")
 
 
 @app.get("/alerts")
