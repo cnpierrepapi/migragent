@@ -1,18 +1,25 @@
 # The plan
 
-Six builds. Everything that has been asked for is in one of them. Each ends with something working on
-a live URL.
+Six builds. Each one ends with something working on a live URL.
 
-Builds 1 and 2 are done. **Build 3, the pipeline, is next.** The researcher gets wrapped in ADK in
-Build 4 rather than before, because the researcher's real job is the one inside the pipeline, and
-wrapping it first would mean wrapping a tool that a laptop runs by hand.
+**All six are built.** What is left is not a build, it is the submission: the video, the repo going
+public, and a category. Plus a long tail of countries with a visa guide and no school or job data,
+which is a data problem rather than a code one.
 
 Standing rules are in `docs/RULES.md`. What gets read and how is in `docs/SOURCES.md`. How it feels
-to use is in `docs/HOW_IT_WORKS.md`. Every defect found so far is in `docs/DEFECTS.md`.
+to use is in `docs/HOW_IT_WORKS.md`. Every defect is in `docs/DEFECTS.md`, and the ADK ones worth
+sending upstream are split out into `docs/ADK_FINDINGS.md`.
 
-**Where it lives:** Cloud Run, service `migragent`, at `https://migragent-ba5o2l34rq-uc.a.run.app`. **`migragent.onenept.com` is not mapped yet** and answers 404; checked 19 August 2026. The mapping is a Build 6 item and this line said otherwise for long enough to be worth correcting rather than quietly fixing. Firestore, Pub/Sub,
-Cloud Scheduler, Cloud Storage. The app holds passports and a service account, so nothing is exported
-to another provider. A push to `main` deploys, and the job fails unless the new revision answers.
+**Where it lives:** Cloud Run, service `migragent`, live at `https://migragent.onenept.com` with a
+Google Trust Services cert. Firestore, Cloud Scheduler, Cloud Storage, Cloud Vision for OCR.
+No Pub/Sub: Cloud Run already numbers its own tasks, so the topic would have been a delivery
+mechanism with nothing to deliver. A push to `main` deploys the service. The ingest job is deployed
+by hand on purpose, because letting CI update it would mean granting the deploy identity the right
+to act as the watcher, and nothing is allowed to become the watcher. That is D38.
+
+**What runs on a schedule:** retention sweep 03:17, watch round 04:40, job listings 05:00, digest
+05:20, all UTC. The order is load bearing. Read the government pages, ask the boards, then tell
+people.
 
 **Words used throughout.** The **registry** is the list of pages we have decided to read, one row per
 page. The **corpus** is what we got out of those pages: the requirements themselves, each with its

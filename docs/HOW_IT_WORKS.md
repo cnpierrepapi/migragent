@@ -1,225 +1,126 @@
 # MIGRAGENT, in plain words
 
-Written before the code, and kept current as it is built. If the build ever contradicts this
-document, the document gets fixed rather than ignored.
-
----
+Kept current as the thing gets built. If the code and this file disagree, this file is wrong and
+gets fixed.
 
 ## What it is
 
-You are applying to move country, or to get licensed to work in one. A study permit, a nursing
-registration, a skilled work visa.
+You want to study or work in another country. Right now you either pay a consultant a couple of
+thousand pounds, or you spend six weekends on government websites that contradict each other and
+still get something wrong.
 
-Today you either pay a consultant around two thousand pounds, or you spend six weekends reading
-government websites that contradict each other, and you still get something wrong.
+MIGRAGENT reads those websites for you. Every day. It hands you the steps, the documents, the
+money and the deadlines for your case, and every line carries the sentence it came from.
 
-MIGRAGENT asks you about your situation once, reads the official sources itself, and hands you a
-document. Not a chat window. A guide you can save as a PDF, print, and take to the bank.
+Then it keeps going after you close the tab. That second part is the whole product. A guide is a
+photograph. This is a person who keeps watching.
+
+## The order is backwards on purpose
+
+Every version of this before August asked you to pick a country first. That is the wrong question
+and we asked it for months.
+
+Think about it. Somebody who does not already know Canada is short of welders cannot choose Canada
+for being short of welders. Asking them to pick makes them do the exact research the product
+exists to do. They pick wrong, or they pick the country their cousin went to, and everything after
+that is built on a guess.
+
+So now it goes:
+
+1. Say what you want. Study, work, or both.
+2. Upload what you have. A CV, or transcripts. A phone photo is fine.
+3. The countries come out of your documents.
+
+Step three is the interesting one. A work country shows up only when its own published shortage
+list matches something your CV says, and the card tells you which sentence did it. A study country
+shows up only when a school on its official register teaches your level in your subject.
+
+Nothing else appears. If you would not qualify, you never see it, because showing it costs you
+either a wasted month or a refusal with a fee attached.
 
 ## What it is not
 
-**It is not a chatbot.** There is no conversation. You fill in a short form, you upload what you
-already have, and the agent goes away and does work. What comes back is a deliverable.
+Not a chatbot. There is no conversation and there is no box to type into. You tap twice, drop a
+file, and it goes away and works.
 
-**It does not give legal advice.** It reports what official sources say, with links, and tells you
-what is missing from your file. The decision stays yours.
+Not legal advice. It reports what official pages say, with links and dates, and tells you what is
+missing from your file. The decision stays yours.
 
-**It does not predict.** It reports changes that have already happened, with the dates the
-government published them. Where those changes point in a direction, it says so, and it says it as
-an observation rather than a forecast.
+Not a search engine. You never search for anything. There is no filter, no browse, no results
+page. What you see is what your own documents opened.
 
----
+## The one rule everything else hangs off
 
-## The four things it does
+Nothing is stated without a sentence behind it.
 
-### 1. It takes your situation once
+A requirement stores the words from the government page. A course stores the words from the school
+page. A shortage occupation stores the line from the list. Each one gets checked against that
+page's own text before the row is kept, and anything that fails is thrown away rather than shown
+with a caveat.
 
-A short form, not an interview. Where you are from, where you are going, what you are applying for,
-what you have already done. Three lanes are built properly:
+Across 3,686 courses pulled off school websites, 29 got dropped for a quote that was not really
+there. That is the check doing its job.
 
-- **Canada study permit**
-- **Nursing registration in Canada**
-- **UK and EU skilled work visas**
+This is also why the gaps stay visible. Only 146 of 3,990 courses carry a fee, because most
+universities keep tuition behind a calculator. We could guess. We do not. The course still shows,
+with "what does this cost for an international student?" pointed at that school's admissions
+office.
 
-### 2. You upload what you have
+A gap you can act on beats a number you cannot trust.
 
-Passport, transcript, degree certificate, English test, registration, employment letters. The agent
-reads them and works out what is already covered.
+## What you get, free
 
-This is the part that makes it a real product rather than a checklist generator. A checklist tells
-everyone the same thing. This tells you what **you** are missing.
+Every country your documents qualify you for. Every course we have read at your level and in your
+subject. The guide, with its sources. Your CV laid out three ways, Canadian, British and Europass,
+because those are three different documents and employers expect their own.
 
-**Where something is missing, it proposes routes rather than stopping.** No English test yet? Here
-are the accepted tests, what each costs, how long each takes to book, and which ones this particular
-regulator accepts. A second class lower degree? Here are the programmes and bridging routes that
-accept one, and the ones that do not. A missing route is still an answer.
+And a question with a link, everywhere a school did not publish something.
 
-### 3. It gives you the guide
+## What seven dollars buys
 
-Numbered steps in the order you have to do them, because half of these things block each other and
-that is where people lose months. For each step: what it is, whether your uploads already satisfy
-it, what it costs, how long it takes, and what it depends on.
+Timing. Start dates, application windows, and the alert that fires when a job you qualify for gets
+posted.
 
-**Every requirement carries the link it came from and the date it was read.** If the agent cannot
-find an official source for something, it does not state it. It goes into a section at the back
-called open questions, which is the honest place for it.
+Not access. The line is deliberately drawn at when things happen rather than what exists, because
+any other line makes the free product dishonest. Hiding a country you qualify for so you will pay
+to see it would be lying by omission with a price on it.
 
-That rule is carried over from the last build and it matters more here. A confidently invented
-requirement in this domain costs somebody their savings and half a year.
+Billing is not built. The page says so rather than showing a checkout that goes nowhere.
 
-### 4. It keeps watching, and tells you when something moves
+## How it stays current
 
-The rules change. Someone who got a guide in March and applies in September is working from a
-document that has quietly gone wrong.
+Four jobs, every morning, in this order.
 
-So the agent makes rounds. It re-reads the sources on a schedule, and when a requirement changes it
-records the change, with both versions and both dates.
+The retention sweep runs at 03:17 and deletes cases past their thirty days. The watch round runs
+at 04:40, re-reads every government page, and diffs it against yesterday. Job listings come in at
+05:00. The digest runs at 05:20 and tells each watching case what moved.
 
-**The browser asks your permission to send notifications.** If you allow it, you get told when
-something in your guide moves, rather than finding out at the bank.
+Order matters. Read the pages, ask the boards, then tell people. Flip the last two and the digest
+reports on yesterday's jobs.
 
-### The change line, and why it is built this way
+The watch round is careful about crying wolf. On the first real run, 95 pages out of 143 came back
+with a different digest and not one word of text had changed. Timestamps, nonces, edge caches. So
+a change is only a change when the words move, because a watcher that fires every day teaches you
+to ignore it, and then you ignore the one that mattered.
 
-Alongside your guide there is a record of how the rules have moved over time. Real changes, real
-published dates, real sources. Canada's proof of funds requirement for a study permit has moved more
-than once. Provincial attestation letters did not exist and then did.
+## Where it works today
 
-From that record the guide can say something genuinely useful: this lane has been getting stricter,
-and here are the four changes in the last two years that say so.
+Study works for Canada and the United Kingdom. 3,990 courses across 241 schools.
 
-**One thing we are deliberately not doing.** The other way to demonstrate this was to backdate an
-agent run to before a policy change, so it looks like the agent was watching at the time. That means
-writing down that something happened on a day it did not happen. Every claim this product makes
-depends on its records being true, so we do not begin by faking one. The changelog is seeded from
-the government's own published history, with their dates, and the agent's own runs carry the dates
-they actually ran.
+Work works for Canada. 2,042 live postings, matched against what your CV actually says.
 
----
+Six more countries have a visa guide and nothing else yet. The UK's job board will not say whether
+it allows crawlers, so we do not read it. Australia's says no outright. Both of those are closed
+doors rather than a to-do list, and `docs/SOURCES.md` records what was checked and when.
 
-## Why a judge should care
+## Your documents
 
-The hackathon's own advice is to solve a real, specific problem you actually have, and to show the
-agent doing something rather than talking.
+The file is never kept. It gets read in memory and thrown away, and what survives is the fields it
+said, each with its quote.
 
-This is a problem in this house right now. Two applications are sitting blocked on exactly this.
+One exception, and it is deliberate. A profile picture is kept, because a picture exists to be
+shown back to you. Your browser shrinks it to 256 pixels before it sends anything, so the full
+photo never reaches us at all. It goes when the case goes.
 
-And the agent is visibly not talking. It reads a form, opens documents, goes out to several official
-sources, and produces a file you can open. The demo is: fill it in, watch it work, open the PDF.
-
----
-
----
-
-## What it looks like, and what it costs
-
-### The look
-
-Two faces on purpose. Light is bright and youthful, because starting an application is a hopeful
-thing. Dark is elite and mature, because the document it hands back has to survive being read across
-a desk by a bank officer. Most of the difference is not colour, it is geometry: dark is tighter,
-flatter and quieter.
-
-The whole brand pack is in `docs/BRAND.md`, and the files it describes are in `web/brand/`. Every
-contrast ratio quoted there was measured by `tools/contrast.py` before it was written down, because
-a palette that says it is accessible without a measurement is the same untested claim this project
-keeps promising not to make.
-
-One animation earns its place: the run itself, one line per source as it lands, with the address and
-the moment it was read, and a counter showing the real number. A product whose pitch is that it does
-not invent things cannot have an interface that performs work it is not doing.
-
-### What it costs
-
-The first agent run is free, with the full guide and the PDF.
-
-After that it is $14 a month for reruns and the daily digest, or $105 once per case for the done
-for you tier.
-
-The detail is in `docs/BRAND.md`, including two things that are not settled yet: the fact that the number of watched sources shown on
-the page is always the live count from the registry rather than an aspiration, and where the line
-sits between preparing somebody's documents and representing them, which is a regulated activity in
-Canada and needs a licensed third party.
-
-**None of this is in Builds 1 to 4.** Payment is not part of the hackathon entry and no billing code
-goes in before 31 August. The design carries the prices so the interface is right. The plumbing
-waits.
-
----
-
-## How it actually feels to use, in three stages
-
-Set on 18 August 2026. This replaces "a short form and then a document" with something with more
-shape to it, and it is written here before any of it is built.
-
-### Stage one. You tell it about yourself, and you watch a number go up
-
-You fill in your details, and you upload the documents you already have.
-
-**Uploading is not a gate.** You can get a guide with nothing uploaded at all. It will just be a
-more general guide, and the product should say so rather than pretending otherwise.
-
-**There is a readiness score on screen, and it climbs as you add things.** When it crosses the
-threshold the confetti fires and the **GO** button lights up.
-
-**The documents are listed by how much they are worth**, because they are genuinely not worth the
-same. A passport moves the number a lot. A high school transcript moves it a little. That ordering
-is not a gamification trick, it is the truth about which documents actually unlock requirements, and
-showing it saves somebody hunting for a certificate that was never going to matter much.
-
-**The score has to be real, and this is the part that can go wrong.** A number that climbs because
-you uploaded *something* is a progress bar pretending to be an assessment, and this product cannot
-afford one of those. So the score is computed from actual coverage: how many of the requirements
-we have actually extracted for your lane are addressed by what you have actually uploaded. If the
-lane has forty requirements and your uploads speak to twelve of them, the number says so. When you
-tap the score it opens and shows which requirements each document covered.
-
-The confetti is then honest, because it is celebrating a real threshold rather than the act of
-clicking. Under `prefers-reduced-motion` it does not fire.
-
-### Stage two. The agent goes and builds your guide
-
-It searches the corpus and the registry, and matches what it finds against your profile: your
-jurisdiction, your lane, your documents, your gaps.
-
-This is the stage where the run animation lives. One line per source as it lands, with the address
-and the moment it was read, and a counter showing the real number.
-
-### Stage three. A guide, a form to fill in, and a board of work
-
-Two things come back rather than one.
-
-**The guide**, as before. Ordered steps, dependencies, cost, duration, the source and the date read
-on every line, and open questions at the back.
-
-**A fillable form**, generated for your case. Filling it in gives the agent the context that a
-generic intake could never ask for, because by now it knows which lane you are in and what is
-missing from your file. This is the second pass, and it is where a general guide becomes yours.
-
-**Then your dashboard fills up with a board of tasks**, in columns you can move things between.
-
-**The agent does the parts it can do.** It writes the cover letter for a specific job. It builds the
-CV for a specific school or role, per application rather than one CV for everything. What lands on
-your board is a piece of work that is already done, waiting for you to check it and send it.
-
-**You submit, and you come back and tick it off.** The agent does not claim to have submitted
-anything on your behalf, and it does not tick anything off for you. The board reflects what has
-really happened.
-
-**And it keeps going**, because the corpus is being re-read on a schedule. When something moves that
-touches your case, new tasks appear on the board and stale ones are marked, rather than you holding
-a document that quietly went wrong.
-
-### What has to stay true in all of this
-
-The board is a record of real state. A task is not marked done because an agent thinks it went well,
-and a drafted cover letter is labelled a draft until a person has read it. Anything the agent
-produces that has not been checked by you says so on its face.
-
-### Where these land in the build order
-
-Build 1 is the guide. Build 2 is uploads, the score, the confetti and the fillable form. Build 3 is
-the watcher, the board, the drafted applications and notifications. Detail in `docs/PLAN.md`.
-
-## Build log
-
-Started 18 August 2026. Nothing here is claimed as working until it has been checked.
+Everything goes when the case goes. Thirty days after you last touch it, or the moment you press
+delete, and the delete reports what it removed instead of just saying "done".
