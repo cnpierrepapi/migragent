@@ -33,6 +33,24 @@ LOGO = ('<svg viewBox="0 0 64 64"><path d="M10 36 V8 L32 28 L54 8 V36" fill="non
         'stroke="currentColor" stroke-width="7.5" stroke-linecap="round"/></svg>')
 
 
+def _next_step(lane: str) -> str:
+    """Where somebody goes after the guide, which depends on why they came.
+
+    The guide answers "what does this take". It does not answer "and what can I
+    apply to", and for a while nothing on this page did either: the study path
+    got a courses link and the work path got nothing at all, so a person who
+    uploaded a CV read their guide and was returned to no next step. The jobs
+    their CV matched existed the whole time, one route away, unlinked.
+    """
+    quiet = ('margin-left:10px;background:transparent;color:var(--ink);'
+             'border:1px solid var(--rule)')
+    if lane == "study":
+        return (f'<a class="cta" style="{quiet}" href="/courses">'
+                f'Courses you can apply to</a>')
+    return (f'<a class="cta" style="{quiet}" href="/work">'
+            f'Jobs your CV matched</a>')
+
+
 def result_html(case, coverage: dict, result: dict, documents: list) -> str:
     score = int(coverage.get("score", 0))
     covered = int(coverage.get("covered", 0))
@@ -157,7 +175,7 @@ def result_html(case, coverage: dict, result: dict, documents: list) -> str:
         {f"&nbsp;·&nbsp; {unverified} unverified" if unverified else ""}</div>
     </div>
     <a class="cta" href="/guide?jurisdiction={_e(case.jurisdiction)}&lane={_e(case.lane)}">Open the guide</a>
-    {'<a class="cta" style="margin-left:10px;background:transparent;color:var(--ink);border:1px solid var(--rule)" href="/courses">Courses you can apply to</a>' if case.lane == "study" else ""}
+    {_next_step(case.lane)}
   </div>
   <p class="sub" style="margin-top:10px;font-size:.9rem">That is the share of requirements a
   document could answer which yours do. It is not a prediction about your application.</p>

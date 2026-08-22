@@ -1,86 +1,183 @@
 # MIGRAGENT
 
-You are applying to move country, or to get licensed to work in one. MIGRAGENT asks two questions,
-takes whatever paperwork you already have, reads the official sources itself, and gives you a guide
-you can save as a PDF.
+An agent that reads the official immigration rules every day and tells you what you need to
+study or work in another country — the steps, the documents, the money, and what changed.
 
-It is not a chatbot. There is no conversation to steer and no prompt box. You make two choices, drop
-your files, and an agent goes away and does the work while you watch each step finish.
+Live: **https://migragent.onenept.com**
 
-Live: https://migragent-158351874494.us-central1.run.app
+Nothing it says is stated without a sentence from a government's own page behind it, with the
+date that page was read. Anything it cannot show you a sentence for is thrown away before you
+see it.
 
-## What it will not do
+---
 
-**Nothing is stated without a source.** Every requirement in the guide carries the official page it
-came from and the date that page was read. The citation is built from the fetch and never passes
-through the model, so a link cannot be invented.
+## What it does
 
-**Every requirement carries a verbatim quote, checked against the page text before the requirement is
-allowed to exist.** A real sentence with one number changed is rejected. Two real fragments stitched
-together are rejected. Where nothing can be quoted, the requirement is not stated: it goes to open
-questions at the back of the guide.
+You are not asked to pick a country. That is backwards: somebody who does not already know
+Canada is short of welders cannot choose Canada for being short of welders, and asking them to
+choose makes them do the research this exists to do for them.
 
-**No run is backdated and no count is rounded up.** The number of sources shown is the number in the
-registry today. The screen you watch while the agent works has no sleep in it and no artificial
-pacing; each line appears when that step really finished, carrying the count it really produced.
+So the order is inverted.
 
-## What is covered
+1. **Say what you want.** Study, work, or both.
+2. **Upload what you have.** A CV, or transcripts. Photographs are fine — most people
+   photograph their documents, and the text is read off the picture.
+3. **The countries come out of your own documents.** A work country appears only when its
+   published shortage list matches something your CV says. A study country appears only when a
+   school on its official register teaches your level and subject.
 
-The registry holds 1,046 sources across seven jurisdictions and two lanes each, work and study:
-United Kingdom, United States, Canada, Australia, France, Spain, United Arab Emirates. Four are
-recorded as blocked rather than quietly dropped. US study and work, because those hosts refuse to
-serve their robots.txt to anybody, so we cannot learn their rules and do not crawl them. AU study and
-work, because that host serves its robots.txt to a generic client and refuses it to one that says who
-it is. Neither is the same as being disallowed, and the registry says which it is.
+Then it keeps working after you close the tab: when a rule moves, an intake opens, or a job in
+a shortage occupation you qualify for is posted, you are told.
 
-Extraction runs lane by lane. Two lanes are deep today, with 708 requirements in the corpus: Canada
-study, 568, and UK study, 140. The intake screen greys out what it cannot serve and says why, rather
-than offering a lane it would answer thinly.
+---
+
+## What is in it, as of 22 August 2026
+
+| | |
+| --- | --- |
+| Requirements read from official pages | 2,332 |
+| Government pages read and re-read | 1,221 |
+| Institutions on official registers | 2,065 |
+| Courses read from school websites | 3,990 across 241 schools |
+| Live job postings matched against CVs | 2,042 |
+
+Study works for **Canada and the United Kingdom**. Work works for **Canada**. Six more countries
+have a visa guide but no school or job data yet, and the README does not pretend otherwise —
+`docs/SOURCES.md` lists what was checked and what refused.
+
+---
+
+## The rules it holds itself to
+
+These are not aspirations. Each one is enforced somewhere in the code and most were learned by
+getting it wrong first; `docs/DEFECTS.md` has thirty-eight of those.
+
+**Every claim carries a quote.** A requirement, a course, a fee and an occupation each store a
+verbatim span from the page, checked against that page's own text before the row is kept. Across
+3,686 extracted courses, 29 were dropped for a quote that was not really there.
+
+**The robots gate is not negotiable.** A site that disallows us is not read. A site that will not
+serve robots.txt is not read either, which cost us HESA and the UK's job board. A browser is used
+to render JavaScript, never to get past a policy or a bot check.
+
+**Nothing is invented to fill a gap.** A course with no published fee is shown with no fee and a
+question pointed at the school's own contact page. 3,774 of 3,990 courses carry such a question,
+because that is the truth about what schools publish.
+
+**Internal scores never reach a screen.** The rubric that decides which country to serve first is
+an opinion, not a measurement, and printing it would dress an editorial choice as a finding.
+
+**The file is never kept.** Documents are read in memory and discarded; the fields survive. The
+one exception is a profile picture, which exists to be shown back to you, is resized to 256px in
+your own browser before it is sent, and is deleted with everything else.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph web["Cloud Run service · migragent-web"]
+        FLOW["flow_page · 3 steps<br/>what you want → what you have → where you can go"]
+        ELIG["eligibility · countries from your documents"]
+        RUB["rubric · which country first (never displayed)"]
+        PAGES["courses · guide · dashboard · alerts"]
+    end
+
+    subgraph job["Cloud Run job · migragent-ingest"]
+        EXTRACT["extract · requirements from government pages"]
+        WATCH["watch · re-read, diff, retire what changed"]
+        LIST["listings · new jobs from government boards"]
+        DIGEST["digest · what moved, per person"]
+    end
+
+    subgraph data["Firestore + Cloud Storage"]
+        REQ[(requirements)]
+        SRC[(sources)]
+        OCC[(occupations)]
+        INST[(institutions + courses)]
+        JOBS[(listings)]
+        SNAP[(page snapshots)]
+    end
+
+    GOV["Government pages<br/>gov.uk · canada.ca · IRCC · ONS"] --> EXTRACT
+    SCHOOL["School websites<br/>241 read"] --> INST
+    BOARD["Job Bank"] --> LIST
+
+    EXTRACT --> REQ
+    EXTRACT --> SNAP
+    WATCH --> SRC
+    WATCH --> SNAP
+    LIST --> JOBS
+    REQ --> DIGEST
+    JOBS --> DIGEST
+    DIGEST --> ALERTS[(alerts)]
+
+    YOU(["Your CV or transcripts"]) --> FLOW
+    FLOW --> ELIG
+    OCC --> ELIG
+    INST --> ELIG
+    ELIG --> RUB --> PAGES
+    ALERTS --> PAGES
+```
+
+**Three identities, and the boundary between them is measured rather than asserted.**
+`migragent-web` serves requests and cannot start a crawl. `migragent-researcher` reads pages and
+cannot read a case. `migragent-watcher` is the only thing that can read the snapshot archive back,
+because comparing today with yesterday is the one job that genuinely needs yesterday — and nothing
+anywhere can become the watcher. `tools/test_isolation.py` proves it.
+
+**Scheduled daily:** retention sweep 03:17 → watch round 04:40 → job listings 05:00 → digest 05:20.
+The order matters: read the government pages, ask the boards, then tell people. Run the digest
+first and it reports on yesterday.
+
+---
 
 ## Running it
 
-You need a Google Cloud project with Firestore, Cloud Run and Vertex AI enabled, and the four service
-accounts created by `tools/grant_roles.sh`.
-
-```
+```bash
 pip install -r requirements.txt
-export GOOGLE_CLOUD_PROJECT=<your project>
-python -m flask --app migragent.app run
+export GOOGLE_CLOUD_PROJECT=your-project
+python -m migragent.app                      # the web service
+
+MIGRAGENT_MODE=extract  python -m migragent.worker   # read a lane
+MIGRAGENT_MODE=watch    python -m migragent.worker   # re-read and diff
+MIGRAGENT_MODE=listings python -m migragent.worker   # new jobs
+MIGRAGENT_MODE=digest   python -m migragent.worker   # tell people
 ```
 
-Crawling and extraction are separate from the web application on purpose, and are run as tools. They
-need a browser, which the deployed container deliberately does not carry:
+Tests are scripts rather than a framework, and each one proves a claim the product makes:
 
-```
-pip install playwright && playwright install chromium
-
-python -m tools.seed_registry          # fill the source registry
-python -m tools.expand_registry        # walk out from the entry pages
-python -m tools.extract_lane CA study  # pages to requirements
-python -m tools.build_guide CA study   # guide to PDF
-python -m tools.test_isolation         # prove the workers cannot reach each other
+```bash
+python -m tools.test_eligibility    # countries come from evidence; the rubric behaves
+python tools/test_delete.py         # deleting a case deletes every row it touched
+python -m tools.test_occupations    # a quote that is not on the page is refused
+python -m tools.test_alerts         # the right person is told the right thing, once
+python -m tools.test_isolation      # the identity boundaries hold
+python -m tools.probe_job_boards    # which government boards are readable, today
 ```
 
-## Deploying
+---
 
-Push to `main` and the running service becomes that commit. `.github/workflows/deploy.yml` builds and
-moves the Cloud Run revision, then fails the job unless the new revision answers on `/health`.
+## Inherited code
 
-There is no service account key in the repository or in its GitHub secrets. GitHub proves who it is
-with a short lived OIDC token, Google checks the token names this repository, and the credential it
-gets back lasts minutes. The deploy identity can build an image and move a revision; it cannot read
-Firestore, so it cannot see a case or a document.
+This repository was started from a prior scaffold. What came from it, and what was replaced, is
+recorded in `docs/INHERITED.md` rather than left for a reader to guess at. Everything in
+`migragent/` and `tools/` described above was written for this build.
 
-## Pre-existing code
+Third-party services: Google Cloud (Vertex AI Gemini, Cloud Vision OCR, Firestore, Cloud Run,
+Cloud Storage) and GMI Cloud for one generated video clip. Wikidata is used to find school
+websites and is never a source for anything shown; ONS, HESA, IRCC and Times Higher Education
+appear only in internal ranking, never on a page.
 
-`migragent/identity.py` and `migragent/config.py` were written on 17 August 2026 for an earlier
-project of mine and carried across. `docs/INHERITED.md` records exactly what came with them and which
-of the gotchas they document have since turned out to be stale. Everything else was written for this
-submission.
+---
 
-## Reading further
+## Where it is honest about being incomplete
 
-`docs/HOW_IT_WORKS.md` is the whole thing in plain words. `docs/PLAN.md` is what is built and what is
-not. `docs/RULES.md` is the standing rules the code has to keep. `docs/DECISIONS.md` records the
-choices, including one that turned out to be over-investment. `docs/DEFECTS.md` is every defect found
-so far, what caused it and how it was proved fixed.
+- Fees exist for 146 of 3,990 courses. Universities keep tuition behind calculators.
+- 25 universities — including Cambridge, Manchester and McGill — have catalogues behind search
+  interfaces the crawler cannot drive, so their courses are missing.
+- The UK's job board will not serve robots.txt and Australia's disallows us, so neither has jobs.
+- Billing for the $7/month subscription does not exist. The page says so instead of taking a card.
+
+`docs/DEFECTS.md` and `docs/DECISIONS.md` carry the rest.
