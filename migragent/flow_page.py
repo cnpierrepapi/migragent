@@ -206,6 +206,12 @@ def documents_html(lane: str, intent: str) -> str:
             f"<b>{_e(lane)}</b> first. You can add the other side afterwards without "
             "starting again.</p>" if intent == "both" else "")
 
+    # The work path also writes the CV out for Canada, the UK and Europass after
+    # reading it, which is three more model calls the person is waiting through.
+    clones = 30 if lane == "work" else 0
+    what = ("your CV, then writing it out for three countries" if lane == "work"
+            else "what you uploaded")
+
     return f'''<!doctype html>
 <html lang="en" data-theme="dark"><head>{HEAD}<title>What you have</title>
 <style>{STYLE}</style></head>
@@ -252,9 +258,49 @@ def documents_html(lane: str, intent: str) -> str:
       list.appendChild(li);
     }}
   }}
+  // WHAT HAPPENS AFTER SUBMIT, AND WHY IT NEEDS SAYING.
+  //
+  // This POST reads the file with the model and, on the work path, writes the
+  // CV out again in three countries' shapes. That is four model calls and it
+  // takes the better part of a minute. Until now the button said "Reading ..."
+  // and nothing else moved, so the honest reading of the screen was that it had
+  // hung.
+  //
+  // Same rule as the working screen: an estimate, labelled as one, that leans
+  // long and never sits at zero. The page is replaced by the redirect when the
+  // work is really done, so the real completion always wins.
   document.getElementById('f').onsubmit = function () {{
     var go = document.getElementById('go');
-    go.disabled = true; go.textContent = 'Reading ...';
+    go.disabled = true;
+    go.textContent = 'Reading ...';
+
+    var picker = document.getElementById('picker');
+    var files = picker && picker.files ? picker.files.length : 0;
+    // Measured: about 25 seconds a file, plus 30 for the three country CVs on
+    // the work path. Padded, because running over looks like a hang and
+    // finishing early is a pleasant surprise.
+    var left = 20 + (files * 25) + ({clones});
+
+    var note = document.createElement('p');
+    note.className = 'why';
+    note.style.marginTop = '18px';
+    document.getElementById('f').appendChild(note);
+
+    function paint() {{
+      var m = Math.floor(left / 60), sec = left % 60;
+      note.innerHTML = '<b>' + m + ':' + (sec < 10 ? '0' : '') + sec + '</b> or so. ' +
+        'Reading {what}. This is an estimate and it leans long; ' +
+        'the page moves on by itself the moment the work is done.';
+    }}
+    paint();
+
+    var timer = setInterval(function () {{
+      left -= 1;
+      if (left > 0) {{ paint(); return; }}
+      clearInterval(timer);
+      note.innerHTML = '<b>Still going.</b> This is taking longer than it usually ' +
+        'does. Nothing is stuck: the page moves on by itself when it finishes.';
+    }}, 1000);
   }};
 </script>
 </body></html>'''

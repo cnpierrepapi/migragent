@@ -36,7 +36,7 @@ class Run:
     """Does the work for one case and reports honestly as it goes."""
 
     def __init__(self, *, cases, corpus, registry, matcher, finder, builder,
-                 detect_fn, agreement_fn, times=None) -> None:
+                 detect_fn, agreement_fn, times=None, cvs=None) -> None:
         self._cases = cases
         self._corpus = corpus
         self._registry = registry
@@ -49,6 +49,8 @@ class Run:
         # interest in bookkeeping. Where it is present, every finished run tells
         # the next person how long to expect to wait.
         self._times = times
+        # Optional, so tools that build a Run without one keep working.
+        self._cvs = cvs
 
     def stream(self, case) -> Iterator[str]:
         started = time.monotonic()
@@ -105,7 +107,26 @@ class Run:
                 "took": _took(time.monotonic() - t),
             })
 
-        if not documents:
+        # A CV lives in its own store rather than with the documents, because it
+        # answers nobody's question: it is a claim a person makes about
+        # themselves, not an answer to something a government asked. See cv.py.
+        #
+        # It still has to be visible here. Uploading a CV on the work path and
+        # then being told "no documents to read" is the product losing your file
+        # as far as you can tell, and that is exactly what it looked like.
+        cv = self._cvs.get(case.case_id) if self._cvs else None
+        if cv is not None:
+            verified = len(cv.verified)
+            yield _sse({
+                "what": f"Read your CV: {cv.filename}",
+                "detail": (f"{len(cv.claims)} things it says about you, {verified} of them "
+                           f"checked word for word against the file. This is what the job "
+                           f"matching runs on. It does not answer the document requirements "
+                           f"below, because a CV is not a passport."),
+                "took": "",
+            })
+
+        if not documents and cv is None:
             yield _sse({
                 "what": "No documents to read",
                 "detail": "The guide will be the general one for this lane rather than yours.",

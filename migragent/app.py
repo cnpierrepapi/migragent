@@ -389,19 +389,44 @@ def _eligible_for(db, case) -> tuple[list, Any, str, str]:
         shortages = {code: Shortages(db).for_jurisdiction(code) for code in JURISDICTIONS}
         shortages = {k: v for k, v in shortages.items() if v}
 
+        postings = Listings(db).counts()
         eligible = work_countries(
             roles, shortages,
             requirements={k: counts.get((k, "work"), 0) for k in JURISDICTIONS},
-            postings=Listings(db).counts(),
+            postings=postings,
         )
-        if not eligible:
+
+        # A WORK COUNTRY HAS TO BE ABLE TO SHOW JOBS.
+        #
+        # The UK and Spain publish shortage lists we have read, so a CV can match
+        # them, and neither has a job board we can read: the UK's will not serve
+        # robots.txt and Spain's did not answer. Offering them here would end the
+        # work path on a country with no jobs behind it, which is the one thing
+        # this path promises.
+        #
+        # So the list is countries where the whole path works. Being told we
+        # cannot help is worse news and better information than being sent to a
+        # country we cannot follow through on.
+        deliverable = [e for e in eligible if postings.get(e.jurisdiction)]
+
+        if not deliverable:
             held = ", ".join(roles[:4]) or "nothing we could read"
+            covered = ", ".join(
+                JURISDICTIONS.get(k, {}).get("name", k)
+                for k in sorted(postings) if postings[k]) or "nowhere yet"
+            matched_elsewhere = [e.jurisdiction for e in eligible]
+            extra = ""
+            if matched_elsewhere:
+                names = ", ".join(JURISDICTIONS.get(k, {}).get("name", k)
+                                  for k in matched_elsewhere)
+                extra = (f" {names} does publish a shortage that fits you, and we cannot read "
+                         f"its job board, so we are not going to pretend we can find you work "
+                         f"there.")
             return [], None, "", (
-                f"No country we have read publishes a shortage that matches {held}. "
-                f"That is an answer about their lists, not about you: we hold shortage "
-                f"lists for a small number of countries so far, and yours may simply not "
-                f"be among them yet.")
-        return eligible, None, "", ""
+                f"Nothing we can follow through on matches {held}. We can only find real "
+                f"jobs in {covered} so far.{extra} That is about how few boards we can "
+                f"read, not about your trade.")
+        return deliverable, None, "", ""
 
     # Study.
     documents = cases_documents(db, case.case_id)
@@ -645,9 +670,15 @@ def working() -> Response:
     if not case.ready:
         return redirect("/start/places")
 
+    db = _db()
     documents = len(cases.documents(case.case_id))
+    # The CV counts as something to read. It is stored apart from the documents
+    # and the screen said "0 documents to read" to somebody who had just
+    # uploaded one, which reads as the file having been lost.
+    if CVStore(db).get(case.case_id) is not None:
+        documents += 1
     return Response(working_html(case, documents,
-                                 RunTimes(_db()).estimate(case.lane, documents)),
+                                 RunTimes(db).estimate(case.lane, documents)),
                     mimetype="text/html")
 
 
@@ -674,6 +705,7 @@ def run_stream() -> Response:
         detect_fn=detect,
         agreement_fn=agreement,
         times=RunTimes(db),
+        cvs=CVStore(db),
     )
     return Response(run.stream(case), mimetype="text/event-stream",
                     headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})

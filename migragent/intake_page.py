@@ -333,7 +333,7 @@ def working_html(case, file_count: int, estimate=None) -> str:
 
   <div class="working">
     <div class="counter" id="n">0</div>
-    <div class="cap">steps completed &nbsp;·&nbsp; {file_count} document{"" if file_count == 1 else "s"} to read</div>
+    <div class="cap">steps completed &nbsp;·&nbsp; {file_count} {"file" if file_count == 1 else "files"} to read</div>
   </div>
 
   <div class="eta" id="eta" data-seconds="{seconds}">
