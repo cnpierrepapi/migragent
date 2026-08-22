@@ -45,6 +45,7 @@ from .level import subjects_from_documents
 from .profile import AvatarRejected, Profiles
 from .rubric import best, score_study, score_work
 from .courses_page import courses_html
+from .coverage_page import coverage_html
 from .entitlements import is_subscriber, redact_all
 from .gaps import with_gaps
 from .subscribe_page import subscribe_html
@@ -590,24 +591,40 @@ def landing() -> Response:
     """
     extracted, live, sources = _coverage()
 
+    # ONLY COUNTRIES WHERE THE WHOLE PATH WORKS REACH THE FRONT PAGE.
+    #
+    # Listing a country because we have read its visa rules sends somebody down a
+    # path that ends with no schools to choose from or no jobs to look at. Study
+    # opens when there are courses to point at; work opens when there is a job
+    # board we can read. Everything else is on /coverage with its real numbers,
+    # which is a more useful answer than the words coming soon.
+    db = _db()
+    rows, _totals = _country_coverage(db)
+
     places = []
     open_lanes = 0
-    for code, meta in JURISDICTIONS.items():
-        counts = {lane: extracted.get((code, lane), 0) for lane in ("study", "work")}
-        total = sum(counts.values())
-        offered = total >= 1
-        open_lanes += len([1 for n in counts.values() if n])
-        if total:
-            note = f"{total:,} requirements read"
+    for row in rows:
+        lanes = []
+        if row["study_ready"]:
+            lanes.append("Study")
+        if row["work_ready"]:
+            lanes.append("Work")
+        if not lanes:
+            continue
+        open_lanes += len(lanes)
+        if row["study_ready"] and row["work_ready"]:
+            note = (f'{row["courses"]:,} courses, {row["jobs"]:,} live jobs')
+        elif row["study_ready"]:
+            note = f'{row["courses"]:,} courses at {row["schools"]:,} schools'
         else:
-            note = "coming soon"
-        places.append((meta["name"], note, offered))
+            note = f'{row["jobs"]:,} live jobs'
+        places.append((row["name"], " and ".join(lanes), note))
 
-    # Offered first, then the largest, so the page opens on what actually works.
-    places.sort(key=lambda p: (not p[2], p[1]))
+    waiting = len(rows) - len(places)
 
     return Response(landing_html(live=live, sources=sources, lanes_open=open_lanes,
-                                 places=places, openings=Listings(_db()).total()),
+                                 places=places, openings=Listings(db).total(),
+                                 waiting=waiting),
                     mimetype="text/html")
 
 
@@ -1072,6 +1089,66 @@ def read_clone(code: str) -> Response:
         return redirect("/dashboard")
 
     return Response(clone_html(clone), mimetype="text/html")
+
+
+def _country_coverage(db) -> tuple[list[dict], dict]:
+    """What we hold per country, and the totals under it.
+
+    Counted from the rows themselves every time rather than cached, because a
+    number on a page that nobody recomputes is a number that quietly rots.
+    """
+    import collections
+
+    reqs = collections.Counter()
+    for d in db.collection("requirements").select(
+            ["jurisdiction", "lane", "retired_at"]).stream():
+        r = d.to_dict()
+        if not r.get("retired_at"):
+            reqs[(r.get("jurisdiction"), r.get("lane"))] += 1
+
+    schools = collections.Counter()
+    for d in db.collection("institutions").select(["jurisdiction"]).stream():
+        schools[d.to_dict().get("jurisdiction")] += 1
+    courses = collections.Counter()
+    for d in db.collection("courses").select(["jurisdiction"]).stream():
+        courses[d.to_dict().get("jurisdiction")] += 1
+    jobs = Listings(db).counts()
+
+    rows = []
+    for code, meta in JURISDICTIONS.items():
+        study_reqs = reqs[(code, "study")]
+        work_reqs = reqs[(code, "work")]
+        rows.append({
+            "code": code,
+            "name": meta["name"],
+            "study_reqs": study_reqs,
+            "work_reqs": work_reqs,
+            "schools": schools.get(code, 0),
+            "courses": courses.get(code, 0),
+            "jobs": jobs.get(code, 0),
+            # A lane is open when the whole path works, not when we hold a row
+            # for it. Study needs courses to point at; work needs jobs.
+            "study_ready": bool(study_reqs and courses.get(code, 0)),
+            "work_ready": bool(work_reqs and jobs.get(code, 0)),
+        })
+
+    rows.sort(key=lambda r: (not (r["study_ready"] or r["work_ready"]),
+                             -(r["courses"] + r["jobs"]), r["name"]))
+    totals = {
+        "reqs": sum(reqs.values()),
+        "sources": Registry(db).total_sources(),
+        "schools": sum(schools.values()),
+        "courses": sum(courses.values()),
+        "jobs": sum(jobs.values()),
+    }
+    return rows, totals
+
+
+@app.get("/coverage")
+def coverage() -> Response:
+    """Every country, including the empty ones. Linked from the front page."""
+    rows, totals = _country_coverage(_db())
+    return Response(coverage_html(rows, totals), mimetype="text/html")
 
 
 @app.get("/courses")

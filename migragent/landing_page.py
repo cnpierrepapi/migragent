@@ -272,24 +272,26 @@ POSTED = ('<svg class="mark" viewBox="0 0 26 26" fill="none" stroke="currentColo
 
 
 def landing_html(live: int, sources: int, lanes_open: int,
-                 places: list[tuple[str, str, bool]],
-                 openings: int = 0) -> str:
+                 places: list[tuple[str, str, str]],
+                 openings: int = 0, waiting: int = 0) -> str:
     """`places` is (name, note, offered), so the page never invents coverage.
 
     `openings` is how many postings have actually been ingested. It is passed in
     rather than typed into the template, and where it is zero the stat is
     replaced instead of printing a nought beside a sentence about opportunities.
     """
-    offered = [p for p in places if p[2]]
-    later = [p[0] for p in places if not p[2]]
-
+    # `places` is (name, what it is open for, note). Only countries where the
+    # whole path works reach this page: study needs courses to point at, work
+    # needs a job board we can read. Everything else lives on /coverage, with
+    # its real numbers, rather than being listed here as a promise.
     place_cards = "".join(
-        f'<div class="place"><b>{_e(name)}</b><span>{_e(note)}</span></div>'
-        for name, note, _ in offered)
+        f'<div class="place"><b>{_e(name)}</b>'
+        f'<span>{_e(opens)}</span><span>{_e(note)}</span></div>'
+        for name, opens, note in places)
 
-    later_line = (f'<p class="later">Being read next: {_e(", ".join(later))}. '
-                  f'Nothing is offered here until it has actually been read.</p>'
-                  if later else "")
+    later_line = (f'<p class="later">{waiting} more countries are being read. '
+                  f'A country appears here when we can take you all the way, '
+                  f'not when we have started.</p>' if waiting else "")
 
     openings_stat = (f'<div class="stat"><b>{openings:,}</b>'
                      f'<span>live postings matched against cases</span></div>'
@@ -462,10 +464,12 @@ intake opens, or a job you qualify for is posted.">
 
     <section>
       <h2>Where you can go today</h2>
-      <p class="lede">Each place shows how much has actually been read for it. Where that
-      number is small it says so.</p>
+      <p class="lede">Two countries, all the way through. We would rather open one
+      properly than list ten we cannot finish.</p>
       <div class="places">{place_cards}</div>
       {later_line}
+      <p style="margin-top:22px">
+        <a class="cta ghost" href="/coverage">See everything we have read</a></p>
     </section>
   </div>
 
