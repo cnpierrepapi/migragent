@@ -300,9 +300,9 @@ def landing_html(live: int, sources: int, lanes_open: int,
     return f'''<!doctype html>
 <html lang="en" data-theme="dark"><head>{HEAD}
 <title>MIGRAGENT: the agent that keeps watch on your move</title>
-<meta name="description" content="Tell it where you want to go. MIGRAGENT reads the official
-immigration rules, builds the route for your case, and tells you when a rule changes, an intake
-opens, or a job you qualify for is posted.">
+<meta name="description" content="Upload what you have. MIGRAGENT reads the official
+immigration rules, works out which countries fit you, and tells you when a rule changes, an
+intake opens, or a job you qualify for is posted.">
 <meta name="theme-color" content="#080B12">
 <style>{CSS}{FEED}{REFUSAL}</style></head>
 <body>
@@ -315,16 +315,14 @@ opens, or a job you qualify for is posted.">
     <div class="hero">
       <div>
         <p class="kicker">Your immigration agent</p>
-        <h1>Tell it where you want to go. <em>It handles the rest.</em></h1>
-        <p>Give it your details once. It reads the official rules for your case, carves out your
-        route in order, and then keeps watching &mdash; so when a rule moves, an intake opens or
-        a job you qualify for is posted, you hear it from your agent instead of finding out the
-        hard way.</p>
+        <h1>Tell it what you want. <em>It does the reading.</em></h1>
+        <p>Upload what you already have. It works out which countries fit you and what each
+        one takes, then keeps checking after you close the tab.</p>
         <div class="row">
           <a class="cta" href="/start">Start free</a>
           <a class="cta ghost" href="#watch">What it tells you</a>
         </div>
-        <p class="under">No account needed. Your documents are never kept.</p>
+        <p class="under">No account. Your documents are never kept.</p>
       </div>
       <div class="figures">
         <video class="shot" style="aspect-ratio:5 / 4" autoplay muted loop playsinline
@@ -351,11 +349,11 @@ opens, or a job you qualify for is posted.">
 
   <div class="wrap">
     <section id="watch">
-      <h2>Most of this happens <em>after</em> you close the tab.</h2>
-      <p class="lede">Anyone can hand you a checklist. The hard part is that the checklist stops
-      being true, the intake you were waiting on opens on a Tuesday with no announcement, and the
-      job that would have carried your visa is filled in nine days. Your agent is still reading
-      while you get on with your life.</p>
+      <h2>The useful part happens <em>after</em> you leave.</h2>
+      <p class="lede">A checklist is a photograph. It was true the day it was written. Then the
+      salary floor moves, the intake opens on a Tuesday with no announcement, and the job that
+      would have carried your visa is gone in nine days. So it keeps reading while you get on
+      with your life.</p>
       <div class="split">
         <div class="feed" role="img"
              aria-label="Example alerts: a salary threshold change, an intake opening, and a matching job posting">
@@ -363,20 +361,20 @@ opens, or a job you qualify for is posted.">
 
           <div class="alert">{MOVED}<div>
             <span class="tag">A rule moved</span>
-            <span class="txt">The Skilled Worker salary floor went up. Your offer is now
-            &pound;900 under it.</span>
+            <span class="txt">The Skilled Worker salary floor went up. Your offer is
+            &pound;900 short now.</span>
             <q>read on gov.uk this morning &middot; both versions kept</q></div></div>
 
           <div class="alert">{OPENED}<div>
             <span class="tag">A door opened</span>
-            <span class="txt">January intake applications opened at the two colleges on your
+            <span class="txt">January applications just opened at the two schools on your
             shortlist.</span>
             <q>register updated &middot; deadline in 41 days</q></div></div>
 
           <div class="alert job">{POSTED}<div>
             <span class="tag">A job you qualify for</span>
-            <span class="txt">Three welding roles posted in a shortage occupation you already
-            match on skills and licence.</span>
+            <span class="txt">Three welding jobs went up. Your ticket and your skills
+            already match.</span>
             <q>Job Bank &middot; employer-submitted &middot; posted yesterday</q></div></div>
         </div>
         <div>
@@ -387,48 +385,48 @@ opens, or a job you qualify for is posted.">
     </section>
 
     <section id="how">
-      <h2>Three things you do. Everything else is the agent.</h2>
-      <p class="lede">You are never asked to search, compare or go and find anything. Nobody
-      moving country has time to become a researcher, and taking that off you is the whole job
-      here.</p>
+      <h2>You do three things. It does the rest.</h2>
+      <p class="lede">Nothing to search, nothing to compare, nothing to go and find. Moving
+      country already turns you into a part-time researcher. That is the job we are taking
+      off you.</p>
       <div class="steps">
         <div class="step">
           {_picture("03-folder-and-hands", "Hands holding a folder of papers while waiting")}
           <em>Step one</em>
           <b>Say what you want</b>
-          <p>Where you are going, and whether it is study or work. Drop in the paperwork you
-          already have, or none at all.</p>
+          <p>Study or work. Then drop in whatever paperwork you have. A phone photo is fine,
+          and none at all is fine too.</p>
         </div>
         <div class="step">
           {_picture("06-consulate-waiting-daylight", "A calm official waiting area in daylight")}
           <em>Step two</em>
-          <b>It carves your route</b>
-          <p>Not a generic checklist. The steps for your case, in order, with the documents, the
-          money and the waiting times, each one carrying the sentence it came from.</p>
+          <b>It works out your route</b>
+          <p>The steps for your case, in order. Documents, money, waiting times. Every line
+          carries the sentence it came from.</p>
         </div>
         <div class="step">
           {_picture("07-keys-new-flat", "A hand setting keys down in an empty sunlit flat")}
           <em>Step three</em>
-          <b>It keeps you ahead</b>
-          <p>Rule changes, intakes opening, and jobs in shortage occupations you qualify for, as
-          they happen &mdash; not when you next remember to go and check.</p>
+          <b>It keeps watching</b>
+          <p>Rules that change, intakes that open, jobs you qualify for. You hear about them
+          when they happen, not when you remember to look.</p>
         </div>
       </div>
     </section>
 
     <section>
-      <h2>One agent, both reasons for going.</h2>
-      <p class="lede">Study and work are different rulebooks, different registers and different
-      deadlines. You pick the one you want; it knows which of the two it is reading.</p>
+      <h2>Both reasons for going.</h2>
+      <p class="lede">Study and work are different rulebooks with different registers and
+      different deadlines. You pick. It knows which one it is reading.</p>
       <div class="routes">
         <div class="route">
           {_picture("05-campus-courtyard-daylight",
                     "A university courtyard in bright daylight", "16 / 9")}
           <div>
             <b>To study</b>
-            <p>What the visa needs, what money you have to show, and which institutions the
-            government's own register says can actually take you &mdash; plus a nudge when the
-            next intake opens.</p>
+            <p>What the visa needs, what money you have to show, and which schools the
+            government's own register says can actually take you. Plus a nudge when the next
+            intake opens.</p>
           </div>
         </div>
         <div class="route">
@@ -436,19 +434,19 @@ opens, or a job you qualify for is posted.">
                     "A person walking a wide unfamiliar city street at dawn", "16 / 9")}
           <div>
             <b>To work</b>
-            <p>The route, the salary floor, the sponsorship rules, and postings on government job
-            boards in occupations the country has publicly said it is short of &mdash; matched
-            against what you can prove you can do.</p>
+            <p>The route, the salary floor, the sponsorship rules. Then real postings in
+            occupations that country has said out loud it is short of, matched against what
+            you can prove you can do.</p>
           </div>
         </div>
       </div>
     </section>
 
     <section>
-      <h2>It would rather tell you nothing than tell you wrong.</h2>
-      <p class="lede">This is what makes the alerts worth opening. Every line it gives you
-      carries the sentence it came from, on the government's own page, with the date it was read.
-      Anything it cannot show you a sentence for is thrown away before you ever see it.</p>
+      <h2>It would rather say nothing than say something wrong.</h2>
+      <p class="lede">Every line carries the sentence it came from, on the government's own
+      page, with the date it was read. If it cannot show you the sentence, it throws the line
+      away before you see it. That is why the alerts are worth opening.</p>
       <div class="refuse">
         <div class="line kept">{TICK}<div><span class="txt">You must have a confirmed job offer
           before you apply.</span>
@@ -464,8 +462,8 @@ opens, or a job you qualify for is posted.">
 
     <section>
       <h2>Where you can go today</h2>
-      <p class="lede">Each place says how much has actually been read for it. Where that number
-      is small, it says so, rather than pretending.</p>
+      <p class="lede">Each place shows how much has actually been read for it. Where that
+      number is small it says so.</p>
       <div class="places">{place_cards}</div>
       {later_line}
     </section>
@@ -473,7 +471,7 @@ opens, or a job you qualify for is posted.">
 
   <div class="wrap end">
     <h2>Find out what it would take.</h2>
-    <p class="lede">Two questions, and you can stop there. No account, no card.</p>
+    <p class="lede">Two taps and an upload. You can stop there. No account, no card.</p>
     <a class="cta" href="/start">Start free</a>
   </div>
 
