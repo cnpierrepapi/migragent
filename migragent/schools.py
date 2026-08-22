@@ -68,8 +68,16 @@ LEVELS = ("bachelors", "masters", "doctorate")
 # second one answers the question being asked.
 STRONG_WORDS = ("courses", "programmes", "programs", "degrees", "subjects",
                 "course-search", "program-search", "undergraduate", "postgraduate",
-                "course", "programme", "program")
-WEAK_WORDS = ("study", "studies", "academics", "admissions", "apply", "future-students")
+                "course", "programme", "program",
+                # French. Quebec is a major destination and every CEGEP and
+                # Quebec university was invisible without these: the crawler
+                # found nothing on uqam.ca or umontreal.ca because it was
+                # looking for English words on a French site.
+                "programmes-detudes", "programmes-d-etudes", "etudes",
+                "baccalaureat", "baccalaureats", "maitrise", "maitrises",
+                "doctorat", "doctorats", "formations", "formation")
+WEAK_WORDS = ("study", "studies", "academics", "admissions", "apply", "future-students",
+              "etudier", "admission", "futurs-etudiants", "cours")
 
 INDEX_WORDS = STRONG_WORDS + WEAK_WORDS
 
@@ -150,6 +158,14 @@ List the COURSES this page describes that a person could apply to. For each one:
            An "MSc", "MA", "MBA", "LLM" or "taught postgraduate" course is
            masters. A "PhD", "DPhil", "professional doctorate" or "DBA" is
            doctorate. If the page does not say, omit the course entirely.
+
+           THE PAGE MAY BE IN FRENCH. "Baccalaureat" is bachelors, "Maitrise" is
+           masters, "Doctorat" is doctorate. A "certificat" or "microprogramme"
+           is NOT one of these and is omitted.
+
+           A Quebec "DEC" or "Diplome d'etudes collegiales", and an "AEC", are
+           college diplomas taken before university. They are NOT bachelors and
+           must be omitted, however many of them the page lists.
   "quote": a VERBATIM span copied exactly from the page that names this course.
            Character for character.
   "subject": the field of study in a few words, if the page states it
