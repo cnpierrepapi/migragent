@@ -1,8 +1,28 @@
 # What happens to the documents you upload
 
-People upload passports here. This document is written before the upload feature ships rather than
-after, and it describes what the code does, not what we intend it to do. Anything below that is not
-true yet says so.
+People upload passports here. This document describes what the code does, not what we intend it to
+do, and anything below that is not true yet says so.
+
+## Who is responsible
+
+The controller of personal data submitted to MIGRAGENT is **Onenept Studios Inc.**, a Delaware
+C corporation, reachable at hello@onenept.com. MIGRAGENT is operated by Onenept Studios Inc. and
+runs on Google Cloud Platform in the United States.
+
+## What this notice covers, and what it does not
+
+It covers every document and every field a person submits to this service, and the records the
+service creates about them. It does not cover the government websites this service reads, which
+publish their own terms, or any third party a person chooses to contact through a link we provide.
+
+## The lawful basis, stated plainly
+
+Processing is carried out to deliver the service a person has asked for. Documents are submitted
+voluntarily and the service works without them: a person may take a guide with nothing uploaded at
+all. Consent is given by uploading and is withdrawn by deleting, and the delete path is described
+below and reports what it removed.
+
+No personal data is sold, and none is shared with a third party for advertising or profiling.
 
 ---
 

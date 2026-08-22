@@ -95,6 +95,7 @@ def coverage_html(rows: list[dict[str, Any]], totals: dict[str, int]) -> str:
             f'<td class="n">{row["study_reqs"]:,}</td>'
             f'<td class="n">{row["work_reqs"]:,}</td>'
             f'<td class="n">{row["schools"]:,}</td>'
+            f'<td class="n">{row["schools_read"]:,}</td>'
             f'<td class="n">{row["courses"]:,}</td>'
             f'<td class="n">{row["jobs"]:,}</td>'
             f'</tr>')
@@ -113,7 +114,8 @@ def coverage_html(rows: list[dict[str, Any]], totals: dict[str, int]) -> str:
     <thead><tr>
       <th>Country</th><th>Open for</th>
       <th class="n">Study rules</th><th class="n">Work rules</th>
-      <th class="n">Schools</th><th class="n">Courses</th><th class="n">Live jobs</th>
+      <th class="n">On the register</th><th class="n">Schools read</th>
+      <th class="n">Courses</th><th class="n">Live jobs</th>
     </tr></thead>
     <tbody>{"".join(body)}</tbody>
   </table>
@@ -126,8 +128,9 @@ def coverage_html(rows: list[dict[str, Any]], totals: dict[str, int]) -> str:
   otherwise.</p>
 
   <p class="note">Totals: {totals["reqs"]:,} requirements from {totals["sources"]:,}
-  official pages, {totals["courses"]:,} courses at {totals["schools"]:,} schools, and
-  {totals["jobs"]:,} live job postings.</p>
+  official pages. {totals["schools"]:,} schools on the official registers, of which
+  {totals["schools_read"]:,} have had their courses read, giving {totals["courses"]:,}
+  courses. {totals["jobs"]:,} live job postings.</p>
 
   <a class="cta" href="/start">Find out what it would take</a>
 </main></body></html>'''

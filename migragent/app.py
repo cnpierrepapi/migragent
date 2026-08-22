@@ -32,6 +32,7 @@ from .cv import CVClones, CVReader, CVStore
 from .cv_builder import FIELDS as CV_FIELDS, build as build_cv, missing_for_matching
 from .cv_builder_page import clone_html, cv_builder_html
 from .dashboard_page import dashboard_html
+from .data_page import data_html
 from .drafts import CLONE_INTO, Drafter, PeopleDrafter
 from .eligibility import next_level, study_countries, work_countries
 from .fetcher import Fetcher
@@ -615,7 +616,7 @@ def landing() -> Response:
         if row["study_ready"] and row["work_ready"]:
             note = (f'{row["courses"]:,} courses, {row["jobs"]:,} live jobs')
         elif row["study_ready"]:
-            note = f'{row["courses"]:,} courses at {row["schools"]:,} schools'
+            note = f'{row["courses"]:,} courses at {row["schools_read"]:,} schools'
         else:
             note = f'{row["jobs"]:,} live jobs'
         places.append((row["name"], " and ".join(lanes), note))
@@ -784,25 +785,22 @@ def sweep() -> Response:
 
 @app.get("/data")
 def data_protection() -> Response:
-    """What happens to an uploaded document, served from the doc itself.
+    """The data protection notice, rendered from the document the build is held to.
 
-    The page a person reads and the document the build is held to are the same
-    file, so they cannot drift apart into a promise and a practice.
+    The page a person reads and the standard the code is checked against are one
+    file, so they cannot drift into a promise and a practice. See data_page.py
+    for why the markdown is parsed here rather than with a library.
     """
+    import datetime
+
     path = Path(__file__).resolve().parent.parent / "docs" / "DATA_PROTECTION.md"
-    text = path.read_text(encoding="utf-8") if path.exists() else "Not available."
-    body = html_module.escape(text)
-    return Response(
-        f'<!doctype html><html lang="en"><head><meta charset="utf-8">'
-        f'<meta name="viewport" content="width=device-width, initial-scale=1">'
-        f'<title>What happens to your documents</title>'
-        f'<link rel="icon" href="/brand/favicon.svg">'
-        f'<link rel="stylesheet" href="/brand/tokens.css">'
-        f'<style>body{{margin:0;padding:48px 24px 96px}}'
-        f'pre{{max-width:820px;margin:0 auto;white-space:pre-wrap;line-height:1.65;'
-        f'font-family:var(--font-mono);font-size:.86rem;color:var(--ink)}}</style>'
-        f'</head><body><pre>{body}</pre></body></html>',
-        mimetype="text/html")
+    if not path.exists():
+        return Response("Not available.", mimetype="text/plain", status=404)
+
+    updated = datetime.datetime.fromtimestamp(
+        path.stat().st_mtime, datetime.timezone.utc).strftime("%d %B %Y")
+    return Response(data_html(path.read_text(encoding="utf-8"), updated=updated),
+                    mimetype="text/html")
 
 
 @app.get("/guide")
@@ -1110,8 +1108,16 @@ def _country_coverage(db) -> tuple[list[dict], dict]:
     for d in db.collection("institutions").select(["jurisdiction"]).stream():
         schools[d.to_dict().get("jurisdiction")] += 1
     courses = collections.Counter()
-    for d in db.collection("courses").select(["jurisdiction"]).stream():
-        courses[d.to_dict().get("jurisdiction")] += 1
+    # Schools we have actually read courses from, which is not the same as
+    # schools on the register. The front page said "2,448 courses at 946
+    # schools", and 946 is the size of the UK sponsor register: it implied we
+    # had read every one of them when we had read 117.
+    read_schools: dict[str, set] = {}
+    for d in db.collection("courses").select(["jurisdiction", "institution"]).stream():
+        row = d.to_dict()
+        code = row.get("jurisdiction")
+        courses[code] += 1
+        read_schools.setdefault(code, set()).add(row.get("institution"))
     jobs = Listings(db).counts()
 
     rows = []
@@ -1124,6 +1130,7 @@ def _country_coverage(db) -> tuple[list[dict], dict]:
             "study_reqs": study_reqs,
             "work_reqs": work_reqs,
             "schools": schools.get(code, 0),
+            "schools_read": len(read_schools.get(code, ())),
             "courses": courses.get(code, 0),
             "jobs": jobs.get(code, 0),
             # A lane is open when the whole path works, not when we hold a row
@@ -1138,6 +1145,7 @@ def _country_coverage(db) -> tuple[list[dict], dict]:
         "reqs": sum(reqs.values()),
         "sources": Registry(db).total_sources(),
         "schools": sum(schools.values()),
+        "schools_read": sum(len(v) for v in read_schools.values()),
         "courses": sum(courses.values()),
         "jobs": sum(jobs.values()),
     }
