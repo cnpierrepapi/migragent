@@ -2,6 +2,7 @@
 
     MIGRAGENT_MODE=extract  python -m migragent.worker
     MIGRAGENT_MODE=watch    python -m migragent.worker
+    MIGRAGENT_MODE=listings python -m migragent.worker
     MIGRAGENT_MODE=digest   python -m migragent.worker
     MIGRAGENT_LANE="CA study" python -m migragent.worker     # one lane, locally
 
@@ -68,7 +69,7 @@ MODE = os.environ.get("MIGRAGENT_MODE", "extract")
 #
 # An unknown mode is now a refusal rather than the most expensive thing this
 # codebase can do by accident.
-MODES = ("extract", "watch", "digest", "selftest", "robots")
+MODES = ("extract", "watch", "listings", "digest", "selftest", "robots")
 
 # Who reads an entry page: the agent that chooses what to open next, or the flat
 # extractor that reads whatever the walk queued. Off unless asked for, so the
@@ -259,6 +260,85 @@ def digest() -> int:
     return 0
 
 
+def listings_round() -> int:
+    """Ask the boards what went up today, for occupations we already hold.
+
+        MIGRAGENT_MODE=listings  python -m migragent.worker
+
+    THE MISSING LINK, AND IT WAS MISSING FOR A WHILE.
+
+    The digest tells somebody when a job they qualify for is posted. It does that
+    by looking for listings first seen since they last looked. Nothing was ever
+    adding listings: the corpus was seeded once by hand in August and then sat
+    still, so the promise was structurally dead. Every alert of that kind that
+    could ever have fired had already fired.
+
+    This closes the loop. It runs before the digest each morning, asks the board
+    about every occupation on that country's own shortage list, and records what
+    comes back. `Listings.record` keeps `first_seen_at` off the merge payload, so
+    a posting seen yesterday keeps yesterday's date and only genuinely new rows
+    look new to the digest.
+
+    WHAT IT DOES NOT DO
+    -------------------
+    It does not search for occupations nobody published. If a government has not
+    said it is short of something, this does not go looking for it, and a person
+    is never shown a job their country of destination never asked for.
+
+    Only Canada is wired up, and that is a fact about the boards rather than a
+    plan. Measured on 22 August 2026: of ten government boards, the UK's will not
+    serve robots.txt, Australia's disallows us, Spain's and Italy's did not
+    answer, and the United States, France, Germany, Portugal and EURES are all
+    readable and not yet built.
+    """
+    from .listings import JobBank, Listings
+    from .occupations import Shortages
+
+    boards = {"CA": JobBank}
+
+    credentials = identity.credentials_for(identity.WATCHER, PROJECT)
+    db = firestore.Client(project=PROJECT, credentials=credentials)
+    fetcher = Fetcher(delay_seconds=2.0)
+    store = Listings(db)
+
+    before = store.counts()
+    total = 0
+
+    for code, board_class in boards.items():
+        board = board_class()
+        occupations = Shortages(db).for_jurisdiction(code)
+
+        seen: set[str] = set()
+        wanted = []
+        for occupation in occupations:
+            title = (occupation.get("title") or "").strip()
+            if title and title.lower() not in seen:
+                seen.add(title.lower())
+                wanted.append(occupation)
+
+        print(f"{code}: asking {board.BOARD} about {len(wanted)} occupations", flush=True)
+
+        for i, occupation in enumerate(wanted, 1):
+            title = occupation["title"]
+            found: list = []
+            for query in board.queries_for(title):
+                page = fetcher.fetch(board.search_url(query))
+                found, _why = board.parse(page, title,
+                                          occupation.get("occupation_id"), query)
+                if found:
+                    break
+            if found:
+                store.record(found)
+                total += len(found)
+            if i % 20 == 0:
+                print(f"  {i}/{len(wanted)}, {total} rows so far", flush=True)
+
+    after = store.counts()
+    print(f"\nlistings: {total} rows written")
+    print(f"held before {before}, after {after}", flush=True)
+    return 0
+
+
 def main() -> int:
     if not PROJECT:
         raise SystemExit("GOOGLE_CLOUD_PROJECT is not set")
@@ -271,6 +351,9 @@ def main() -> int:
 
     if MODE == "selftest":
         return selftest()
+
+    if MODE == "listings":
+        return listings_round()
 
     if MODE == "digest":
         return digest()
