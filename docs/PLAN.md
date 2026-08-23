@@ -248,12 +248,14 @@ the Care Quality Commission condition and the actual fees. The one shot extracto
 entry page returned "you must pay the application fee" with no amount. Same model, same page budget
 per page, different choice of pages.
 
-**Still to do, and this is the honest state of Build 4.** The agent is off. `MIGRAGENT_RESEARCHER`
-is not set on the ingestion job, so the daily round still reads the way it always did, and this
-build's "ends with" line above is not true yet. Turning it on is one environment variable and a
-watched round; what stops it being a one-liner is that nobody has yet compared a full agent-read lane
-against a walked one on the same lane, and switching the pipeline over on the strength of one gov.uk
-entry page would be exactly the sort of claim this project keeps catching itself making.
+**Measured on 23 August 2026, and the answer was not the one the build expected.**
+`tools/compare_agent.py` ran on two lanes, writing nothing. On UK work, where the walk holds 174
+requirements from 19 pages, the agent read 3 pages and returned 26, of which 10 were things the walk
+had missed including the actual fees. On Germany study, where the walk holds 26 from 4 pages, the
+agent read 7 and returned 29, and 4 of those pages were not in the registry at all. So the daily
+round is not handed to it: `MIGRAGENT_RESEARCHER` stays unset where the walk is deep, and the agent
+runs as a second pass where the corpus says a lane is thin. Decision 10 has the numbers and the
+reason the two lanes disagree.
 
 ---
 

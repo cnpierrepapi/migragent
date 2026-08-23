@@ -325,6 +325,54 @@ The feature is working as designed and the design has a boundary near there.
 
 ---
 
+## 10. The agent reads where the walk is thin, and does not replace it
+
+**Decided:** 23 August 2026, after running `tools/compare_agent.py` on two lanes rather than
+switching the pipeline over on the strength of one good gov.uk page. Nothing was written by either
+run.
+
+Build 4 ended with the agent built, proven in a test, and switched off, because nobody had compared
+a whole lane it read against the same lane the walk read. That comparison has now run twice, once
+where the walk is deep and once where it is thin, and the two answers point in opposite directions.
+Which is the finding.
+
+**UK work, where the walk holds 174 live requirements from 19 pages.** The agent read 3 pages, took
+32 turns, refused nothing, and stopped by its own choice with 5 pages of its budget unspent. It
+returned 26 requirements. Sixteen sentences were found by both. The walk kept 139 the agent never
+saw. On volume this is not close.
+
+But the 10 it found alone are not filler. The application fee of 819 pounds and the 628 pound fee
+for a job on the immigration salary list, the criminal record certificate for applications from
+outside the UK, the PhD salary discount and what it requires, and each family member applying
+separately. It got them by opening `/skilled-worker-visa/print`, which is the whole guide on one
+page, and reading it as a document. The walk had that page in the registry and treated it as one
+more page among twenty.
+
+**Germany study, where the walk holds 26 requirements from 4 pages.** The agent read 7 pages and
+returned 29, with a higher share carrying a number, and 4 of its 7 pages were not in the registry at
+all: arrival registration, EU student mobility, and the notification deadline that goes with it.
+Eleven sentences shared, 18 only the agent, 14 only the walk. Here it is better on nearly every axis
+and it widened the registry while doing it.
+
+**Why the two disagree, and it is not the model.** The walk finds pages by structure and reads
+whatever it finds. Where a government publishes a lot and links it plainly, that is a strength and
+the agent cannot match it in one session with a page budget. Where a government publishes across
+sections that do not link to each other, structure runs out and choosing what to open next is worth
+more than reading more.
+
+**So the daily round is not handed to the agent.** `MIGRAGENT_RESEARCHER` stays unset for lanes the
+walk covers deeply. The agent runs as a second pass on thin lanes, where thin is measured from the
+corpus rather than guessed, and the pages it opens get registry rows so the watcher keeps them.
+
+**One thing it did that the walk cannot, and it is the D29 failure it walks past.** On the German
+lane the agent opened a page under the site's Arbeit section, read it, and recorded nothing from it.
+The walk gives a discovered page the lane of the entry that found it, which is how Skilled Worker
+rules ended up in a study guide (D32). An agent reading for a stated question can look at a page and
+decide it is about a different question. That is not a fix for per page lane detection, which is
+still open, and it is the first thing in this build that has ever declined a page on subject.
+
+---
+
 ## The watch: three signals, no fourth
 
 The product's second promise is that it tells you when something changes. Deciding *what* counts as
