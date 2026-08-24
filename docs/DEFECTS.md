@@ -1392,3 +1392,32 @@ derived from the source, the quote and the lane, so the rows merged with themsel
 dates it wrote were true. Model calls spent for nothing, and a reminder that "it deployed" and "it
 is running this code" are two different claims.
 
+
+---
+
+## D39 — "It cannot read a case" was a habit described as a wall
+
+**What happened.** Writing `docs/ARCHITECTURE.md` meant reading the IAM policy rather than the
+docstrings, and the researcher holds `roles/datastore.viewer`. The README and the identity module
+both say it cannot read a case. It can read every case in the database.
+
+**Why nothing caught it.** `tools/test_isolation.py` asserts what it was written to assert: the
+researcher can read the registry, and cannot write. Both are true and both still pass. The claim
+about cases was never one of the five checks, so the test's green line was covering a sentence it
+had never looked at. Same species as D1, where the four service accounts held zero roles while the
+docstring said isolation was enforced by Google, and the same species as the `app.py` docstring that
+went on saying the web worker could not call a model for a day after that stopped being true.
+
+**What is actually true.** Firestore grants read at the database, not at the collection. There is no
+role that says "the registry but not the cases". The product never asks the researcher for a case,
+and nothing but the code's own habits stops it.
+
+**Fix, for now: the words.** `docs/ARCHITECTURE.md` says what the boundary is and where it stops.
+The two real options, neither taken today, are a second Firestore database so cases live somewhere
+the researcher has no grant at all, or keeping cases in Cloud Storage under the same append-only
+treatment as the snapshots. Both are a build, not an afternoon, and both change the shape of every
+case read in the product.
+
+**The rule that comes out of it.** A test proves the sentences it was written against, and the
+sentences it was never shown are exactly where a false claim lives. Before a document describes a
+boundary, read the policy.

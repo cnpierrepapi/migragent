@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY migragent/ ./migragent/
 COPY web/brand/ ./web/brand/
 COPY docs/DATA_PROTECTION.md ./docs/DATA_PROTECTION.md
+COPY docs/ARCHITECTURE.md ./docs/ARCHITECTURE.md
 
 # Cloud Run sets PORT. The service listens on it rather than on a fixed number.
 ENV PORT=8080

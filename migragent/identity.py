@@ -21,9 +21,14 @@ already recorded in docs/INHERITED.md.
 
 The watcher is the strongest boundary of the four and it is worth naming: it has
 no serviceAccountTokenCreator bindings whatsoever, so no principal anywhere can
-become it. It runs as itself on its own Cloud Run job and is reached through
-Pub/Sub, never by impersonation. A web request therefore cannot start a crawl
-round by any path.
+become it. It runs as itself on its own Cloud Run job, started by Cloud
+Scheduler, never by impersonation. A web request therefore cannot start a crawl
+round by any path. This used to say the job was reached through Pub/Sub, which
+stopped being true when Decision 4 took Pub/Sub out.
+
+What none of this does is keep the researcher out of a case. It holds
+roles/datastore.viewer, Firestore grants read at the database rather than at the
+collection, and the product simply never asks it for one. D39.
 
 Re-run the test after any change here or in tools/grant_roles.sh:
 

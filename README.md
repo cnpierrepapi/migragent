@@ -1,183 +1,221 @@
 # MIGRAGENT
 
-An agent that reads the official immigration rules every day and tells you what you need to
-study or work in another country — the steps, the documents, the money, and what changed.
+An agent that reads the official immigration rules every day and tells you what you need in order
+to study or work in another country. The steps, the documents, the money, and what changed since
+last time.
 
-Live: **https://migragent.onenept.com**
+Live at **https://migragent.onenept.com**. How it is built: **https://migragent.onenept.com/architecture**.
 
-Nothing it says is stated without a sentence from a government's own page behind it, with the
-date that page was read. Anything it cannot show you a sentence for is thrown away before you
-see it.
-
----
+Nothing it says reaches you without a sentence from a government's own page behind it, and the date
+that page was read. Anything it cannot show you a sentence for is thrown away before you see it.
 
 ## What it does
 
-You are not asked to pick a country. That is backwards: somebody who does not already know
-Canada is short of welders cannot choose Canada for being short of welders, and asking them to
-choose makes them do the research this exists to do for them.
+You are not asked to pick a country. That is backwards. Somebody who does not already know Canada
+is short of welders cannot choose Canada for being short of welders, and asking them to choose
+makes them do the research this exists to do for them.
 
 So the order is inverted.
 
-1. **Say what you want.** Study, work, or both.
-2. **Upload what you have.** A CV, or transcripts. Photographs are fine — most people
-   photograph their documents, and the text is read off the picture.
-3. **The countries come out of your own documents.** A work country appears only when its
-   published shortage list matches something your CV says. A study country appears only when a
-   school on its official register teaches your level and subject.
+1. Say what you want. Study, work, or both.
+2. Upload what you have. A CV, or transcripts. Photographs are fine, because most people photograph
+   their documents, and the text is read off the picture.
+3. The countries come out of your own documents. A work country appears only when its published
+   shortage list matches something your CV says. A study country appears only when a school on its
+   official register teaches your level and subject.
 
-Then it keeps working after you close the tab: when a rule moves, an intake opens, or a job in
-a shortage occupation you qualify for is posted, you are told.
+Then it keeps working after you close the tab. When a rule moves, an intake opens, or a job in a
+shortage occupation you qualify for is posted, you get told.
 
----
-
-## What is in it, as of 22 August 2026
+## What is in it, on 24 August 2026
 
 | | |
 | --- | --- |
-| Requirements read from official pages | 2,332 |
-| Government pages read and re-read | 1,221 |
-| Institutions on official registers | 2,065 |
-| Courses read from school websites | 3,990 across 241 schools |
-| Live job postings matched against CVs | 2,042 |
+| Live requirements read off official pages | 2,291 across 17 country and lane pairs |
+| Government pages in the registry | 1,229, of which 4 are blocked |
+| Institutions from official registers | 2,065 |
+| Courses read from school websites | 3,990 |
+| Job postings matched against CVs | 2,490 |
+| Changes caught and recorded | 31 |
 
-Study works for **Canada and the United Kingdom**. Work works for **Canada**. Six more countries
-have a visa guide but no school or job data yet, and the README does not pretend otherwise —
-`docs/SOURCES.md` lists what was checked and what refused.
-
----
+Study works for Canada and the United Kingdom. Work works for Canada. Several more countries have a
+visa guide with no school or job data behind it yet, and `docs/SOURCES.md` says which, along with
+what was checked and what refused us.
 
 ## The rules it holds itself to
 
-These are not aspirations. Each one is enforced somewhere in the code and most were learned by
-getting it wrong first; `docs/DEFECTS.md` has thirty-eight of those.
+Each one is enforced somewhere in the code, and most were learned by getting it wrong first.
+`docs/DEFECTS.md` has thirty-nine of those, written up as failures rather than as features.
 
-**Every claim carries a quote.** A requirement, a course, a fee and an occupation each store a
-verbatim span from the page, checked against that page's own text before the row is kept. Across
+Every claim carries a quote. A requirement, a course, a fee and an occupation each store a verbatim
+span from the page, checked against that page's own text before the row is allowed to exist. Of
 3,686 extracted courses, 29 were dropped for a quote that was not really there.
 
-**The robots gate is not negotiable.** A site that disallows us is not read. A site that will not
-serve robots.txt is not read either, which cost us HESA and the UK's job board. A browser is used
-to render JavaScript, never to get past a policy or a bot check.
+The robots gate is not negotiable. A site that disallows us is not read. A site that will not serve
+its robots.txt is not read either, which cost us HESA and the UK's job board. A browser is used to
+render JavaScript, never to get past a policy or a bot check.
 
-**Nothing is invented to fill a gap.** A course with no published fee is shown with no fee and a
-question pointed at the school's own contact page. 3,774 of 3,990 courses carry such a question,
-because that is the truth about what schools publish.
+Nothing is invented to fill a gap. A course with no published fee is shown with no fee, and a
+question pointed at the school's own contact page. Fees exist for 146 of 3,990 courses, because
+that is the truth about what universities publish.
 
-**Internal scores never reach a screen.** The rubric that decides which country to serve first is
-an opinion, not a measurement, and printing it would dress an editorial choice as a finding.
+Internal scores never reach a screen. The rubric that decides which country to serve first is an
+opinion, not a measurement, and printing it would dress an editorial choice up as a finding.
 
-**The file is never kept.** Documents are read in memory and discarded; the fields survive. The
+The file is never kept. Documents are read in memory and the fields survive, not the document. The
 one exception is a profile picture, which exists to be shown back to you, is resized to 256px in
 your own browser before it is sent, and is deleted with everything else.
 
----
+## How it is built
 
-## Architecture
+`docs/ARCHITECTURE.md` is the long version, and `/architecture` on the live site renders that same
+file so the description and the build cannot drift apart.
 
 ```mermaid
-flowchart TB
-    subgraph web["Cloud Run service · migragent-web"]
-        FLOW["flow_page · 3 steps<br/>what you want → what you have → where you can go"]
-        ELIG["eligibility · countries from your documents"]
-        RUB["rubric · which country first (never displayed)"]
-        PAGES["courses · guide · dashboard · alerts"]
+flowchart LR
+    GOV["Government pages<br/>robots.txt asked first"]
+    REG["Registers and school sites"]
+    BOARD["Government job boards"]
+
+    subgraph job["Cloud Run job: migragent-ingest, as migragent-watcher"]
+        AGENT["ADK researcher<br/>picks the next page where structure runs out"]
+        FETCH["Fetch, then two gates<br/>bytes changed, then the text really changed"]
+        QUOTE["Quote check<br/>not on the page, not a row"]
+        DIGEST["Digest<br/>who does this actually affect"]
     end
 
-    subgraph job["Cloud Run job · migragent-ingest"]
-        EXTRACT["extract · requirements from government pages"]
-        WATCH["watch · re-read, diff, retire what changed"]
-        LIST["listings · new jobs from government boards"]
-        DIGEST["digest · what moved, per person"]
+    subgraph store["Firestore and Cloud Storage"]
+        ROWS[(requirements, sources, courses,<br/>occupations, listings, cases)]
+        SNAP[(snapshot archive, append only)]
     end
 
-    subgraph data["Firestore + Cloud Storage"]
-        REQ[(requirements)]
-        SRC[(sources)]
-        OCC[(occupations)]
-        INST[(institutions + courses)]
-        JOBS[(listings)]
-        SNAP[(page snapshots)]
+    subgraph web["Cloud Run service: migragent, as migragent-web"]
+        FLOW["What you want, what you have"]
+        ELIG["Countries out of your documents"]
+        OUT["Guide, courses, work, alerts"]
     end
 
-    GOV["Government pages<br/>gov.uk · canada.ca · IRCC · ONS"] --> EXTRACT
-    SCHOOL["School websites<br/>241 read"] --> INST
-    BOARD["Job Bank"] --> LIST
-
-    EXTRACT --> REQ
-    EXTRACT --> SNAP
-    WATCH --> SRC
-    WATCH --> SNAP
-    LIST --> JOBS
-    REQ --> DIGEST
-    JOBS --> DIGEST
-    DIGEST --> ALERTS[(alerts)]
-
-    YOU(["Your CV or transcripts"]) --> FLOW
-    FLOW --> ELIG
-    OCC --> ELIG
-    INST --> ELIG
-    ELIG --> RUB --> PAGES
-    ALERTS --> PAGES
+    GOV --> FETCH
+    REG --> FETCH
+    BOARD --> FETCH
+    AGENT --> FETCH --> QUOTE --> ROWS
+    FETCH --> SNAP
+    ROWS --> DIGEST
+    ROWS --> ELIG
+    FLOW --> ELIG --> OUT
+    DIGEST --> OUT
 ```
 
-**Three identities, and the boundary between them is measured rather than asserted.**
-`migragent-web` serves requests and cannot start a crawl. `migragent-researcher` reads pages and
-cannot read a case. `migragent-watcher` is the only thing that can read the snapshot archive back,
-because comparing today with yesterday is the one job that genuinely needs yesterday — and nothing
-anywhere can become the watcher. `tools/test_isolation.py` proves it.
+Four identities, and the boundary between them is measured rather than asserted. `migragent-web`
+serves requests and cannot start a crawl. `migragent-researcher` reads pages and calls the model,
+and cannot write anything down. `migragent-writer` writes. `migragent-watcher` is the only thing
+that can read the snapshot archive back, and nothing anywhere can become it, which is why its own
+test runs inside the job. `tools/test_isolation.py` is where those claims are checked.
 
-**Scheduled daily:** retention sweep 03:17 → watch round 04:40 → job listings 05:00 → digest 05:20.
-The order matters: read the government pages, ask the boards, then tell people. Run the digest
-first and it reports on yesterday.
+What that does not cover is in D39: Firestore grants read at the database rather than at the
+collection, so the researcher can read a case it has no business in. The product never asks it to.
+Nothing but the code's own habits stops it, and the document says so rather than describing a wall
+that is only a habit.
 
----
+Scheduled daily: retention sweep at 03:17, watch round at 04:40, job listings at 05:00, digest at
+05:20. Read the government pages, then ask the boards, then tell people. Run the digest first and
+it reports on yesterday.
 
-## Running it
+## Running it yourself
+
+You need Python 3.12 and a Google Cloud project with Firestore, Cloud Storage and Vertex AI turned
+on. Everything below runs from the repository root.
 
 ```bash
 pip install -r requirements.txt
-export GOOGLE_CLOUD_PROJECT=your-project
-python -m migragent.app                      # the web service
-
-MIGRAGENT_MODE=extract  python -m migragent.worker   # read a lane
-MIGRAGENT_MODE=watch    python -m migragent.worker   # re-read and diff
-MIGRAGENT_MODE=listings python -m migragent.worker   # new jobs
-MIGRAGENT_MODE=digest   python -m migragent.worker   # tell people
+playwright install chromium          # the container has no browser on purpose
+gcloud auth application-default login
+export GOOGLE_CLOUD_PROJECT=your-project-id
 ```
 
-Tests are scripts rather than a framework, and each one proves a claim the product makes:
+Create the four service accounts, then apply the permission model:
 
 ```bash
-python -m tools.test_eligibility    # countries come from evidence; the rubric behaves
-python tools/test_delete.py         # deleting a case deletes every row it touched
-python -m tools.test_occupations    # a quote that is not on the page is refused
-python -m tools.test_alerts         # the right person is told the right thing, once
-python -m tools.test_isolation      # the identity boundaries hold
-python -m tools.probe_job_boards    # which government boards are readable, today
+for sa in researcher writer watcher web; do
+  gcloud iam service-accounts create migragent-$sa --project "$GOOGLE_CLOUD_PROJECT"
+done
+bash tools/grant_roles.sh            # every role in one readable file, with its reason
+python tools/test_isolation.py       # and then prove the roles are what the file says
 ```
 
----
+Serve it:
 
-## Inherited code
+```bash
+python -m migragent.app              # http://localhost:8080
+```
 
-This repository was started from a prior scaffold. What came from it, and what was replaced, is
-recorded in `docs/INHERITED.md` rather than left for a reader to guess at. Everything in
-`migragent/` and `tools/` described above was written for this build.
+An empty project shows you an empty product, so seed something to read and then read it:
 
-Third-party services: Google Cloud (Vertex AI Gemini, Cloud Vision OCR, Firestore, Cloud Run,
-Cloud Storage) and GMI Cloud for one generated video clip. Wikidata is used to find school
-websites and is never a source for anything shown; ONS, HESA, IRCC and Times Higher Education
-appear only in internal ranking, never on a page.
+```bash
+python -m tools.seed_registry                                 # the entry pages, per country and lane
+python -m tools.run_round UK study --mode extract --limit 5   # fetch, extract, check every quote, store
+python tools/build_guide.py UK study                          # an HTML guide and a PDF, into out/
+```
 
----
+One thing to change before any of that: `tools/grant_roles.sh` and most files under `tools/` carry
+this deployment's project id as a constant near the top. The service itself reads
+`GOOGLE_CLOUD_PROJECT` from the environment, the tools do not, and that is a known rough edge rather
+than a hidden one.
 
-## Where it is honest about being incomplete
+The batch side is one program with six modes, run as a Cloud Run job in production and as a script
+anywhere:
 
-- Fees exist for 146 of 3,990 courses. Universities keep tuition behind calculators.
-- 25 universities — including Cambridge, Manchester and McGill — have catalogues behind search
-  interfaces the crawler cannot drive, so their courses are missing.
-- The UK's job board will not serve robots.txt and Australia's disallows us, so neither has jobs.
-- Billing for the $7/month subscription does not exist. The page says so instead of taking a card.
+```bash
+MIGRAGENT_MODE=extract  python -m migragent.worker   # read pages nobody has read
+MIGRAGENT_MODE=watch    python -m migragent.worker   # re-read, diff, record what moved
+MIGRAGENT_MODE=listings python -m migragent.worker   # new jobs off government boards
+MIGRAGENT_MODE=digest   python -m migragent.worker   # work out who needs telling
+MIGRAGENT_MODE=selftest python -m migragent.worker   # the watcher's own boundary
+MIGRAGENT_MODE=robots   python -m migragent.worker   # print robots.txt as the job receives it
+```
 
-`docs/DEFECTS.md` and `docs/DECISIONS.md` carry the rest.
+An unknown mode exits rather than falling through to the most expensive branch available. That
+sentence is there because of D38, where an old image met a new mode and started crawling a country.
+
+## The tests, and what each one is for
+
+They are scripts rather than a framework, and each proves a claim the product makes out loud.
+
+```bash
+python -m tools.test_eligibility    # countries come from evidence, and the rubric behaves
+python tools/test_delete.py         # deleting a case really does delete every row it touched
+python -m tools.test_occupations    # a quote that is not on the page is refused
+python -m tools.test_alerts         # the right person is told the right thing, once
+python -m tools.test_agent          # the ADK agent never opens its own model client
+python tools/test_isolation.py      # the identity boundaries hold
+python -m tools.probe_job_boards    # which government boards are readable today
+python -m tools.compare_agent UK work   # the agent against the walk, on one lane, writing nothing
+```
+
+## Pre-existing code, and outside services
+
+This repository was started from a prior scaffold of the author's own. `migragent/identity.py` and
+`migragent/config.py` came from it and were written on 17 August 2026. `docs/INHERITED.md` records
+what came across and what was replaced. Everything else under `migragent/` and `tools/` was written
+for this build.
+
+Outside services: Google Cloud for all of it, which is Vertex AI Gemini, Cloud Vision OCR,
+Firestore, Cloud Run, Cloud Storage and Cloud Scheduler, plus GMI Cloud for one generated video
+clip, because every Veo model returns 404 on this project. Wikidata is used to find school websites
+and is never a source for anything shown. ONS, HESA, IRCC and Times Higher Education appear only in
+internal ranking and never on a page.
+
+## Where it is incomplete, said plainly
+
+Fees exist for 146 of 3,990 courses, because universities keep tuition behind calculators.
+
+Twenty-five universities, Cambridge and Manchester and McGill among them, publish their catalogues
+behind search interfaces the crawler cannot drive, so their courses are missing.
+
+The UK's job board will not serve robots.txt and Australia's disallows us, so neither has jobs here.
+
+Sign-in does not exist yet, so a case belongs to a browser rather than to a person.
+
+Billing for the subscription does not exist. The page says so instead of taking a card.
+
+`docs/DEFECTS.md` and `docs/DECISIONS.md` carry the rest, including the ones that were embarrassing.

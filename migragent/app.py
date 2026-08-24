@@ -32,6 +32,7 @@ from .cv import CVClones, CVReader, CVStore
 from .cv_builder import FIELDS as CV_FIELDS, build as build_cv, missing_for_matching
 from .cv_builder_page import clone_html, cv_builder_html
 from .dashboard_page import dashboard_html
+from .architecture_page import architecture_html
 from .data_page import data_html
 from .drafts import CLONE_INTO, Drafter, PeopleDrafter
 from .eligibility import next_level, study_countries, work_countries
@@ -803,6 +804,26 @@ def data_protection() -> Response:
                     mimetype="text/html")
 
 
+@app.get("/architecture")
+def architecture() -> Response:
+    """How the thing is built, rendered from the same file the repository holds.
+
+    Same arrangement as /data and for the same reason. A description of the
+    architecture that lives only in a submission is a description nobody has to
+    keep true.
+    """
+    import datetime
+
+    path = Path(__file__).resolve().parent.parent / "docs" / "ARCHITECTURE.md"
+    if not path.exists():
+        return Response("Not available.", mimetype="text/plain", status=404)
+
+    updated = datetime.datetime.fromtimestamp(
+        path.stat().st_mtime, datetime.timezone.utc).strftime("%d %B %Y")
+    return Response(architecture_html(path.read_text(encoding="utf-8"), updated=updated),
+                    mimetype="text/html")
+
+
 @app.get("/guide")
 def guide() -> Response:
     jurisdiction = (request.args.get("jurisdiction") or "").upper()
@@ -1359,3 +1380,11 @@ def draft_piece() -> Response:
                  else drafter.cover_letter(cv, listing, case.jurisdiction))
     board.attach(case.case_id, identifier, piece)
     return redirect("/board")
+
+
+if __name__ == "__main__":
+    # For running it on your own machine. Production is gunicorn, started by the
+    # Dockerfile, and this block is not involved there. It exists because the
+    # README told a stranger to run `python -m migragent.app` and nothing
+    # happened, which is a worse first impression than a missing feature.
+    app.run(host="127.0.0.1", port=int(os.environ.get("PORT", "8080")), debug=False)

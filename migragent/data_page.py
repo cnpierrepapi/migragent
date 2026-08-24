@@ -214,5 +214,6 @@ def data_html(markdown: str, updated: str = "") -> str:
   statement of compliance with any particular regime. Where a claim is tested, the test
   is named so it can be run.
   <br>{_e(CONTROLLER)} &middot; <a href="/">MIGRAGENT</a> &middot;
-  <a href="/coverage">What we have read</a></p>
+  <a href="/coverage">What we have read</a> &middot;
+  <a href="/architecture">How it is built</a></p>
 </main></body></html>'''
