@@ -31,6 +31,40 @@ So the two errors are not comparable and the gate is not balanced. It says
 cosmetic only when it is very sure, and everything it cannot settle stays a
 change. An unreachable embedding model means substantive, not silence.
 
+THE MODALITY GUARD, AND WHY SIMILARITY ALONE CANNOT DO THIS JOB
+---------------------------------------------------------------
+Measured against the real model on 18 labelled pairs across English, Spanish and
+French, the two populations OVERLAP. Highest real change 0.9788, lowest genuine
+rewording 0.9201. There is no threshold that separates them, and that is not a
+tuning problem, it is the shape of the tool.
+
+With figures and modality compared first, the highest real change the similarity
+score is left to judge drops to 0.9302, and the threshold sits 0.0398 clear of
+it. On that set: 10 real changes out of 10 correctly called changes, and 5
+rewordings out of 8 correctly called wording. The other 3 cost a re-extraction
+each, which is the error we are choosing to make.
+
+That is 18 hand written pairs, not a sample of the corpus. It is enough to show
+the threshold alone was unsafe. It is not enough to call this measured, and the
+first real watch round with this on should be read as calibration.
+
+Every one of the three worst cases was a modal verb:
+
+    must be issued      -> may be issued          0.9784   EN
+    Vous devez fournir  -> Vous pouvez fournir    0.9788   FR
+    Debe presentar      -> Puede presentar        0.9762   ES
+
+An embedding scores those as near-identical because "must" and "may" occupy the
+same slots in a sentence. On an immigration page that pair is the entire
+difference between an obligation and an option. Negation is nearly as bad:
+"est renouvelable" to "n'est pas renouvelable" came back at 0.9700, sitting
+exactly on the threshold.
+
+So modality gets the same treatment as figures: compared directly, before
+similarity, and no score may overrule it. A rewording that swaps "must" for
+"has to" now reads as substantive and costs a re-extraction. That is the cheap
+error, and it is the one we choose.
+
 THE NUMBER GUARD, WHICH THE MODEL CANNOT OVERRULE
 --------------------------------------------------
 Immigration pages are mostly numbers that matter: fees, days, ages, income
@@ -82,6 +116,52 @@ SAME_MEANING = 0.97
 # count is a guard with a hole in it.
 _NUMBER = re.compile(r"\d[\d.,]*")
 
+# Words that carry obligation, permission or negation, mapped to WHICH of those
+# three they carry rather than compared as tokens. Compared like figures, for the
+# reason in the docstring.
+#
+# Classes rather than words, because "debe" and "deberá" are the same obligation
+# and comparing the tokens called that a change. What must be caught is a shift
+# BETWEEN classes: obligation becoming permission, or a negation appearing. That
+# survives the folding and the false alarms do not.
+#
+# Deliberately across languages in one table rather than switched on the lane: a
+# page can carry two languages, and a guard that only works when it has been told
+# which one it is reading is a guard that fails quietly.
+_MODALITY_CLASSES = {
+    "obligation": (
+        "must shall required requires obligatory "
+        "debe debes debera deberan deberá deberán obligatorio obligatoria "
+        "doit doivent devez dois obligatoire "
+        "muss mussen müssen deve devono devera deverá"
+    ),
+    "permission": (
+        "may can optional "
+        "puede pueden podra podran podrá podrán opcional "
+        "peut peuvent pouvez facultatif "
+        "darf durfen dürfen kann konnen können puo può possono podem"
+    ),
+    "negation": (
+        "not no never cannot "
+        "nunca "
+        "ne n pas jamais "
+        "nicht kein keine non nao não"
+    ),
+}
+
+# cannot is both a permission and its refusal, and must fold to both or a page
+# swapping "cannot" for "can" reads as unchanged.
+_BOTH = {"cannot"}
+
+_MODALITY_LOOKUP: dict[str, list[str]] = {}
+for _klass, _words in _MODALITY_CLASSES.items():
+    for _word in _words.split():
+        _MODALITY_LOOKUP.setdefault(_word, []).append(_klass)
+for _word in _BOTH:
+    _MODALITY_LOOKUP[_word] = ["negation", "permission"]
+
+_MODALITY = re.compile(r"\b(" + "|".join(sorted(_MODALITY_LOOKUP, key=len, reverse=True)) + r")\b", re.I)
+
 MAX_CHARS = 8_000
 
 
@@ -96,6 +176,18 @@ class Meaning:
     @property
     def cosmetic(self) -> bool:
         return not self.substantive
+
+
+def modality_in(text: str) -> list[str]:
+    """Which of obligation, permission and negation this text carries, as a multiset.
+
+    A multiset and not a set: "may work" becoming "may not work" adds a negation
+    without removing the permission, and a set would call that unchanged.
+    """
+    found: list[str] = []
+    for match in _MODALITY.finditer(text):
+        found.extend(_MODALITY_LOOKUP[match.group(0).lower()])
+    return sorted(found)
 
 
 def numbers_in(text: str) -> list[str]:
@@ -161,6 +253,12 @@ def assess(diff: str, embedder: Embedder | None) -> Meaning:
     if before_numbers != after_numbers:
         return Meaning(True, None,
                        f"the figures changed: {before_numbers} became {after_numbers}")
+
+    before_modality, after_modality = modality_in(removed), modality_in(added)
+    if before_modality != after_modality:
+        return Meaning(True, None,
+                       "obligation or negation changed: "
+                       f"{before_modality} became {after_modality}")
 
     if embedder is None:
         return Meaning(True, None, "no embedder, so every difference is a change")

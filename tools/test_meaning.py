@@ -19,7 +19,7 @@ import sys
 sys.path.insert(0, ".")
 
 from migragent.meaning import (Embedder, SAME_MEANING, assess,  # noqa: E402
-                               changed_lines, numbers_in)
+                               changed_lines, modality_in, numbers_in)
 
 
 def diff_of(removed: list[str], added: list[str]) -> str:
@@ -99,11 +99,49 @@ def main() -> int:
                                  ["Applicants must hold a passport."]), embedder)
         check(verdict.substantive, f"{label}: it stays a change", verdict.reason[:70])
 
+    # ---- the modality guard -------------------------------------------------
+    # Measured against the real model: the three worst cases in the whole set
+    # were modal swaps scoring 0.976 to 0.979, ABOVE several genuine rewordings.
+    # Similarity alone cannot do this job, so these never reach the model.
+    same = [[1.0, 0.0], [1.0, 0.0]]
+    for before, after, why in [
+        ("The certificate must be issued.", "The certificate may be issued.", "must to may"),
+        ("Debe presentar el certificado.", "Puede presentar el certificado.", "debe to puede"),
+        ("Vous devez fournir un justificatif.", "Vous pouvez fournir un justificatif.", "devez to pouvez"),
+        ("You may work while studying.", "You may not work while studying.", "a negation appeared"),
+        ("Le titre est renouvelable.", "Le titre n'est pas renouvelable.", "a French negation appeared"),
+        ("You cannot work.", "You can work.", "cannot to can"),
+    ]:
+        guard = Fixed(same)
+        verdict = assess(diff_of([before], [after]), guard)
+        check(verdict.substantive, f"{why} is a change even at similarity 1.0", verdict.reason[:70])
+        check(guard.calls == 0, f"{why}: and the model was never asked")
+
+    # Folded to classes, not tokens, or the same obligation in two words trips it.
+    check(modality_in("Debe presentar") == modality_in("Deberá aportar"),
+          "debe and deberá are the same obligation")
+    check(modality_in("Vous devez fournir") == modality_in("doit être fourni"),
+          "devez and doit are the same obligation")
+    check(modality_in("must be issued") != modality_in("may be issued"),
+          "obligation and permission are not")
+
+    # A multiset, not a set: "may" to "may not" keeps the permission and adds a
+    # negation, and a set would call that unchanged.
+    check(modality_in("may work") != modality_in("may not work"),
+          "a negation added alongside a permission still registers",
+          (modality_in("may work"), modality_in("may not work")))
+
     # ---- the threshold is not on the edge of the measurement ----------------
-    check(SAME_MEANING < 0.9878,
-          "the threshold admits the reworded Spanish that was measured", SAME_MEANING)
-    check(SAME_MEANING > 0.6154,
-          "and excludes the different requirement that was measured", SAME_MEANING)
+    check(SAME_MEANING < 0.9741,
+          "the threshold admits the rewordings measured against the real model",
+          SAME_MEANING)
+    # The safety margin that matters. With both guards applied, the highest
+    # scoring real change in the calibration set was 0.9302. The threshold must
+    # sit clear above it, because everything above it is called cosmetic and a
+    # real change called cosmetic is a rule that moved with nobody told.
+    check(SAME_MEANING > 0.9302 + 0.02,
+          "and stays clear of the highest real change measured (0.9302)",
+          f"margin {SAME_MEANING - 0.9302:.4f}")
 
     # ---- diff parsing --------------------------------------------------------
     removed, added = changed_lines(diff_of(["a", "b"], ["c"]))
