@@ -353,6 +353,103 @@ anybody is watching them.
 
 ---
 
+## Build 7 — the second reader, and the agents that earn the name
+
+**Written 24 August, after Build 6 was already planned. It runs before Build 6, because the
+submission films whatever exists on the day.**
+
+**Ends with:** a requirement that two independent models agree on, a watcher that stops crying
+change when a page was only reworded, and four agents where today there is one, each with a written
+reason for being an agent and one written reason for not being one.
+
+### Why a second model at all
+
+The strongest paragraph in this codebase is in `migragent/ocr.py`, and it is about not letting a
+model mark its own homework. Gemini could transcribe a document and then check its own claims
+against its own transcription, and a hallucinated date would verify itself. So Cloud Vision reads
+the pixels instead: a different engine, no stake in the answer, and when the two agree that
+agreement is worth something.
+
+That argument does not stop at images.
+
+Today the quote check is a string containment test against the fetched page, which is deterministic
+and stays exactly as it is. But the judgement of whether a page *states* a requirement is Gemini's
+alone, and nothing independent ever disagrees with it. A second reader closes that.
+
+**Cloud Vision is already integrated and has never been claimed.** `migragent/ocr.py` posts to
+`vision.googleapis.com`. It belongs in the mandatory-requirements table, which currently lists only
+Gemini under models and is therefore wrong about what this thing runs on.
+
+### 7.1 Gemma as the second reader
+
+Gemma sees the page text and the proposed requirement. Nothing else. No prompt history, no tools,
+no idea what Gemini decided or why. It answers one question: does this page state this.
+
+- Both agree, the requirement is live.
+- They disagree, it goes to open questions with both readings recorded.
+- Gemma is unreachable, the requirement is live and flagged `unverified_second_read`, because a
+  second opinion being unavailable is not evidence against the first one.
+
+The disagreement rate is the number worth watching. If it is near zero the check is theatre and
+should be said to be theatre. If it is high, one of the two readers is wrong often and we want to
+know that before a user does.
+
+**Runs on the ingestion path only, never on a web request.** A person waiting on a page does not
+wait twice.
+
+### 7.2 An embedding model, and D23 one storey up
+
+D23 is closed at the byte layer: a page whose bytes moved but whose words did not no longer counts
+as a change. The words layer is still crude. Any line that moved fires a full re-extraction and
+writes a change row, so "you must" becoming "applicants must" reports as immigration policy moving.
+
+That is D23's own warning arriving a level higher. A watcher that cries change every day teaches the
+person receiving it to ignore it, and the day something real moves they ignore that too.
+
+So: embed the old text and the new, compare, and let a reworded page settle without firing. A
+changed number, a changed deadline, a changed fee still fires, because those move the meaning and
+the distance shows it.
+
+**The test is the one D23 taught:** run the round twice with nothing expected to change and demand a
+zero, then run it against a page edited only cosmetically and demand a zero again, then change one
+fee and demand exactly one.
+
+### 7.3 The agents
+
+Four, where there is one. **An agent is added only where a loop or a decision already exists in the
+code and is currently spelled out by hand.** Anything else is farming a count, and a judge reading
+`docs/DECISIONS.md` will see it.
+
+- **Researcher.** Unchanged. Picks what to read when structure runs out.
+- **Verifier.** Gemma-backed, one tool, the page. The second read above.
+- **Watcher.** Given a diff, decides substantive or cosmetic, then writes the change record with the
+  government's own sentence and date attached.
+- **Work.** Today a sequence spread across `occupations.py`, `listings.py` and `fit.py` that runs in
+  a fixed order and already reads like one. It becomes a SequentialAgent because it is one.
+
+**The people finder stays not an agent.** Decision 9 records the reason: grounding and a tool-calling
+loop solve different halves of that problem and the agent added nothing. Keeping that on the record
+next to four new agents is what makes the four credible.
+
+### Where this is cheap, and why
+
+Every model call in this system goes through `migragent/model.py`. D20 forced that when one rate
+limit produced three symptoms that looked like three unrelated bugs, and `tools/test_agent.py` fails
+loudly if any caller ever escapes it again.
+
+So a second model is a routing decision inside one file. Not a rewrite. The cost of D20 is being
+repaid here.
+
+### Order of work, and what survives being cut
+
+1. Vision claimed in the requirements table. One sentence, and it is true today.
+2. Gemma on the verifier. **Stands alone if everything after this is cut.**
+3. Embeddings on the watcher.
+4. The agent revamp.
+
+Nothing here is allowed to make the live product worse. Each step ships behind a flag, off by
+default, and turns on only after the round has run clean twice.
+
 ## Build 6 — The submission
 
 **Ends with:** somebody who has never seen this can understand it, run it, and watch it work.
@@ -368,14 +465,17 @@ anybody is watching them.
 
 ## The three mandatory requirements
 
-Checked against the code on 20 August 2026, not remembered.
+Checked against the code on 24 August 2026, not remembered.
 
 | Required | Where |
 | --- | --- |
 | Gemini 3.5 or newer | requirement extraction, document reading, CV reading, diff explanation, fit scoring, CV and cover letter drafts, the people finder |
 | A Google agent framework | ADK, on the researcher: `migragent/researcher.py` and `migragent/agent_llm.py`. **Nowhere else.** The people finder was going to be the second one and is not: it is two plain Gemini calls, one of them with Google Search grounding, because grounding and a tool-calling agent solve different halves of that problem and the agent added nothing. |
+| A second model, independent of Gemini | **Cloud Vision**, on the OCR check in `migragent/ocr.py`. Shipping since Build 2 and missing from this table until 24 Aug, which made the table wrong about what this runs on. It is here because a model checking its own transcription proves nothing, and a different engine reading the pixels does. |
 | Google Cloud infrastructure | Cloud Run, Cloud Run jobs, Firestore, Cloud Scheduler, Cloud Storage, Vertex AI, Artifact Registry, Cloud Build, Identity Platform. **Not Pub/Sub**, which was in this table for weeks after Decision 4 removed it. |
 
-No marks exist for touching more Google products. Every service above earns its place, and the
-restraint gets said out loud, because what we deliberately did not use is more interesting to a judge
-than a longer list.
+Every service above earns its place, and the restraint gets said out loud, because what we
+deliberately did not use is more interesting to a judge than a longer list. That still holds after
+Build 7: Gemma and the embedding model arrive because a second reader and a reworded-page test need
+them, and **Veo and Lyria stay out because nothing here needs video or music** and inventing a use
+for them would cost more credibility than the 0.2 is worth.
