@@ -1421,3 +1421,64 @@ case read in the product.
 **The rule that comes out of it.** A test proves the sentences it was written against, and the
 sentences it was never shown are exactly where a false claim lives. Before a document describes a
 boundary, read the policy.
+
+## D40 — The second reader was shown less of the page than the reader it was checking
+
+**Found:** 24 August 2026, on the first widening of the second read past English. Found by reading
+the model's own reason rather than its verdict, which is the only reason it was found at all.
+
+**What it looked like.** Disagreement rates by lane, same code, same settings:
+
+    UK work    6.7%      UK study   4.5%
+    CA study   7.7%      CA work   12.5%
+    FR study   0.0%   (1 requirement, not a sample)
+    ES work   51.4%   <-- 18 agreed, 19 disputed
+
+**The obvious reading, which was wrong.** Gemma is weaker in Spanish than in English. It is a
+smaller model, Spanish is not English, and the number sat exactly where a language competence
+problem would sit. The fix that follows from it is a per-language threshold, or restricting the
+second read to lanes where it has been shown to work. I had already proposed the per-language
+threshold before checking anything.
+
+**What it was.** `migragent/verify.py` sent the model the first **12,000** characters of the page.
+`migragent/extract.py` sends the first **30,000**. So the extractor read a requirement out of
+character 15,239, and the verifier was asked whether a page it had only seen half of contained it.
+
+Every one of the 19 disputed Spanish quotes sat beyond character 12,000. Every single one. The
+verifier was never shown the sentence it was being asked to rule on, said so, and was correct.
+
+**Why the English lanes hid it.** gov.uk pages are short and put requirements near the top. The
+Spanish pages are long and put the documentation list at the bottom: 29,396 and 21,780 characters,
+with the disputed quotes at 12,411 through 17,659. The bug needed a long page to become visible and
+English never provided one. **A test on the lanes that were convenient would have passed.**
+
+**The model said so, in words, and I nearly overruled it.** One of the nineteen reasons read: "The
+provided text ends before reaching the section that would list the specific documentation required
+for the worker's passport." That is not a hallucination or a language failure. That is a correct
+report of the input it was given. The verdicts looked like noise and the reasons were an exact
+description of the bug.
+
+**Fix, and the shape of it matters.** The window is no longer a number in this file. It is imported
+from the extractor, so the two cannot drift, because they were never independent quantities: a
+reader asked whether a page states a claim, shown less of the page than the reader who made the
+claim, will correctly report that it does not, and every one of those correct answers is a false
+disagreement.
+
+Then a second guard, which is the one that makes this class unrepeatable. Before the model is
+called at all, the quote is checked against the exact text about to be handed over, folded the same
+way `extract.py` folds it. If the sentence is not in there, there is no question to ask, and the
+result is `unverified` rather than a disagreement. A NO deletes a requirement, and a window artefact
+must never be able to delete a requirement.
+
+**Blast radius.** 19 correct, quoted, government-sourced Spanish requirements were moved out of the
+live ES work guide into open questions, and 19 open questions were written telling a reader that two
+models disagreed about a page they had not both read. This is D36's shape again: a mechanism that
+silently retires a country's content while every other lane looks fine.
+
+**The lesson, and it is not the obvious one.** The obvious lesson is to match the windows. The real
+one is that a suspicious number in a subsystem's output is a claim about that subsystem, not a
+verdict on it, and the cheap check is to read what it actually said. Two minutes of reading the
+reasons beat the whole plausible theory about Spanish.
+
+**Status:** closed, with `tools/test_verify.py` asserting the two windows are equal and that a quote
+outside the given text is unverified rather than disputed. 23 checks.

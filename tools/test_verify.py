@@ -107,6 +107,38 @@ def main() -> int:
     check(len(extraction.requirements) <= 3,
           "the second reader added nothing that was not already there")
 
+    # ---- D40: the window ---------------------------------------------------
+    # The bug this catches shipped, ran on five lanes, and produced a 51.4%
+    # disagreement rate on Spanish that looked exactly like a model being weak
+    # in a language. It was a smaller window than the extractor's.
+    from migragent.extract import MAX_CHARS as EXTRACTOR_WINDOW
+    from migragent.verify import MAX_CHARS as VERIFIER_WINDOW
+    check(VERIFIER_WINDOW == EXTRACTOR_WINDOW,
+          "the second reader sees exactly what the extractor saw, never less",
+          f"verifier {VERIFIER_WINDOW}, extractor {EXTRACTOR_WINDOW}")
+
+    far = ("filler. " * 2000) + "You must hold a valid passport."
+    check(len(far) > 12_000, "the fixture really is past the old window", len(far))
+
+    asked: list = []
+
+    class Watching(SecondReader):
+        def __init__(self):
+            super().__init__("project", None)
+
+        def _would_call(self, *a):  # pragma: no cover
+            asked.append(a)
+
+    reader = Watching()
+    verdict = reader.check("You must pay the fee.", "You must hold a passport.",
+                           "You must hold a valid passport.")
+    check(verdict.agreed is None,
+          "a quote outside the given text is unverified, never a disagreement",
+          verdict.reason)
+    check("outside the text" in verdict.reason,
+          "and it says which of the two it was")
+    check(asked == [], "and the model was never called about it")
+
     # ---- the flag ----------------------------------------------------------
     import os
     os.environ.pop("MIGRAGENT_SECOND_READ", None)

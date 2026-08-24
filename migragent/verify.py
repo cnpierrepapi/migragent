@@ -59,16 +59,28 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from .extract import MAX_CHARS as EXTRACTOR_WINDOW, _normalise
 from .model import ModelError, call_content
 
 # The second reader. Pinned, not inherited: see the note above.
 SECOND_MODEL = "gemma-4-26b-a4b-it-maas"
 SECOND_LOCATION = "global"
 
-# How much page goes to the second reader. Smaller than the extractor's 30k,
-# because this is a yes or no about one sentence rather than a survey of the
-# page, and a smaller window is a cheaper call on the high-volume path.
-MAX_CHARS = 12_000
+# How much page goes to the second reader. IMPORTED, not chosen, and this is
+# the whole lesson of D40.
+#
+# It used to be 12,000 against the extractor's 30,000, on the reasoning that a
+# yes or no about one sentence is a smaller job than surveying a page, so a
+# smaller window would be cheaper on the high-volume path.
+#
+# That reasoning is fine and the conclusion was wrong, because the two numbers
+# are not independent. A reader asked whether a page states a claim, shown less
+# of the page than the reader who made the claim, will correctly report that it
+# does not, and every one of those correct answers is a false disagreement.
+#
+# So it is not a smaller number that happens to match today. It is the same
+# number, by construction, and it moves when the extractor's does.
+MAX_CHARS = EXTRACTOR_WINDOW
 
 PROMPT = """Below is the text of one page from an official government website, \
 and one claim somebody has made about what that page says.
@@ -87,6 +99,18 @@ PAGE:
 CLAIM: {claim}
 QUOTE THE CLAIM RESTS ON: {quote}
 """
+
+
+def _quote_present(window: str, quote: str) -> bool:
+    """Is the sentence the claim rests on inside the text we are handing over?
+
+    Folded the same way `migragent/extract.py` folds a quote before checking it
+    against a page, so this agrees with the check that let the requirement exist
+    in the first place rather than inventing a second, stricter opinion.
+    """
+    if not quote:
+        return True
+    return _normalise(quote) in _normalise(window)
 
 
 @dataclass
@@ -120,9 +144,22 @@ class SecondReader:
         self._credentials = credentials
 
     def check(self, page_text: str, claim: str, quote: str) -> Verdict:
+        window = page_text[:MAX_CHARS]
+
+        # The guard that makes D40 unrepeatable. If the sentence the claim rests
+        # on is not in the text being handed over, then whatever comes back is
+        # not an opinion about the claim, and a NO would be an artefact of the
+        # window rather than a judgement about the page. There is nothing to ask.
+        #
+        # This is belt and braces now that the window is imported, and it stays,
+        # because the previous version of this file was also correct on the day
+        # it was written.
+        if not _quote_present(window, quote):
+            return Verdict(None, "the quote is outside the text the second reader was given")
+
         body = {
             "contents": [{"role": "user", "parts": [{"text": PROMPT.format(
-                page=page_text[:MAX_CHARS], claim=claim, quote=quote)}]}],
+                page=window, claim=claim, quote=quote)}]}],
             "generationConfig": {"temperature": 0.0, "maxOutputTokens": 256},
         }
         try:
