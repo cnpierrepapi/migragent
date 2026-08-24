@@ -36,6 +36,7 @@ from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.occupations import ShortageReader, Shortages  # noqa: E402
 from migragent.registry import Registry  # noqa: E402
 from migragent.researcher import Researcher  # noqa: E402
+from migragent.meaning import Embedder  # noqa: E402
 from migragent.verify import SecondReader, enabled as second_read_enabled  # noqa: E402
 from migragent.render import BrowserFetcher  # noqa: E402
 from migragent.round import ChangeWriter, Round, RunLog  # noqa: E402
@@ -105,6 +106,7 @@ def main() -> int:
                                   on_event=lambda line: print(line, flush=True))
             if with_agent else None,
             second_reader=SecondReader(PROJECT, reader) if with_second else None,
+            embedder=Embedder(PROJECT, reader),
             browser=browser,
             on_event=lambda line: print(line, flush=True),
         )
@@ -118,6 +120,8 @@ def main() -> int:
           f"unreadable {result.unreadable}, failed {result.failed}")
     print(f"kept {result.kept}, dropped {result.dropped}, retired {result.retired}, "
           f"{result.seconds}s")
+    if result.reworded:
+        print(f"reworded: {result.reworded} page(s) moved their words and not their meaning")
     if with_second:
         seen = result.agreed + result.disputed + result.unverified
         rate = (result.disputed / seen * 100) if seen else 0.0

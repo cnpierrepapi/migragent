@@ -45,6 +45,7 @@ from typing import Any, Callable
 
 from .changes import Change, change_id, text_diff
 from .extract import Extraction, page_text
+from .meaning import assess
 from .verify import review
 from .fetcher import Fetched
 
@@ -97,6 +98,7 @@ class SourceOutcome:
     agreed: int = 0
     disputed: int = 0
     unverified: int = 0
+    reworded: bool = False
 
 
 @dataclass
@@ -135,6 +137,9 @@ class RoundResult:
     disputed: int = 0
     unverified: int = 0
 
+    # Pages whose words moved and whose meaning did not. D23 one storey up.
+    reworded: int = 0
+
     outcomes: list[SourceOutcome] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -157,7 +162,7 @@ class Round:
     def __init__(self, *, registry, corpus, snapshots, fetcher, extractor,
                  explainer, changes_writer, browser=None,
                  shortage_reader=None, shortages=None, researcher=None,
-                 second_reader=None,
+                 second_reader=None, embedder=None,
                  on_event: Callable[[str], None] | None = None) -> None:
         # Optional on purpose. Without it a round reads the way it always has,
         # which is what watch mode needs and what a round with no model access
@@ -167,6 +172,9 @@ class Round:
         # exactly the way it always has, and nothing downstream can tell the
         # difference except that second_read is empty.
         self._second_reader = second_reader
+        # Also optional. Without it every difference in the words is a change,
+        # which is exactly the behaviour before this existed.
+        self._embedder = embedder
         self._shortage_reader = shortage_reader
         self._shortages = shortages
         self._registry = registry
@@ -273,6 +281,8 @@ class Round:
             result.agreed += outcome.agreed
             result.disputed += outcome.disputed
             result.unverified += outcome.unverified
+            if outcome.reworded:
+                result.reworded += 1
             if outcome.material:
                 result.material_changes += 1
 
@@ -571,9 +581,27 @@ class Round:
         before = Fetched(url=source.url, outcome="fetched",
                          read_at=source.last_read_at or "unknown",
                          status=200, body=previous)
-        added, removed, _ = text_diff(page_text(before), page_text(page))
+        added, removed, diff = text_diff(page_text(before), page_text(page))
         if added or removed:
-            return None
+            # Lines moved. That used to end the question and send the page for a
+            # full re-extraction plus a change row. It is still the answer for
+            # anything the gate cannot settle, and for every failure it has.
+            #
+            # The snapshot is deliberately NOT stored when only the wording moved,
+            # and the old one is kept. The archive holds versions of a page that
+            # say different things, and tomorrow's diff should be measured from
+            # the last version that meant something rather than from the last
+            # time a civil servant tidied a sentence. The digest IS updated by
+            # _mark_read, so the same tidy does not come back through the byte
+            # gate every morning.
+            meaning = assess(diff, self._embedder)
+            if meaning.substantive:
+                return None
+            out.outcome = "unchanged"
+            out.detail = f"the words moved and the meaning did not: {meaning.reason}"[:200]
+            out.reworded = True
+            self._mark_read(source, page, source.snapshot_path)
+            return out
 
         out.outcome = "unchanged"
         out.detail = "the bytes differ and not one line of text does"

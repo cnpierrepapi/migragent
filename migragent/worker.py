@@ -53,6 +53,7 @@ from .registry import Registry
 from .researcher import Researcher
 from .round import ChangeWriter, Round, RunLog, lanes
 from .snapshots import SnapshotStore
+from .meaning import Embedder
 from .verify import SecondReader, enabled as second_read_enabled
 
 PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
@@ -394,6 +395,10 @@ def main() -> int:
                               on_event=lambda line: print(line, flush=True))
         if USE_AGENT else None,
         second_reader=SecondReader(PROJECT, credentials) if second_read_enabled() else None,
+        # Watch mode is the only mode that diffs, so the meaning gate is only
+        # ever consulted there. Handing it over in extract mode would cost
+        # nothing and mean nothing.
+        embedder=Embedder(PROJECT, credentials) if MODE == "watch" else None,
         on_event=lambda line: print(line, flush=True),
     )
 
