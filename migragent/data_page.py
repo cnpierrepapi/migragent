@@ -31,7 +31,7 @@ from .result_page import HEAD, LOGO
 # The registered entity. A data protection notice that does not say who is
 # holding the data is not a notice, it is a blog post.
 CONTROLLER = "Onenept Studios Inc."
-CONTACT = "hello@onenept.com"
+CONTACT = "admin@onenept.com"
 
 
 def _e(x: Any) -> str:
@@ -58,14 +58,25 @@ def render(markdown: str) -> str:
     # at roughly 100 characters and bold runs across those wraps. Rendering line
     # by line left a literal "**" on screen wherever it did.
     para: list[str] = []
+    # A bullet wraps in the source too, and the wrapped half used to close the
+    # list and come out as its own paragraph, flush left, under the list it
+    # belonged to. On the page about what happens to a passport, three bullets
+    # about who may read what were broken in exactly that way.
+    item: list[str] = []
 
     def close_para() -> None:
         if para:
             out.append(f"<p>{_inline(' '.join(para))}</p>")
             para.clear()
 
+    def close_item() -> None:
+        if item:
+            out.append(f"<li>{_inline(' '.join(item))}</li>")
+            item.clear()
+
     def close_list() -> None:
         nonlocal in_list
+        close_item()
         if in_list:
             out.append("</ul>")
             in_list = False
@@ -121,10 +132,16 @@ def render(markdown: str) -> str:
 
         if line.lstrip().startswith(("- ", "* ")):
             close_para()
+            close_item()
             if not in_list:
                 out.append("<ul>")
                 in_list = True
-            out.append(f"<li>{_inline(line.lstrip()[2:])}</li>")
+            item.append(line.lstrip()[2:])
+            continue
+
+        # An indented line under a bullet is the rest of that bullet.
+        if in_list and raw[:1].isspace():
+            item.append(line.strip())
             continue
         close_list()
 
