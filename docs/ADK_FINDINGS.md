@@ -5,6 +5,11 @@ these should go back to `google/adk-python` rather than sit in our code comments
 
 Version: `google-adk` 2.7.1, August 2026. Every one of these cost real time here.
 
+Field names in 1 and 2 were checked against `GenerateContentConfig` on google-genai 2.x field by
+field, not remembered. The type carries 35 fields and they go to three different places: 6 at the
+top level of a Vertex request, 3 that mean something only to the client library, and 26 sampling
+settings that belong inside `generationConfig`.
+
 ## 1. A wrong config split silently drops your tools
 
 The one that hurt most.
@@ -29,6 +34,8 @@ TOP_LEVEL = {"tools", "toolConfig", "systemInstruction", "safetySettings",
              "cachedContent", "labels"}
 ```
 
+Those six are the complete top level set on google-genai 2.x.
+
 What would help upstream: either a documented mapping from `LlmRequest.config` to the REST shape,
 or a helper that does the split. Right now every custom `BaseLlm` has to rediscover it, and the
 failure is silent, which is the worst kind.
@@ -36,8 +43,8 @@ failure is silent, which is the worst kind.
 ## 2. Client-only fields get sent to the wire and rejected
 
 Same area, smaller bite. `LlmRequest.config` carries fields that mean something to the genai
-client library and nothing to the REST endpoint. `httpOptions`, `automaticFunctionCalling`,
-`shouldReturnHttpResponse`, `abortSignal`, `retryOptions`.
+client library and nothing to the REST endpoint. There are three: `httpOptions`,
+`automaticFunctionCalling`, `shouldReturnHttpResponse`.
 
 Forward them and Vertex rejects the request as having unknown fields. So a custom `BaseLlm` has to
 know which parts of the config are for the library and which are for the server, and nothing says
@@ -46,11 +53,17 @@ which is which.
 Ours:
 
 ```python
-NOT_FOR_THE_WIRE = {"httpOptions", "automaticFunctionCalling", "shouldReturnHttpResponse",
-                    "abortSignal", "retryOptions"}
+NOT_FOR_THE_WIRE = {"httpOptions", "automaticFunctionCalling",
+                    "shouldReturnHttpResponse"}
 ```
 
-That list is hand made from watching things fail. It is probably incomplete.
+An earlier version of this note also listed `abortSignal` and `retryOptions`, and both were wrong.
+`abortSignal` is not a field on `GenerateContentConfig` at all. `retryOptions` is real but it sits
+inside `HttpOptions`, so dropping `httpOptions` already takes it along. Neither mistake could
+change behaviour, because a field that never appears can never be forwarded, which is exactly why
+it survived. Worth saying out loud: this list was written from watching things fail, and a list
+written that way records what you saw, not what is there. Checking it against the type took two
+minutes and should have happened first.
 
 ## 3. Closing an event stream early prints a traceback for a non-error
 
@@ -95,7 +108,8 @@ request body is undocumented, and getting it wrong fails quietly. That is one go
 reproduction, and possibly one small PR.
 
 Number 3 is its own thing and needs a maintainer's opinion on whether early cancellation is meant
-to be supported.
+to be supported. Posted as a comment on `google/adk-python#2792` on 22 Aug, with a design for the
+cancel API on `#2425` the same day. Neither has a reply yet.
 
 Per the contribution plan: hit the problem while using the thing, write it up so it leaves nothing
 to search for, quantify it, and never shop an issue tracker for something to fix.

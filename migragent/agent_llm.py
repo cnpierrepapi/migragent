@@ -29,6 +29,10 @@ apart: sampling settings, which belong inside `generationConfig`, and the tools,
 the system instruction and the safety settings, which sit at the top level.
 Getting that split wrong does not raise, it just silently ignores the tools, so
 the split is written out by name below rather than guessed at.
+
+The names below were checked field by field against `GenerateContentConfig` on
+google-genai 2.x, not remembered. It carries 35 fields: 6 top level, 3 that mean
+something only to the client library, and 26 that are sampling settings.
 """
 from __future__ import annotations
 
@@ -48,8 +52,13 @@ TOP_LEVEL = {"tools", "toolConfig", "systemInstruction", "safetySettings",
 
 # Client side settings that mean something to the genai library and nothing to
 # the REST endpoint. Sent anyway, they are rejected as unknown fields.
-NOT_FOR_THE_WIRE = {"httpOptions", "automaticFunctionCalling", "shouldReturnHttpResponse",
-                    "abortSignal", "retryOptions"}
+#
+# These three are the whole list on google-genai 2.x. Retry options are real but
+# they live inside HttpOptions rather than beside it, so dropping httpOptions
+# already takes them with it. An earlier version of this set also named
+# abortSignal, which is not a field on this type at all.
+NOT_FOR_THE_WIRE = {"httpOptions", "automaticFunctionCalling",
+                    "shouldReturnHttpResponse"}
 
 
 def request_body(llm_request: LlmRequest) -> dict[str, Any]:
