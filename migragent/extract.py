@@ -103,6 +103,11 @@ class Requirement:
     jurisdiction: str = ""
     lane: str = ""
 
+    # What the second reader made of it: agreed, or unverified because it could
+    # not be reached. A disputed requirement never becomes one of these, because
+    # it never becomes a requirement at all. See migragent/verify.py.
+    second_read: str = ""
+
     def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in asdict(self).items() if v is not None}
 
