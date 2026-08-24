@@ -53,6 +53,7 @@ from .registry import Registry
 from .researcher import Researcher
 from .round import ChangeWriter, Round, RunLog, lanes
 from .snapshots import SnapshotStore
+from .verify import SecondReader, enabled as second_read_enabled
 
 PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
 MODEL = os.environ.get("MIGRAGENT_MODEL", "gemini-3.5-flash")
@@ -392,6 +393,7 @@ def main() -> int:
                               credentials=credentials, fetcher=Fetcher(delay_seconds=0.5),
                               on_event=lambda line: print(line, flush=True))
         if USE_AGENT else None,
+        second_reader=SecondReader(PROJECT, credentials) if second_read_enabled() else None,
         on_event=lambda line: print(line, flush=True),
     )
 

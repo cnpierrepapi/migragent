@@ -45,6 +45,7 @@ from typing import Any, Callable
 
 from .changes import Change, change_id, text_diff
 from .extract import Extraction, page_text
+from .verify import review
 from .fetcher import Fetched
 
 Mode = str  # "extract" or "watch"
@@ -89,6 +90,14 @@ class SourceOutcome:
     material: bool | None = None
     seconds: float = 0.0
 
+    # What the second reader made of this page. Carried per page as well as per
+    # round, because a single page disagreeing about everything is a different
+    # problem from a lane disagreeing about a little, and the round total cannot
+    # tell them apart.
+    agreed: int = 0
+    disputed: int = 0
+    unverified: int = 0
+
 
 @dataclass
 class RoundResult:
@@ -120,6 +129,12 @@ class RoundResult:
     retired: int = 0
     material_changes: int = 0
 
+    # The second reader's score for the whole round. If disputed is always zero
+    # the check is theatre, and this is the number that says so.
+    agreed: int = 0
+    disputed: int = 0
+    unverified: int = 0
+
     outcomes: list[SourceOutcome] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -142,11 +157,16 @@ class Round:
     def __init__(self, *, registry, corpus, snapshots, fetcher, extractor,
                  explainer, changes_writer, browser=None,
                  shortage_reader=None, shortages=None, researcher=None,
+                 second_reader=None,
                  on_event: Callable[[str], None] | None = None) -> None:
         # Optional on purpose. Without it a round reads the way it always has,
         # which is what watch mode needs and what a round with no model access
         # falls back to.
         self._researcher = researcher
+        # Optional the same way the researcher is. Without it a round reads
+        # exactly the way it always has, and nothing downstream can tell the
+        # difference except that second_read is empty.
+        self._second_reader = second_reader
         self._shortage_reader = shortage_reader
         self._shortages = shortages
         self._registry = registry
@@ -250,6 +270,9 @@ class Round:
             result.kept += outcome.kept
             result.dropped += outcome.dropped
             result.retired += outcome.retired
+            result.agreed += outcome.agreed
+            result.disputed += outcome.disputed
+            result.unverified += outcome.unverified
             if outcome.material:
                 result.material_changes += 1
 
@@ -261,6 +284,20 @@ class Round:
         result.seconds = round(time.monotonic() - started, 1)
         result.finished_at = _now()
         return result
+
+    def _second_read(self, page: Fetched, extraction, out: SourceOutcome) -> None:
+        """Put an extraction past the second reader, if there is one.
+
+        Runs before the corpus is written, because the point of a second reader
+        is to stop something reaching the guide, and a requirement that has to be
+        retired afterwards was already published.
+        """
+        if self._second_reader is None or not extraction.requirements:
+            return
+        counts = review(self._second_reader, page_text(page), extraction)
+        out.agreed += counts["agreed"]
+        out.disputed += counts["disputed"]
+        out.unverified += counts["unverified"]
 
     # -------------------------------------------------------------- one page
 
@@ -378,6 +415,8 @@ class Round:
             self._mark_read(source, page, snapshot_path)
             return out
 
+        self._second_read(page, extraction, out)
+
         # Anything this page used to say and no longer says stops being told to
         # anybody, from now, with the date we noticed it.
         before_ids = self._corpus.live_ids_for_source(source.source_id)
@@ -458,6 +497,8 @@ class Round:
                 # repeated under every page the agent opened.
                 open_questions=session.open_questions if row is source else [],
             )
+
+            self._second_read(fetched, extraction, out)
 
             before = self._corpus.live_ids_for_source(row.source_id)
             read = self._corpus.record(row.source_id, extraction, jurisdiction, lane)
