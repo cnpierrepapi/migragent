@@ -46,7 +46,7 @@ from typing import Any, Callable
 from .changes import Change, change_id, text_diff
 from .extract import Extraction, page_text
 from .meaning import assess
-from .verify import review
+from .verify import proven, review, why_not
 from .fetcher import Fetched
 
 Mode = str  # "extract" or "watch"
@@ -140,6 +140,11 @@ class RoundResult:
     # Pages whose words moved and whose meaning did not. D23 one storey up.
     reworded: int = 0
 
+    # Whether the second read ran on this lane, and if not then why. Written
+    # down rather than left to be inferred from three zero counts, which is what
+    # a lane with no disagreements also looks like.
+    second_read: str = "off"
+
     outcomes: list[SourceOutcome] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -213,6 +218,13 @@ class Round:
         started = time.monotonic()
         result = RoundResult(jurisdiction=jurisdiction, lane=lane, mode=mode,
                              started_at=_now())
+        if self._second_reader is None:
+            result.second_read = "off"
+        elif proven(jurisdiction):
+            result.second_read = "on"
+        else:
+            result.second_read = f"skipped: {why_not(jurisdiction)}"
+            self._on_event(f"  second read skipped: {why_not(jurisdiction)}")
 
         # Rows blocked by robots.txt come back for a re-check, and nothing else
         # blocked does. A 404 is a fact about a page and stays one; permission is
@@ -295,7 +307,8 @@ class Round:
         result.finished_at = _now()
         return result
 
-    def _second_read(self, page: Fetched, extraction, out: SourceOutcome) -> None:
+    def _second_read(self, page: Fetched, extraction, out: SourceOutcome,
+                     jurisdiction: str) -> None:
         """Put an extraction past the second reader, if there is one.
 
         Runs before the corpus is written, because the point of a second reader
@@ -303,6 +316,10 @@ class Round:
         retired afterwards was already published.
         """
         if self._second_reader is None or not extraction.requirements:
+            return
+        # An unmeasured lane does not get a check nobody has looked at the output
+        # of. See MEASURED in migragent/verify.py.
+        if not proven(jurisdiction):
             return
         counts = review(self._second_reader, page_text(page), extraction)
         out.agreed += counts["agreed"]
@@ -425,7 +442,7 @@ class Round:
             self._mark_read(source, page, snapshot_path)
             return out
 
-        self._second_read(page, extraction, out)
+        self._second_read(page, extraction, out, jurisdiction)
 
         # Anything this page used to say and no longer says stops being told to
         # anybody, from now, with the date we noticed it.
@@ -508,7 +525,7 @@ class Round:
                 open_questions=session.open_questions if row is source else [],
             )
 
-            self._second_read(fetched, extraction, out)
+            self._second_read(fetched, extraction, out, jurisdiction)
 
             before = self._corpus.live_ids_for_source(row.source_id)
             read = self._corpus.record(row.source_id, extraction, jurisdiction, lane)

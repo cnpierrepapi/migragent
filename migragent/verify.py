@@ -131,6 +131,39 @@ class Verdict:
         return "agreed" if self.agreed else "disputed"
 
 
+# WHERE THE SECOND READ HAS ACTUALLY BEEN MEASURED, and nowhere else runs it.
+#
+# Not an allowlist of languages. A record of lanes where a real sample has been
+# taken and the disagreement rate looked like a working check rather than a
+# broken one. The rule this encodes is that an unmeasured check is not a check:
+# D40 produced 51.4% disagreement on Spanish and every one of them was wrong,
+# and the only reason that was caught is that somebody looked at the number.
+#
+# To add a lane: run it with --second-read on a real sample, read the
+# disagreements rather than the rate, and put the result here. Do not add a lane
+# because it shares a language with one already here.
+MEASURED = {
+    "UK": "4.5% study, 6.7% work, 24 Aug 2026",
+    "CA": "7.7% study, 12.5% work, 24 Aug 2026",
+    # Spain is here on a re-run AFTER D40. The first run said 51.4% and was
+    # measuring the bug. The second said 0.0% over 39 requirements.
+    "ES": "0.0% work over 39 requirements, 24 Aug 2026, post D40",
+}
+
+# FR: the sample run was killed before it produced anything. One earlier lane
+#     returned a single requirement, which is not a sample.
+# AE: 7 live requirements in the whole lane. Too thin to read a rate from.
+
+
+def proven(jurisdiction: str) -> bool:
+    """Has the second read been measured on this lane?"""
+    return (jurisdiction or "").upper() in MEASURED
+
+
+def why_not(jurisdiction: str) -> str:
+    return f"the second read has not been measured on {jurisdiction}"
+
+
 def enabled() -> bool:
     """Off unless switched on. A new reader does not get to be a default."""
     return os.environ.get("MIGRAGENT_SECOND_READ", "").strip().lower() in {"1", "true", "on", "yes"}

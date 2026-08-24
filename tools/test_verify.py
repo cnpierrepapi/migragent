@@ -19,7 +19,8 @@ import sys
 sys.path.insert(0, ".")
 
 from migragent.extract import Extraction, Requirement  # noqa: E402
-from migragent.verify import SecondReader, Verdict, _read, enabled, review  # noqa: E402
+from migragent.verify import (MEASURED, SecondReader, Verdict, _read,  # noqa: E402
+                              enabled, proven, review)
 
 PAGE = "You must pay the application fee of 490 euros. You must hold a valid passport."
 
@@ -138,6 +139,18 @@ def main() -> int:
     check("outside the text" in verdict.reason,
           "and it says which of the two it was")
     check(asked == [], "and the model was never called about it")
+
+    # ---- the measured-lanes gate --------------------------------------------
+    # An unmeasured lane does not get a check nobody has read the output of.
+    # This is the D40 rule as code: 51.4% disagreement on Spanish was a bug, and
+    # the only reason it was caught is that somebody looked at the number.
+    for j in ["UK", "CA", "ES"]:
+        check(proven(j), f"{j} has a measured rate, so it runs", MEASURED[j])
+    for j in ["FR", "AE", "DE", "IT", ""]:
+        check(not proven(j), f"{j or 'an empty jurisdiction'} is unmeasured, so it does not")
+    check(proven("uk"), "the check is not case sensitive")
+    check(all(str(v).strip() for v in MEASURED.values()),
+          "every measured lane records what was actually measured")
 
     # ---- the flag ----------------------------------------------------------
     import os

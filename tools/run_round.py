@@ -122,7 +122,9 @@ def main() -> int:
           f"{result.seconds}s")
     if result.reworded:
         print(f"reworded: {result.reworded} page(s) moved their words and not their meaning")
-    if with_second:
+    if with_second and result.second_read.startswith("skipped"):
+        print(f"second read: {result.second_read}")
+    if with_second and result.second_read == "on":
         seen = result.agreed + result.disputed + result.unverified
         rate = (result.disputed / seen * 100) if seen else 0.0
         print(f"second read: agreed {result.agreed}, disputed {result.disputed}, "
