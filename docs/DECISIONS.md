@@ -373,6 +373,40 @@ still open, and it is the first thing in this build that has ever declined a pag
 
 ---
 
+## 11. The lane a page serves is read from the page, not inherited
+
+**Decided:** 27 August 2026, building the agent layer. This is the fix for per page lane detection
+that Decision 10 said was still open, and D29 and D32 are the failures it closes.
+
+The walk gives a discovered page the lane of the entry that found it. That is right most of the
+time, because a government that puts its student pages under a student section is telling you
+something true. It is wrong exactly when a government links the work route from the study route, or
+serves one catalogue for every route, and then a page about salaried employment is one command away
+from being extracted into a study guide with a real quote, a real link and a real date on it. The
+anti-invention machinery cannot see it, because nothing is invented: a true sentence is filed under
+the wrong question.
+
+**The Lane Classifier reads the page and says which of study and work it is about**, one, both or
+neither, before the round extracts it. It is a `migragent/agents` agent because "which question is
+this page answering" is judgment, not a rule, and the same discipline the rest of the layer keeps
+applies here: every route it names carries a sentence checked against the page, and it is not told
+which lane the walk assigned, so it reads rather than confirms.
+
+**It runs on depth 1 and deeper government pages only.** Entry pages at depth 0 are hand seeded and
+their lane is a decision somebody made. Depth 0 is also where the researcher agent starts, and that
+branch owns it.
+
+**It fails safe, the same way the second reader does.** No classifier, or a classifier that could
+not answer on a page, and the page is extracted into its assigned lane as before. A second opinion
+being unavailable is not evidence that the walk was wrong. The cost of that choice is that a genuine
+off-lane page slips through on a day the classifier is down, which is the same page that slipped
+through every day before this existed, so the floor does not move.
+
+**Off by default**, behind `MIGRAGENT_AGENT_LANE`, and rolled out lane by lane: run it, read the
+pages it calls off-lane rather than the count, confirm they are, then widen.
+
+---
+
 ## The watch: three signals, no fourth
 
 The product's second promise is that it tells you when something changes. Deciding *what* counts as
