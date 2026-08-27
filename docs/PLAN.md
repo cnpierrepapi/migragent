@@ -416,20 +416,24 @@ fee and demand exactly one.
 
 ### 7.3 The agents
 
-Four, where there is one. **An agent is added only where a loop or a decision already exists in the
-code and is currently spelled out by hand.** Anything else is farming a count, and a judge reading
-`docs/DECISIONS.md` will see it.
+**Full design is in `docs/AGENTS.md`.** It grew from four to sixteen once every judgment call in the
+system was listed rather than only the ones in the watch path. The rule that gates the list is
+unchanged: an agent is added only where a decision or a loop already exists in the code and is
+spelled out by hand today, and everything deterministic stays deterministic code.
 
-- **Researcher.** Unchanged. Picks what to read when structure runs out.
-- **Verifier.** Gemma-backed, one tool, the page. The second read above.
-- **Watcher.** Given a diff, decides substantive or cosmetic, then writes the change record with the
-  government's own sentence and date attached.
-- **Work.** Today a sequence spread across `occupations.py`, `listings.py` and `fit.py` that runs in
-  a fixed order and already reads like one. It becomes a SequentialAgent because it is one.
+The sixteen, by pipeline: Scout, Researcher, Extractor, Verifier, Lane Classifier, Translator,
+Change Interpreter, Attribution Verifier, Course Reader for research and ingestion; Document Reader,
+Coverage Matcher, Gap and Route Finder for intake; CV Reader, Application Writer, Fit Scorer for
+work; Digest Router for notification. Six borderline agents from an earlier draft were merged into
+these or erased because the existing code already serves them, and `docs/AGENTS.md` says which and
+why.
+
+Orchestration is five SequentialAgents, one ParallelAgent, two LoopAgents and four non-LLM
+BaseAgents for the deterministic gates. Sixteen plus twelve is twenty-eight nodes.
 
 **The people finder stays not an agent.** Decision 9 records the reason: grounding and a tool-calling
 loop solve different halves of that problem and the agent added nothing. Keeping that on the record
-next to four new agents is what makes the four credible.
+next to sixteen agents is what makes the sixteen credible.
 
 ### Where this is cheap, and why
 
