@@ -17,13 +17,14 @@ pool, because a person waiting on their guide is watching a progress line, not a
 server-sent events carry it.
 
 A Cloud Run job called `migragent-ingest` does the reading. Ten tasks, five at a time, and the
-task index picks the lane. It is one program with five modes:
+task index picks the lane. It is one program with six modes:
 
 - `extract` reads pages nobody has read yet
 - `watch` re-reads pages we have read and works out what moved
 - `listings` pulls new postings off government job boards
 - `digest` works out who needs telling, and tells them
 - `selftest` proves the watcher can add to the snapshot archive and cannot rewrite it
+- `robots` prints robots.txt as the job receives it, for when a block looks wrong
 
 Four Cloud Scheduler jobs start those, in this order and for this reason:
 
@@ -115,21 +116,52 @@ drafts letters, and writes the one sentence about what a change means. It never 
 requirement exists, it never supplies a URL, and it never sees the date a page was read. Those
 come off the fetch, which is the only thing that knows them.
 
-The researcher is on ADK. `migragent/researcher.py` is an `LlmAgent` with five tools: read a page,
-list what a page links to, record a requirement, note an open question, finish. It cannot fetch,
-it can only ask a tool that checks robots.txt first. It cannot write a requirement, it can only
-offer one to a tool that checks the quote. Refusals are counted and returned rather than swallowed.
+## The agents, and the calls that are not agents
 
-ADK's own model client is not used. `migragent/agent_llm.py` is a `BaseLlm` that routes everything
-back through `model.py`, so the agent gets the same retries and the same status codes as every
-other caller. `tools/test_agent.py` traps `google.genai.Client` and fails loudly if that ever stops
-being true.
+There are four ADK agents. An agent here means the model decides across several steps what to do
+next: open another page, pick a tool, redo its answer because a check refused it. Anything that is
+one model call with a code check on the response is a call, not an agent, and it stays that way.
+Decision 12 has the full split.
 
-The agent does not run the daily round, and Decision 10 has the numbers. On a lane the walk covers
-deeply it read 3 pages against the walk's 19 and returned 26 requirements against 174, though 10
-of those 26 were things the walk had missed, including the fees. On a thin lane it read 7 pages,
-returned more than the walk, and 4 of its pages were not in the registry at all. So it runs where
-structure has run out, and the walk keeps the lanes where structure is doing the work.
+`migragent/researcher.py` is an `LlmAgent` with five tools: read a page, list what a page links
+to, record a requirement, note an open question, finish. It picks which pages to open when the
+structural walk has run out of structure to follow. It cannot fetch, it can only ask a tool that
+checks robots.txt first. It cannot write a requirement, it can only offer one to a tool that
+checks the quote.
+
+`migragent/agents/scout.py` reads candidate entry pages, tells a real page from a navigation
+shell, and follows a shell's links to the content behind it. It exists because a wrong seed in
+`tools/seed_registry.py` is silent: Spain sat in the pipeline for days producing one citable
+requirement because both its seeds were pages of links.
+
+`migragent/agents/extractor.py` reads one page and records requirements one at a time. When the
+quote check refuses a span, it gets told, and it looks for the sentence that actually says the
+thing rather than dropping it in silence like the one-shot call does.
+
+`migragent/agents/coverage.py` matches a person's uploaded documents to the requirements they
+cover, which is the readiness score. When a match cites a field nobody uploaded, it gets that
+back and looks for another document, instead of quietly losing the match on a wording miss
+between "bank statement" and "proof of funds".
+
+Everything else that touches the model is a single call. The lane check in `migragent/lanes.py`
+says which route a page is about. The second reader in `migragent/verify.py` asks a different
+model whether the page states a claim. `migragent/changes.py` writes the one sentence about what
+a diff means. The document, CV and course readers each read one thing. `migragent/routes.py` and
+`migragent/fit.py` propose options and matches that code then validates against a known set. None
+of these choose what to do next, so none of them are agents. The lane check was an agent for one
+day and got walked back when a session per page made a watch round take hours.
+
+ADK's own model client is not used by any of them. `migragent/agent_llm.py` is a `BaseLlm` that
+routes everything back through `model.py`, so an agent gets the same retries and the same status
+codes as every other caller. `tools/test_agent.py` traps `google.genai.Client` and fails loudly
+if that ever stops being true. Each agent has its own scripted-model test that does the same
+trap: `test_scout_agent.py`, `test_extractor_agent.py`, `test_coverage_agent.py`.
+
+The researcher does not run the daily round, and Decision 10 has the numbers. On a lane the walk
+covers deeply it read 3 pages against the walk's 19 and returned 26 requirements against 174,
+though 10 of those 26 were things the walk had missed, including the fees. On a thin lane it read
+7 pages, returned more than the walk, and 4 of its pages were not in the registry at all. So it
+runs where structure has run out, and the walk keeps the lanes where structure is doing the work.
 
 ## What is stored
 
@@ -153,7 +185,10 @@ flowchart LR
 
     subgraph job["Cloud Run job: migragent-ingest, runs as migragent-watcher"]
         FETCH["fetch, hash, then diff the text<br/>two gates, not one"]
-        AGENT["ADK researcher<br/>where structure runs out"]
+        SCOUT["Scout agent<br/>real entry or a shell"]
+        AGENT["Researcher agent<br/>where structure runs out"]
+        EXTRACT["Extractor agent<br/>records, retries a refused quote"]
+        LANE["lane check (one call)<br/>which route is this page"]
         QUOTE["quote check<br/>no sentence, no row"]
         DIGEST["digest: who does this affect"]
     end
@@ -173,11 +208,11 @@ flowchart LR
 
     MODEL{{"Gemini 3.5 Flash on Vertex<br/>one caller, migragent/model.py"}}
 
-    GOV --> FETCH
+    GOV --> SCOUT --> FETCH
     SCHOOL --> FETCH
     BOARD --> FETCH
-    FETCH --> AGENT --> QUOTE
-    FETCH --> QUOTE
+    FETCH --> AGENT --> EXTRACT --> LANE --> QUOTE
+    FETCH --> EXTRACT
     QUOTE --> REQ
     QUOTE --> DATA
     FETCH --> SNAP
@@ -191,7 +226,8 @@ flowchart LR
     ELIG --> OUT
     DIGEST --> OUT
 
-    QUOTE -. asks what it means .-> MODEL
+    EXTRACT -. asks what it means .-> MODEL
+    LANE -. one call .-> MODEL
     ELIG -. borrows the researcher .-> MODEL
 ```
 
@@ -218,3 +254,8 @@ does not already know what to look for gets an answer, and a search box asks the
 There is no vector database. Matching a person to a change is done on the requirement rows they
 already carry, which is an exact lookup, and dressing it up as a similarity problem would make it
 slower and less certain at the same time.
+
+There are four agents, not sixteen. An early draft had one for every model call in the system.
+Twelve of those turned out to be a single call with a code check on the answer, which is not an
+agent, and wrapping them to raise the count is the same move as a Pub/Sub topic with one
+publisher. Decision 12.

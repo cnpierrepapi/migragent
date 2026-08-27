@@ -427,8 +427,9 @@ The four: **Researcher** (navigates), **Scout** (explores from candidates), **Ex
 gets the quote check's refusal back, revises), **Coverage Matcher** (proposes a match, gets back
 "not uploaded", looks again; guards the readiness score). The lane check that closes D29 and D32 was
 built as an agent and walked back to one call the same day, because a session per page made a watch
-round take hours (Decision 11). Orchestration: two SequentialAgents over the four agents, the lane
-check, and four non-LLM BaseAgent gate nodes.
+round take hours (Decision 11). No `SequentialAgent`: ADK 2.7.1 deprecates it, and `round.py` and
+`run.py` already sequence the steps in plain Python where they read fine. The deterministic gates
+(robots, quote check, meaning gate, citation binder) stay code.
 
 **The people finder stays not an agent** (Decision 9), and now sits next to twelve other calls that
 are deliberately not agents. The restraint is the architecture story.

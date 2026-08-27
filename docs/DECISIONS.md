@@ -408,10 +408,15 @@ would also be the exact move this doc started out to refuse, same as not standin
 topic with one publisher (Decision 4) and not making the people finder an agent (Decision 9). A
 judge who reads this file is who the restraint is for.
 
-So the submission says four `LlmAgent`s, two `SequentialAgent`s, four non-LLM gate nodes, and a
-list of the calls that are deliberately not agents. If that reads as a smaller build than a
-sixteen-agent diagram, it's a more honest one, and honesty is what's being judged on the
-architecture axis.
+No `SequentialAgent` either. ADK 2.7.1 deprecates it, and the sequence it would wrap already runs
+in plain Python: `round.py` does fetch, gates, Scout, Researcher, Extractor, lane check, quote
+check, persist in order, and `run.py` does the reader, the matcher and the drafts in order. Both
+read fine as code. Adding a deprecated shell around them buys a node in a diagram and nothing
+else.
+
+So the submission says four `LlmAgent`s, four deterministic gate functions, and a list of the
+calls that are deliberately not agents. If that reads as a smaller build than a sixteen-agent
+diagram, it's a more honest one, and honesty is what's being judged on the architecture axis.
 
 ## The watch: three signals, no fourth
 

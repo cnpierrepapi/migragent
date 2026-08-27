@@ -14,6 +14,16 @@ URL was added here on the strength of looking plausible.
 
     python tools/seed_registry.py            write to Firestore
     python tools/seed_registry.py --dry-run  fetch and report, write nothing
+    python tools/seed_registry.py --scout    let the Scout agent check each lane's
+                                             candidates and swap a navigation shell
+                                             for the page behind it before writing
+
+The Scout pass exists because a wrong candidate here is silent. The row gets
+written, the round reads it, and a lane seeded on a page of links looks the same
+as a lane that is genuinely thin. Spain sat like that for days. With --scout,
+each lane's candidate URLs go to migragent/agents/scout.py, which reads them,
+keeps the ones that state a requirement, and follows a shell's own links to the
+real page when it finds one. Rejections are printed, not hidden.
 """
 from __future__ import annotations
 
@@ -27,9 +37,11 @@ from google.cloud import firestore  # noqa: E402
 
 from migragent import identity  # noqa: E402
 from migragent.fetcher import Fetcher  # noqa: E402
-from migragent.registry import Registry, Source, source_id  # noqa: E402
+from migragent.registry import JURISDICTIONS, Registry, Source, source_id  # noqa: E402
 
 PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+MODEL = "gemini-3.5-flash"
+MODEL_LOCATION = "global"
 
 # jurisdiction, lane, url, title, language
 CANDIDATES = [
@@ -140,15 +152,64 @@ CANDIDATES = [
 ]
 
 
+def _scout_candidates(fetcher) -> list[tuple]:
+    """Run the Scout agent over each lane's candidates, return what it keeps.
+
+    Every kept URL is a page the Scout read and could quote a requirement from.
+    A shell it walked past is dropped, and a page it found behind a shell is
+    added with the language of the lane it was scouting.
+    """
+    from migragent.agents.scout import Scout
+
+    reader = identity.credentials_for(identity.RESEARCHER, PROJECT)
+    scout = Scout(project=PROJECT, model=MODEL, location=MODEL_LOCATION,
+                  credentials=reader, fetcher=fetcher)
+
+    by_lane: dict[tuple, list[tuple]] = {}
+    for row in CANDIDATES:
+        by_lane.setdefault((row[0], row[1]), []).append(row)
+
+    kept: list[tuple] = []
+    for (jurisdiction, lane), rows in by_lane.items():
+        place = JURISDICTIONS.get(jurisdiction, {}).get("name", jurisdiction)
+        language = rows[0][4]
+        report = scout.scout(jurisdiction=jurisdiction, lane=lane, place=place,
+                             candidates=[r[2] for r in rows])
+        if report.error:
+            print(f"  scout {jurisdiction} {lane}: {report.error}, keeping the "
+                  f"{len(rows)} original candidate(s)")
+            kept.extend(rows)
+            continue
+        for nom in report.nominations:
+            title = nom.url.rstrip("/").rsplit("/", 1)[-1].replace("-", " ") or lane
+            kept.append((jurisdiction, lane, nom.url, title, language))
+            print(f"  scout {jurisdiction} {lane}: keep {nom.url}")
+            print(f"           {nom.reason}")
+        for rej in report.rejected:
+            print(f"  scout {jurisdiction} {lane}: drop {rej.get('url','')}  "
+                  f"({rej.get('why','')})")
+        if not report.nominations:
+            print(f"  scout {jurisdiction} {lane}: nothing kept, falling back to "
+                  f"the {len(rows)} original candidate(s)")
+            kept.extend(rows)
+    return kept
+
+
 def main() -> int:
     dry_run = "--dry-run" in sys.argv
     fetcher = Fetcher(delay_seconds=2.0)
     built: list[Source] = []
 
-    print(f"checking {len(CANDIDATES)} government pages across "
-          f"{len({c[0] for c in CANDIDATES})} jurisdictions\n")
+    candidates = CANDIDATES
+    if "--scout" in sys.argv:
+        print("scouting each lane's candidates first\n")
+        candidates = _scout_candidates(fetcher)
+        print()
 
-    for jurisdiction, lane, url, title, language in CANDIDATES:
+    print(f"checking {len(candidates)} government pages across "
+          f"{len({c[0] for c in candidates})} jurisdictions\n")
+
+    for jurisdiction, lane, url, title, language in candidates:
         result = fetcher.fetch(url)
         source = Source(
             source_id=source_id(jurisdiction, lane, url),
