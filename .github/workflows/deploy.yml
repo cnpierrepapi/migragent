@@ -68,10 +68,18 @@ jobs:
 
       # A deploy that reports success while the service returns 500 is a deploy
       # that lies. The job fails unless the new revision answers.
+      #
+      # /health is a static string and proves only that the container booted.
+      # It stayed 200 through the whole %28default%29 outage while every page
+      # that touches Firestore was 500ing. So one route that reads the store is
+      # checked here too, and it is the landing page because that is the first
+      # thing anybody sees.
       - name: Check the service answers
         run: |
           url=$(gcloud run services describe "$SERVICE" --project "$PROJECT" \
                   --region "$REGION" --format='value(status.url)')
-          code=$(curl -s -o /dev/null -w '%{http_code}' "$url/health")
-          echo "$url/health -> $code"
-          test "$code" = "200"
+          for path in /health /; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$url$path")
+            echo "$url$path -> $code"
+            test "$code" = "200"
+          done

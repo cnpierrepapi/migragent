@@ -1,8 +1,16 @@
 flask==3.0.3
 gunicorn==22.0.0
-google-cloud-firestore==2.28.1
+google-cloud-firestore==2.29.0
 google-cloud-storage==3.13.1
 google-auth==2.56.3
+# Pinned explicitly, not left to the resolver. firestore 2.28.1 with an
+# unpinned api-core/grpcio built an image that sent the (default) database id
+# double-encoded as %28default%29; a Firestore backend rollout later started
+# rejecting it with 400 InvalidArgument and every dynamic route began 500ing
+# with no redeploy. 2.29.0 fixes the encoding; these two are pinned so the
+# image cannot drift underneath it again.
+google-api-core==2.34.0
+grpcio==1.83.0
 truststore==0.9.1
 pypdf==5.1.0
 google-adk==2.7.1
