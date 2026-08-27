@@ -416,24 +416,20 @@ fee and demand exactly one.
 
 ### 7.3 The agents
 
-**Full design is in `docs/AGENTS.md`.** It grew from four to sixteen once every judgment call in the
-system was listed rather than only the ones in the watch path. The rule that gates the list is
-unchanged: an agent is added only where a decision or a loop already exists in the code and is
-spelled out by hand today, and everything deterministic stays deterministic code.
+**Full design is in `docs/AGENTS.md`.** It started as sixteen. Building the first five settled the
+honest number: **five agents have genuine agentic structure**, meaning the model decides across
+multiple steps what to do next. The other eleven are single model calls whose response is validated
+in code, and `verify.py`, `changes.py`, `coverage.py` and their neighbours already do them well.
+Wrapping the eleven in `LlmAgent` for the count is the padding this document exists to refuse.
 
-The sixteen, by pipeline: Scout, Researcher, Extractor, Verifier, Lane Classifier, Translator,
-Change Interpreter, Attribution Verifier, Course Reader for research and ingestion; Document Reader,
-Coverage Matcher, Gap and Route Finder for intake; CV Reader, Application Writer, Fit Scorer for
-work; Digest Router for notification. Six borderline agents from an earlier draft were merged into
-these or erased because the existing code already serves them, and `docs/AGENTS.md` says which and
-why.
+The five: **Researcher** (navigates), **Scout** (explores from candidates), **Extractor**
+(records, gets the quote check's refusal back, revises), **Lane Classifier** (marks routes, retries,
+decides neither; closes D29 and D32), **Coverage Matcher** (proposes a match, gets back "not
+uploaded", looks again; guards the readiness score). Orchestration: two SequentialAgents over those
+five and four non-LLM BaseAgent gate nodes.
 
-Orchestration is five SequentialAgents, one ParallelAgent, two LoopAgents and four non-LLM
-BaseAgents for the deterministic gates. Sixteen plus twelve is twenty-eight nodes.
-
-**The people finder stays not an agent.** Decision 9 records the reason: grounding and a tool-calling
-loop solve different halves of that problem and the agent added nothing. Keeping that on the record
-next to sixteen agents is what makes the sixteen credible.
+**The people finder stays not an agent** (Decision 9), and now sits next to eleven other calls that
+are deliberately not agents. The restraint is the architecture story.
 
 ### Where this is cheap, and why
 
