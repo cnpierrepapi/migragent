@@ -416,11 +416,12 @@ fee and demand exactly one.
 
 ### 7.3 The agents
 
-**Full design is in `docs/AGENTS.md`.** It started as sixteen. Building them settled the honest
-number: **four agents have genuine agentic structure**, meaning the model decides across multiple
-steps what to do next. The other twelve are single model calls whose response is validated in code,
-and `verify.py`, `changes.py`, `coverage.py`, `lanes.py` and their neighbours already do them well.
-Wrapping the twelve in `LlmAgent` for the count is the padding this document exists to refuse.
+It started as sixteen. Building them settled the honest number: **four agents have genuine agentic
+structure**, meaning the model decides across multiple steps what to do next. The other twelve are
+single model calls whose response is validated in code, and `verify.py`, `changes.py`,
+`coverage.py`, `lanes.py` and their neighbours already do them well. Wrapping the twelve in
+`LlmAgent` for the count is padding, and `docs/DECISIONS.md` entry 12 is where that refusal is
+written down.
 
 The four: **Researcher** (navigates), **Scout** (explores from candidates), **Extractor** (records,
 gets the quote check's refusal back, revises), **Coverage Matcher** (proposes a match, gets back
