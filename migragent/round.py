@@ -126,6 +126,10 @@ class RoundResult:
     unreadable: int = 0
     failed: int = 0
 
+    # Pages fetched, then not extracted because the classifier read them as
+    # belonging to another route or to none. D29 and D32.
+    off_lane: int = 0
+
     kept: int = 0
     dropped: int = 0
     retired: int = 0
@@ -167,12 +171,18 @@ class Round:
     def __init__(self, *, registry, corpus, snapshots, fetcher, extractor,
                  explainer, changes_writer, browser=None,
                  shortage_reader=None, shortages=None, researcher=None,
-                 second_reader=None, embedder=None,
+                 second_reader=None, embedder=None, lane_classifier=None,
                  on_event: Callable[[str], None] | None = None) -> None:
         # Optional on purpose. Without it a round reads the way it always has,
         # which is what watch mode needs and what a round with no model access
         # falls back to.
         self._researcher = researcher
+        # Optional the same way. Without it a discovered page is read into the
+        # lane the walk gave it, which is right most of the time and wrong the
+        # way D29 and D32 describe. With it, a depth 1 or deeper government page
+        # is checked against the page's own words before it is extracted into
+        # this lane.
+        self._lane_classifier = lane_classifier
         # Optional the same way the researcher is. Without it a round reads
         # exactly the way it always has, and nothing downstream can tell the
         # difference except that second_read is empty.
@@ -284,6 +294,8 @@ class Round:
                     result.unchanged += 1
                 elif outcome.outcome == "changed":
                     result.changed += 1
+                elif outcome.outcome == "off-lane":
+                    result.off_lane += 1
                 elif outcome.outcome in ("extracted", "researched"):
                     result.extracted += 1
 
@@ -423,6 +435,29 @@ class Round:
             out.detail = "a register, parsed by tools/seed_institutions.py"
             self._mark_read(source, page, snapshot_path)
             return out
+
+        # A discovered page inherits the lane of the entry that found it, and
+        # government sites link the work route from the study route and the
+        # other way round. Before a depth 1 or deeper government page is
+        # extracted into this lane's corpus, the classifier reads the page
+        # itself and says which routes it is about. D29 and D32.
+        #
+        # Entry pages are not checked here: they are hand seeded, their lane is
+        # a decision somebody made, and the agent branch below owns depth 0.
+        # A classifier that is off, or that fell over on this page, does not
+        # block extraction: a second opinion being unavailable is not evidence
+        # against the first one, which is the same rule the second reader keeps.
+        if (self._lane_classifier is not None and mode == "extract"
+                and source.kind == "government" and (source.depth or 0) >= 1):
+            verdict = self._lane_classifier.classify(
+                page.final_url or source.url, page_text(page))
+            if verdict.answered and not verdict.serves(lane):
+                served = ", ".join(sorted(verdict.lanes)) or "neither route"
+                out.outcome = "off-lane"
+                out.detail = (f"the page is about {served}, not {lane}: "
+                              f"{verdict.stopped_because}")[:200]
+                self._mark_read(source, page, snapshot_path)
+                return out
 
         # An entry page is where a lane starts, and it is the one place where
         # choosing what to read next is worth a decision rather than a rule. So

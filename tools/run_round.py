@@ -36,6 +36,7 @@ from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.occupations import ShortageReader, Shortages  # noqa: E402
 from migragent.registry import Registry  # noqa: E402
 from migragent.researcher import Researcher  # noqa: E402
+from migragent.agents.lane import LaneClassifier, enabled as lane_check_enabled  # noqa: E402
 from migragent.meaning import Embedder  # noqa: E402
 from migragent.verify import SecondReader, enabled as second_read_enabled  # noqa: E402
 from migragent.render import BrowserFetcher  # noqa: E402
@@ -66,6 +67,10 @@ def main() -> int:
     # Either the flag on the command line or the environment switch, so a local
     # run can try it without exporting anything and the job needs no new flag.
     with_second = "--second-read" in sys.argv or second_read_enabled()
+    # The Lane Classifier reads a discovered page and says which routes it is
+    # about, so a work page linked from a study index does not get extracted
+    # into the study guide. D29 and D32. Off unless asked for.
+    with_lane_check = "--lane-check" in sys.argv or lane_check_enabled()
     max_depth = None if "--all" in sys.argv else 1
     if "--depth" in sys.argv:
         # `--depth 0` reads only the pages we deliberately seeded.
@@ -107,6 +112,9 @@ def main() -> int:
             if with_agent else None,
             second_reader=SecondReader(PROJECT, reader) if with_second else None,
             embedder=Embedder(PROJECT, reader),
+            lane_classifier=LaneClassifier(
+                project=PROJECT, model=MODEL, location=MODEL_LOCATION,
+                credentials=reader) if with_lane_check else None,
             browser=browser,
             on_event=lambda line: print(line, flush=True),
         )
@@ -122,6 +130,9 @@ def main() -> int:
           f"{result.seconds}s")
     if result.reworded:
         print(f"reworded: {result.reworded} page(s) moved their words and not their meaning")
+    if with_lane_check:
+        print(f"off-lane: {result.off_lane} page(s) were about another route and not "
+              f"extracted into {lane}")
     if with_second and result.second_read.startswith("skipped"):
         print(f"second read: {result.second_read}")
     if with_second and result.second_read == "on":
@@ -137,6 +148,12 @@ def main() -> int:
         if o.outcome == "researched":
             print(f"  chose from {o.url[-70:]}")
             print(f"      {o.detail}")
+    if result.off_lane:
+        print("\nread as another route, not extracted:")
+        for o in result.outcomes:
+            if o.outcome == "off-lane":
+                print(f"  {o.url[-66:]}")
+                print(f"      {(o.detail or '')[:110]}")
     if result.failed or result.unreadable:
         print("\nwhat did not read:")
         for o in result.outcomes:
