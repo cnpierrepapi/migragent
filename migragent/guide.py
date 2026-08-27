@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import html
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 from .clock import now_iso
 

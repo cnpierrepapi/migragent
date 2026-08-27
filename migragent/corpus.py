@@ -18,12 +18,11 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
 from typing import Any
 
 from google.cloud import firestore
 
-from .extract import Extraction, Requirement
+from .extract import Extraction
 
 REQUIREMENTS = "requirements"
 OPEN_QUESTIONS = "open_questions"

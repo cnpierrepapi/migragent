@@ -19,7 +19,6 @@ anything noticing, which would quietly undo the point of having an archive.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
 
 from google.cloud import storage
 

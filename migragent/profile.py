@@ -39,7 +39,6 @@ import base64
 import binascii
 import re
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
 from typing import Any
 from .clock import now_iso as _now
 

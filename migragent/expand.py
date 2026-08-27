@@ -345,8 +345,8 @@ class Expander:
         self, url: str, entry_url: str, depth: int, jurisdiction: str | None = None
     ) -> tuple[bool, str]:
         parts = urllib.parse.urlsplit(url)
-        entry_parts = urllib.parse.urlsplit(entry_url)
-        host = parts.netloc.lower()
+        urllib.parse.urlsplit(entry_url)
+        parts.netloc.lower()
 
         in_scope, why = self._within_scope(url, entry_url, jurisdiction)
         if not in_scope:

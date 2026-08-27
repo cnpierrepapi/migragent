@@ -46,7 +46,6 @@ import html
 import re
 import urllib.parse
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
 from typing import Any
 
 from .fetcher import Fetched, decode_body

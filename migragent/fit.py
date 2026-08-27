@@ -34,10 +34,7 @@ silently score lower, and a reader should still know which evidence was checked.
 """
 from __future__ import annotations
 
-import re
-import unicodedata
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
 from typing import Any
 
 from .cv import CV

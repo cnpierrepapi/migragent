@@ -27,7 +27,7 @@ from . import identity
 from .clock import now_iso as _now_iso
 from .alerts import Alerts, Watches
 from .alerts_page import alerts_html
-from .board import Board, Piece
+from .board import Board
 from .cases import RETENTION_DAYS, Cases
 from .cv import CVClones, CVReader, CVStore
 from .cv_builder import FIELDS as CV_FIELDS, build as build_cv, missing_for_matching
@@ -53,13 +53,13 @@ from .entitlements import is_subscriber, redact_all
 from .gaps import with_gaps
 from .subscribe_page import subscribe_html
 from .corpus import Corpus
-from .coverage import Matcher, document_worth
+from .coverage import Matcher
 from .agents.coverage import AgentMatcher, enabled as agent_coverage_enabled
 from .detect import agreement, detect
-from .documents import KINDS, MIME_BY_SUFFIX, DocumentReader, extract_text
+from .documents import MIME_BY_SUFFIX, DocumentReader, extract_text
 from .ocr import OCR, can_read as ocr_can_read
 from .form import FormBuilder
-from .intake_page import intake_html, working_html
+from .intake_page import working_html
 from .landing_page import landing_html
 from .result_page import result_html
 from .routes import RouteFinder
@@ -67,7 +67,6 @@ from .run import Run, sse_done
 from .timing import RunTimes
 from .guide import build, to_html
 from .registry import JURISDICTIONS, Registry
-from .upload_page import upload_html
 from .work_page import board_html, jobs_html
 
 BRAND_DIR = Path(__file__).resolve().parent.parent / "web" / "brand"
@@ -164,80 +163,6 @@ def home() -> Response:
     return Response(choose_html(live=live, sources=sources), mimetype="text/html")
 
 
-@app.get("/start/old")
-def home_old() -> Response:
-    """The previous intake, kept while the new flow beds in.
-
-    Not linked from anywhere. It is here so a comparison is one URL away rather
-    than one git revert away, and it goes when the new flow has been through a
-    few real people.
-
-    The first version of this page listed fourteen jurisdiction and lane rows
-    labelled ready, watched and uncovered. That is our filing system. Nobody
-    arrives thinking "CA study", they arrive thinking about a master's in Canada,
-    so coverage now appears only where it changes what they can expect.
-    """
-    db = _db()
-    registry, corpus = Registry(db), Corpus(db)
-
-    # Counted from the requirements themselves rather than from the read log,
-    # because a page read that kept nothing is not coverage, and a requirement
-    # retired because its page stopped saying it must stop counting the moment
-    # it is retired.
-    extracted: dict[tuple[str, str], int] = {}
-    for row in db.collection("requirements").select(
-            ["jurisdiction", "lane", "retired_at"]).stream():
-        d = row.to_dict()
-        if d.get("retired_at"):
-            continue
-        key = (d.get("jurisdiction", ""), d.get("lane", ""))
-        extracted[key] = extracted.get(key, 0) + 1
-
-    unverified: dict[tuple[str, str], str] = {}
-    found: dict[tuple[str, str], int] = {}
-    for row in db.collection("sources").select(
-            ["jurisdiction", "lane", "last_read_at", "blocked", "unverified_reason"]).stream():
-        d = row.to_dict()
-        key = (d.get("jurisdiction", ""), d.get("lane", ""))
-        if d.get("unverified_reason") and not d.get("last_read_at"):
-            unverified.setdefault(key, d["unverified_reason"])
-        if d.get("blocked") is None and d.get("last_read_at"):
-            key = (d.get("jurisdiction", ""), d.get("lane", ""))
-            found[key] = found.get(key, 0) + 1
-
-    coverage_by_lane = {}
-    for code in JURISDICTIONS:
-        for lane in ("study", "work"):
-            key = (code, lane)
-            count = extracted.get(key, 0)
-            if count >= DEEP_ENOUGH:
-                coverage_by_lane[key] = ("ready", f"{count} requirements read")
-            elif count:
-                # Thin, and it says the number rather than the word. Saudi
-                # Arabia's work lane has three requirements and Canada's study
-                # permit has 568, and before this they were both "ready", which
-                # reported that extraction had run rather than what it found.
-                # Same mistake as a progress bar that measures uploading instead
-                # of coverage.
-                #
-                # Not disabled. Somebody who wants the three requirements we can
-                # actually source for Saudi Arabia should be able to have them,
-                # knowing there are three.
-                coverage_by_lane[key] = ("thin", f"only {count} requirements so far")
-            elif found.get(key):
-                coverage_by_lane[key] = ("watched", f"{found[key]} pages found, none read yet")
-            elif unverified.get(key):
-                coverage_by_lane[key] = ("unavailable", unverified[key])
-            else:
-                coverage_by_lane[key] = ("uncovered", "no readable official source")
-
-    # The number on the front page is the same number the lanes are built from,
-    # summed, rather than a figure typed into a template and left to rot.
-    return Response(intake_html(coverage_by_lane, registry.total_sources(),
-                                live=sum(extracted.values())),
-                    mimetype="text/html")
-
-
 def cases_documents(db, case_id: str) -> list:
     return Cases(db).documents(case_id)
 
@@ -271,7 +196,13 @@ def _courses_by_country(db, level: str) -> dict[str, list]:
 
 
 def _requirement_counts(db) -> dict[tuple[str, str], int]:
-    """Live requirements per country and lane, which several screens want."""
+    """Live requirements per country and lane, which several screens want.
+
+    This is the one place that counts requirements. The landing page, the
+    coverage page and the two intake screens all go through here, because the
+    same ten-line loop was written out four times and two of the copies did not
+    know the other two existed.
+    """
     counts: dict[tuple[str, str], int] = {}
     for row in db.collection("requirements").select(
             ["jurisdiction", "lane", "retired_at"]).stream():
@@ -281,6 +212,28 @@ def _requirement_counts(db) -> dict[tuple[str, str], int]:
         key = (d.get("jurisdiction", ""), d.get("lane", ""))
         counts[key] = counts.get(key, 0) + 1
     return counts
+
+
+# The front pages read counts off whole Firestore collections. The landing page
+# alone used to scan `requirements` twice plus `institutions`, `courses` and
+# `listings` once each, about eleven thousand document reads, on every hit
+# including every crawler. None of those numbers move between one request and
+# the next, so the readers below are memoised for a minute. The ingest job
+# changes the underlying rows a few times a day; a minute of staleness on a
+# marketing number is a fair trade for not rescanning the store per pageview.
+_CACHE: dict[str, tuple[float, Any]] = {}
+_CACHE_TTL = 60.0
+
+
+def _cached(key: str, build):
+    import time
+
+    hit = _CACHE.get(key)
+    if hit is not None and time.monotonic() - hit[0] < _CACHE_TTL:
+        return hit[1]
+    value = build()
+    _CACHE[key] = (time.monotonic(), value)
+    return value
 
 
 @app.post("/start/lane")
@@ -312,10 +265,7 @@ def start_lane() -> Response:
 
 @app.get("/start/documents")
 def start_documents() -> Response:
-    cases = Cases(_db())
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
     return Response(documents_html(case.lane, case.intent or case.lane),
                     mimetype="text/html")
 
@@ -328,11 +278,7 @@ def read_documents() -> Response:
     because the clones are what the work path is for and waiting until they have
     found a job to produce them is the wrong order.
     """
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     creds = identity.credentials_for(identity.RESEARCHER, _project())
     uploads = [u for u in request.files.getlist("file") if u and u.filename]
@@ -479,11 +425,7 @@ def _eligible_for(db, case) -> tuple[list, Any, str, str]:
 @app.get("/start/level")
 def study_level() -> Response:
     """Correct the level and subject we read off the documents."""
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     documents = cases_documents(db, case.case_id)
     reading = level_from_documents(documents)
@@ -497,11 +439,7 @@ def study_level() -> Response:
 
 @app.post("/start/level")
 def save_study_level() -> Response:
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     level = (request.form.get("level") or "").strip().lower()
     if level not in ("bachelors", "masters", "doctorate"):
@@ -520,11 +458,7 @@ def save_study_level() -> Response:
 
 @app.get("/start/places")
 def start_places() -> Response:
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     eligible, reading, assumed, nothing = _eligible_for(db, case)
     return Response(places_html(case.lane, eligible, reading, assumed, nothing),
@@ -539,11 +473,7 @@ def choose_places() -> Response:
     checkboxes in carries no information about where they should start, and the
     rubric has an opinion built from what we can actually deliver.
     """
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     picked = [p.upper() for p in request.form.getlist("place") if p.upper() in JURISDICTIONS]
     if not picked:
@@ -570,16 +500,12 @@ def choose_places() -> Response:
 
 def _coverage() -> tuple[dict, int, int]:
     """What the two front pages both need: coverage per lane, and two totals."""
-    db = _db()
-    extracted: dict[tuple[str, str], int] = {}
-    for row in db.collection("requirements").select(
-            ["jurisdiction", "lane", "retired_at"]).stream():
-        d = row.to_dict()
-        if d.get("retired_at"):
-            continue
-        key = (d.get("jurisdiction", ""), d.get("lane", ""))
-        extracted[key] = extracted.get(key, 0) + 1
-    return extracted, sum(extracted.values()), Registry(db).total_sources()
+    def build():
+        db = _db()
+        extracted = _requirement_counts(db)
+        return extracted, sum(extracted.values()), Registry(db).total_sources()
+
+    return _cached("coverage", build)
 
 
 @app.get("/")
@@ -633,6 +559,35 @@ def _case_or_none(cases: Cases):
     return cases.get(cid) if cid else None
 
 
+class _NoCase(Exception):
+    """Raised by load_case when the cookie points at no case. Carries the
+    response the caller wants sent instead."""
+
+    def __init__(self, response):
+        self.response = response
+
+
+@app.errorhandler(_NoCase)
+def _no_case(exc: _NoCase):
+    return exc.response
+
+
+def load_case(on_missing=None):
+    """The Firestore client, the Cases store, and the current case.
+
+    Twenty-odd handlers opened with the same five lines: build the client, build
+    the store, read the cookie, bail to /start if there is no case. That is one
+    call now. A handler that wants a different answer for the missing case, an
+    event-stream close or a JSON error, passes it as `on_missing`.
+    """
+    db = _db()
+    cases = Cases(db)
+    case = _case_or_none(cases)
+    if case is None:
+        raise _NoCase(on_missing if on_missing is not None else redirect("/start"))
+    return db, cases, case
+
+
 @app.post("/begin")
 def begin() -> Response:
     """One submit: the two choices, and whatever files came with them.
@@ -677,10 +632,7 @@ def begin() -> Response:
 
 @app.get("/working")
 def working() -> Response:
-    cases = Cases(_db())
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
     # A case exists from step one now, before any country is chosen. Running it
     # in that state would build a guide for nowhere, so it goes back to the step
     # it has not finished rather than failing on an empty jurisdiction.
@@ -702,11 +654,8 @@ def working() -> Response:
 @app.get("/run-stream")
 def run_stream() -> Response:
     """Server sent events, one per real step, as each one finishes."""
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return Response(sse_done(), mimetype="text/event-stream")
+    db, cases, case = load_case(
+        on_missing=Response(sse_done(), mimetype="text/event-stream"))
 
     creds = identity.credentials_for(identity.RESEARCHER, _project())
     if not case.ready:
@@ -733,11 +682,7 @@ def run_stream() -> Response:
 @app.get("/result")
 def result() -> Response:
     """The guide, the routes, and the form only you can answer."""
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
     return Response(
         result_html(case, cases.coverage(case.case_id) or {},
                     cases.result(case.case_id) or {},
@@ -747,11 +692,7 @@ def result() -> Response:
 
 @app.post("/delete")
 def delete_case() -> Response:
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return jsonify({"error": "no case"}), 400
+    db, cases, case = load_case(on_missing=(jsonify({"error": "no case"}), 400))
     removed = cases.delete(case.case_id)
 
     # Two callers, two answers. The upload screen deletes with fetch and wants
@@ -854,11 +795,7 @@ def work() -> Response:
     it matched, each row carrying the line in their own CV that put it there.
     Rule 39.
     """
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     cv = CVStore(db).get(case.case_id)
     place = JURISDICTIONS.get(case.jurisdiction, {}).get("name", case.jurisdiction)
@@ -890,11 +827,7 @@ def upload_cv() -> Response:
     almost none of them. It is scored against a listing instead, where there is
     a listing to score it against.
     """
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     uploaded = request.files.get("cv")
     if uploaded is None or not uploaded.filename:
@@ -918,11 +851,7 @@ def upload_cv() -> Response:
 @app.post("/fit")
 def score_fit() -> Response:
     """Score the CV against one posting, from the posting's own words."""
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     listing_id = request.form.get("listing") or ""
     listing = db.collection("listings").document(listing_id).get()
@@ -945,11 +874,7 @@ def score_fit() -> Response:
 @app.post("/interested")
 def interested() -> Response:
     """Put an application on the board. It does not move again without them."""
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     listing_id = request.form.get("listing") or ""
     snap = db.collection("listings").document(listing_id).get()
@@ -970,11 +895,7 @@ def dashboard() -> Response:
     with its own copy of any of that would be a second version of the truth,
     drifting from the first.
     """
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     clones = CVClones(db).for_case(case.case_id)
     columns = Board(db).for_case(case.case_id)
@@ -1013,11 +934,7 @@ def save_profile() -> Response:
     and not a control: the prefix, the media type, the decoded size and the
     file's own magic number all have to agree before anything is stored.
     """
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     avatar = request.form.get("avatar")
     try:
@@ -1038,11 +955,7 @@ def save_profile() -> Response:
 @app.get("/cv/new")
 def cv_form() -> Response:
     """The CV builder, prefilled when there is already one to edit."""
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     profile = Profiles(db).get(case.case_id)
     cv = CVStore(db).get(case.case_id)
@@ -1065,11 +978,7 @@ def cv_create() -> Response:
     all. The clones borrow the researcher, because the web identity has no model
     access of its own, and the borrowing is visible here at the point of use.
     """
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     name = request.form.get("name", "")
     answers = {kind: request.form.get(kind, "") for kind, _l, _h, _m in CV_FIELDS}
@@ -1097,11 +1006,7 @@ def cv_create() -> Response:
 @app.get("/cv/<code>")
 def read_clone(code: str) -> Response:
     """One country's version of the CV, as plain text on a plain page."""
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     clone = CVClones(db).get(case.case_id, code.upper())
     if clone is None:
@@ -1113,17 +1018,18 @@ def read_clone(code: str) -> Response:
 def _country_coverage(db) -> tuple[list[dict], dict]:
     """What we hold per country, and the totals under it.
 
-    Counted from the rows themselves every time rather than cached, because a
-    number on a page that nobody recomputes is a number that quietly rots.
+    Memoised for a minute by `_cached`. This walks four whole collections, and
+    the landing page and the coverage page both call it. The numbers move a
+    handful of times a day when the ingest job runs, so recomputing per request
+    scanned the store for nothing.
     """
+    return _cached("country_coverage", lambda: _country_coverage_build(db))
+
+
+def _country_coverage_build(db) -> tuple[list[dict], dict]:
     import collections
 
-    reqs = collections.Counter()
-    for d in db.collection("requirements").select(
-            ["jurisdiction", "lane", "retired_at"]).stream():
-        r = d.to_dict()
-        if not r.get("retired_at"):
-            reqs[(r.get("jurisdiction"), r.get("lane"))] += 1
+    reqs = collections.Counter(_requirement_counts(db))
 
     schools = collections.Counter()
     for d in db.collection("institutions").select(["jurisdiction"]).stream():
@@ -1189,11 +1095,7 @@ def courses() -> Response:
     intake dates are redacted for anybody who has not subscribed. Three rules,
     three modules, none of them decided here.
     """
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     eligible, reading, assumed, _why = _eligible_for(db, case)
     subjects = list(getattr(reading, "subjects", []) or []) if reading else []
@@ -1246,11 +1148,7 @@ def subscribe_interest() -> Response:
     The address goes on the profile, which is deleted with the case, rather than
     into a marketing list that outlives them.
     """
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     email = (request.form.get("email") or "").strip()
     lane = (request.form.get("lane") or "study").strip()
@@ -1274,11 +1172,7 @@ def alerts() -> Response:
     computed before `mark_seen` runs: otherwise a person's first view of an
     alert would be the view that decides it is old news.
     """
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     store = Alerts(db)
     rows = store.for_case(case.case_id)
@@ -1297,11 +1191,7 @@ def start_watch() -> Response:
     decided something for them. This is one button, and `/watch/off` is the
     same button.
     """
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
     Watches(db).start(case.case_id, case.jurisdiction, case.lane)
     cases.touch(case.case_id)
     return redirect("/alerts")
@@ -1309,33 +1199,21 @@ def start_watch() -> Response:
 
 @app.post("/watch/off")
 def stop_watch() -> Response:
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
     Watches(db).stop(case.case_id)
     return redirect("/alerts")
 
 
 @app.get("/board")
 def board() -> Response:
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
     return Response(board_html(Board(db).for_case(case.case_id)), mimetype="text/html")
 
 
 @app.post("/board/move")
 def move_item() -> Response:
     """A person moved this. Nothing else can."""
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
     Board(db).advance(case.case_id, request.form.get("item") or "",
                       request.form.get("column") or "")
     return redirect("/board")
@@ -1349,11 +1227,7 @@ def draft_piece() -> Response:
     spends two model calls is a click that has to justify itself, and most
     people want to look at the job before anybody writes anything.
     """
-    db = _db()
-    cases = Cases(db)
-    case = _case_or_none(cases)
-    if case is None:
-        return redirect("/start")
+    db, cases, case = load_case()
 
     kind = request.form.get("kind") or ""
     identifier = request.form.get("item") or ""

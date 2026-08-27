@@ -28,8 +28,6 @@ real page when it finds one. Rejections are printed, not hidden.
 from __future__ import annotations
 import os
 
-import hashlib
-import re
 import sys
 
 sys.path.insert(0, ".")

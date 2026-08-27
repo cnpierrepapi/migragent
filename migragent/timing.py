@@ -38,8 +38,6 @@ about being an estimate throughout, and gets better the more it is used.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any
 from .clock import now_iso as _now
 
 RUN_TIMES = "run_times"

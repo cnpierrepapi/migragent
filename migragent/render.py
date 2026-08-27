@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from datetime import datetime, timezone
 
 from .fetcher import Fetched, Fetcher, USER_AGENT, stable_digest
 from .clock import now_iso as _now

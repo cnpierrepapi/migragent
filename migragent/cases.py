@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import secrets
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from typing import Any
 
 from google.cloud import firestore

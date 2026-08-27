@@ -40,7 +40,6 @@ product failing.
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
 
 from .cv import CV, Claim
 from .clock import now_iso

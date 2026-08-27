@@ -45,8 +45,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from dataclasses import asdict, dataclass
 from typing import Any
 
 from .extract import MAX_CHARS, _normalise, page_text

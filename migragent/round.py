@@ -40,7 +40,6 @@ from __future__ import annotations
 
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
 from typing import Any, Callable
 
 from .changes import Change, change_id, text_diff

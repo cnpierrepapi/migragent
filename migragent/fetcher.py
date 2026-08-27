@@ -21,7 +21,6 @@ import urllib.parse
 import urllib.request
 import urllib.robotparser
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from typing import Literal
 from .clock import now_iso as _now
 
