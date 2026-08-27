@@ -23,6 +23,7 @@ import urllib.robotparser
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Literal
+from .clock import now_iso as _now
 
 # The crawler says who it is and how to complain. Rule 10 in docs/RULES.md is
 # that robots.txt is a gate, and identifying honestly is the other half of that
@@ -195,9 +196,6 @@ def decode_body(body: bytes | None, content_type: str | None = None) -> str:
             continue
     return body.decode("utf-8", "replace")
 
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 @dataclass

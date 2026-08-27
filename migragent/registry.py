@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from typing import Any, Iterable, Literal
 
 from google.cloud import firestore
+from .clock import now_iso as _now
 
 COLLECTION = "sources"
 
@@ -86,9 +87,6 @@ JURISDICTIONS = {
     "SA": {"name": "Saudi Arabia", "languages": ["ar", "en"]},
 }
 
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def source_id(jurisdiction: str, lane: str, url: str) -> str:

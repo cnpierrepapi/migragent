@@ -35,6 +35,7 @@ from typing import Any
 
 from .detect import Detection, agreement, detect
 from .model import call_json
+from .clock import now_iso
 
 # What a document can be. The list is short on purpose: these are the documents
 # that actually appear in immigration and licensing requirements.
@@ -68,12 +69,7 @@ MIME_BY_SUFFIX = {
 MAX_BYTES = 20 * 1024 * 1024
 
 
-def _normalise(s: str) -> str:
-    s = unicodedata.normalize("NFKC", s)
-    for a, b in (("‘", "'"), ("’", "'"), ("“", '"'),
-                 ("”", '"'), ("–", "-"), ("—", "-")):
-        s = s.replace(a, b)
-    return re.sub(r"\s+", " ", s).strip().lower()
+from .fold import fold_ci as _normalise  # noqa: E402
 
 
 @dataclass
@@ -211,7 +207,7 @@ class DocumentReader:
     def read(self, filename: str, data: bytes, mime: str,
              extractable_text: str = "", text_source: str = "",
              text_note: str = "") -> ReadDocument:
-        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        now = now_iso()
         has_text = bool(extractable_text.strip())
         doc = ReadDocument(kind="other", filename=filename, read_at=now,
                            text_layer=has_text,

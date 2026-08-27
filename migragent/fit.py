@@ -44,6 +44,7 @@ from .cv import CV
 from .extract import page_text
 from .fetcher import Fetched
 from .model import call_json
+from .clock import now_iso
 
 FITS = "case_fits"
 
@@ -55,12 +56,7 @@ CAVEAT = ("This means the listing asks for things your CV states. "
 MAX_POSTING_CHARS = 20_000
 
 
-def _normalise(s: str) -> str:
-    s = unicodedata.normalize("NFKC", s)
-    for a, b in (("‘", "'"), ("’", "'"), ("“", '"'), ("”", '"'),
-                 ("–", "-"), ("—", "-"), (" ", " ")):
-        s = s.replace(a, b)
-    return re.sub(r"\s+", " ", s).strip().lower()
+from .fold import fold_ci as _normalise  # noqa: E402
 
 
 def _claim_for(evidence: str | None, by_value: dict[str, Any]) -> Any:
@@ -210,7 +206,7 @@ class FitScorer:
         self._credentials = credentials
 
     def score(self, page: Fetched, cv: CV, listing_id: str, case_id: str) -> Fit:
-        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        now = now_iso()
         fit = Fit(listing_id=listing_id, case_id=case_id,
                   posting_url=page.final_url or page.url, read_at=now)
 

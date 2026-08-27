@@ -64,6 +64,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from google.cloud import firestore
+from .clock import now_iso as _now
 
 WATCHES = "watches"
 ALERTS = "alerts"
@@ -84,9 +85,6 @@ KIND_LABELS = {
 # change underneath will go with it.
 PER_KIND = 6
 
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def alert_id(case_id: str, kind: str, key: str) -> str:

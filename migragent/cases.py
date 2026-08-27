@@ -60,8 +60,7 @@ def new_case_id() -> str:
     return secrets.token_urlsafe(24)
 
 
-def _now() -> datetime:
-    return datetime.now(timezone.utc)
+from .clock import now as _now  # noqa: E402
 
 
 @dataclass

@@ -64,6 +64,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from .model import ModelError, _json_from, call_content
+from .clock import now_iso
 
 # One shape for "found through search rather than crawled". It travels with the
 # rows and appears on the screen.
@@ -221,7 +222,7 @@ class PeopleFinder:
         self._credentials = credentials
 
     def find(self, employer: str, location: str = "", title: str = "") -> Finding:
-        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        now = now_iso()
         finding = Finding(employer=employer, read_at=now)
 
         if not employer.strip():

@@ -20,6 +20,7 @@ import html
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
+from .clock import now_iso
 
 JURISDICTION_NAMES = {
     "UK": "the United Kingdom", "US": "the United States", "CA": "Canada",
@@ -76,7 +77,7 @@ def build(jurisdiction: str, lane: str, requirements: list[dict[str, Any]],
     return Guide(
         jurisdiction=jurisdiction,
         lane=lane,
-        generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        generated_at=now_iso(),
         requirements=requirements,
         open_questions=open_questions,
         sources_read=len({r.get("source_url") for r in requirements}),

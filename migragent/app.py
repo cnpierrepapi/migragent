@@ -24,6 +24,7 @@ from flask import (Flask, Response, jsonify, make_response, redirect, request,
                    send_from_directory)
 
 from . import identity
+from .clock import now_iso as _now_iso
 from .alerts import Alerts, Watches
 from .alerts_page import alerts_html
 from .board import Board, Piece
@@ -96,10 +97,6 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 24 * 1024 * 1024
 
 
-def _now_iso() -> str:
-    from datetime import datetime, timezone
-
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def _project() -> str:

@@ -51,6 +51,7 @@ from typing import Any
 
 from .extract import MAX_CHARS, _normalise, page_text
 from .model import call_json
+from .clock import now_iso as _now
 
 COURSES = "courses"
 
@@ -100,9 +101,6 @@ def course_id(source_url: str, title: str, level: str) -> str:
     key = f"{source_url}|{_normalise(title)}|{level}"
     return hashlib.sha256(key.encode()).hexdigest()[:32]
 
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 @dataclass

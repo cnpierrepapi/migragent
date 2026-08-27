@@ -36,6 +36,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from .model import call_json
+from .clock import now_iso
 
 MAX_BYTES = 10 * 1024 * 1024
 
@@ -45,12 +46,7 @@ CV_FIELDS = "case_cv"
 CV_CLONES = "case_cv_clones"
 
 
-def _normalise(s: str) -> str:
-    s = unicodedata.normalize("NFKC", s)
-    for a, b in (("‘", "'"), ("’", "'"), ("“", '"'), ("”", '"'),
-                 ("–", "-"), ("—", "-"), (" ", " ")):
-        s = s.replace(a, b)
-    return re.sub(r"\s+", " ", s).strip().lower()
+from .fold import fold_ci as _normalise  # noqa: E402
 
 
 @dataclass
@@ -142,7 +138,7 @@ class CVReader:
 
     def read(self, filename: str, data: bytes, mime: str,
              extractable_text: str = "", text_source: str = "") -> CV:
-        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        now = now_iso()
         has_text = bool(extractable_text.strip())
         cv = CV(filename=filename, read_at=now, text_layer=has_text,
                 text_source=text_source or ("pdf" if has_text else "none"))

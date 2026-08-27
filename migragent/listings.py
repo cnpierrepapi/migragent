@@ -50,6 +50,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from .fetcher import Fetched, decode_body
+from .clock import now_iso as _now
 
 LISTINGS = "listings"
 
@@ -67,9 +68,6 @@ _TAG = re.compile(r"<[^>]+>")
 _SESSION_IN_PATH = re.compile(r";jsessionid=[^/?#]*", re.I)
 _DROP_PARAMS = {"source", "jsessionid", "utm_source", "utm_medium", "utm_campaign"}
 
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def _text(fragment: str) -> str:

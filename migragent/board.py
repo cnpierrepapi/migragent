@@ -30,6 +30,7 @@ import hashlib
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any
+from .clock import now_iso as _now
 
 BOARD = "board_items"
 
@@ -41,9 +42,6 @@ COLUMN_NAMES = {
     "sent": "Sent",
 }
 
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def item_id(case_id: str, listing_id: str) -> str:

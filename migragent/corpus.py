@@ -30,9 +30,6 @@ OPEN_QUESTIONS = "open_questions"
 READS = "reads"
 
 
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
-
 
 def requirement_id(source_url: str, quote: str, lane: str = "") -> str:
     """Stable across re-reads of the same page saying the same thing, per lane.

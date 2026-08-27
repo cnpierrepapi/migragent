@@ -33,6 +33,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from .fetcher import Fetched, Fetcher, USER_AGENT, stable_digest
+from .clock import now_iso as _now
 
 RENDER_TIMEOUT_MS = 45_000
 
@@ -40,9 +41,6 @@ RENDER_TIMEOUT_MS = 45_000
 # lane is not held up by one slow site.
 SETTLE_MS = 2_500
 
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 @dataclass

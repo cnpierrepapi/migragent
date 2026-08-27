@@ -69,19 +69,9 @@ def page_text(page: Fetched) -> str:
     return _BLANKS.sub("\n\n", text).strip()
 
 
-def _normalise(s: str) -> str:
-    """Fold a string so a quote can be compared fairly against the page.
-
-    Whitespace, quote marks and dashes vary between what a model returns and
-    what the page holds, and failing a true quote on a curly apostrophe would
-    throw away good requirements and make the check look stricter than it is.
-    Case and accents are kept: they carry meaning in French and Spanish.
-    """
-    s = unicodedata.normalize("NFKC", s)
-    for a, b in (("‘", "'"), ("’", "'"), ("“", '"'), ("”", '"'),
-                 ("–", "-"), ("—", "-"), (" ", " ")):
-        s = s.replace(a, b)
-    return re.sub(r"\s+", " ", s).strip()
+# Keeps case and accents. Re-exported as _normalise because verify.py,
+# lanes.py and researcher.py import it from here.
+from .fold import fold as _normalise  # noqa: E402
 
 
 @dataclass

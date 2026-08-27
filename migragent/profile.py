@@ -41,6 +41,7 @@ import re
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Any
+from .clock import now_iso as _now
 
 PROFILES = "case_profiles"
 
@@ -61,9 +62,6 @@ _DATA_URI = re.compile(r"^data:(image/[a-z]+);base64,([A-Za-z0-9+/=\s]+)$")
 # it is a length limit so a row cannot carry a paragraph.
 MAX_NAME = 80
 
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 class AvatarRejected(Exception):

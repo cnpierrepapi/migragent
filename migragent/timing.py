@@ -40,6 +40,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
+from .clock import now_iso as _now
 
 RUN_TIMES = "run_times"
 
@@ -74,9 +75,6 @@ CEILING_SECONDS = 900.0
 # in model latency shows up within a day rather than being averaged away.
 SAMPLE = 40
 
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def _bucket(documents: int) -> str:

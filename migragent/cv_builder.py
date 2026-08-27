@@ -43,6 +43,7 @@ import re
 from datetime import datetime, timezone
 
 from .cv import CV, Claim
+from .clock import now_iso
 
 # What the form asks for, in the order it asks. Each entry is the claim kind it
 # produces, the label, and whether more than one may be given.
@@ -94,7 +95,7 @@ def build(answers: dict[str, str], name: str = "") -> CV:
     Anything not in FIELDS is ignored rather than stored, so a posted form
     carrying an extra key cannot invent a claim kind.
     """
-    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    now = now_iso()
     claims: list[Claim] = []
 
     for kind, _label, _hint, _many in FIELDS:

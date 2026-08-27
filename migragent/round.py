@@ -48,6 +48,7 @@ from .extract import Extraction, page_text
 from .meaning import assess
 from .verify import proven, review, why_not
 from .fetcher import Fetched
+from .clock import now_iso as _now
 
 Mode = str  # "extract" or "watch"
 
@@ -72,9 +73,6 @@ OFFERED = ["UK", "CA", "FR", "ES", "AE"]
 # client and a hundred and seventeen to a browser.
 THIN_PAGE_BYTES = 4000
 
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 @dataclass

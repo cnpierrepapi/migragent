@@ -24,6 +24,7 @@ from datetime import datetime, timezone
 from google.cloud import storage
 
 from .fetcher import Fetched
+from .clock import now_iso
 
 BUCKET = "migragent-snapshots"
 
@@ -76,7 +77,7 @@ class SnapshotStore:
             "status": str(result.status),
             "stable_sha256": result.sha256 or "",
             "raw_sha256": result.raw_sha256 or "",
-            "stored_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "stored_at": now_iso(),
         }
         blob.upload_from_string(
             result.body,
