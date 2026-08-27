@@ -53,6 +53,7 @@ from .gaps import with_gaps
 from .subscribe_page import subscribe_html
 from .corpus import Corpus
 from .coverage import Matcher, document_worth
+from .agents.coverage import AgentMatcher, enabled as agent_coverage_enabled
 from .detect import agreement, detect
 from .documents import KINDS, MIME_BY_SUFFIX, DocumentReader, extract_text
 from .ocr import OCR, can_read as ocr_can_read
@@ -718,7 +719,9 @@ def run_stream() -> Response:
         cases=cases,
         corpus=Corpus(db),
         registry=Registry(db),
-        matcher=Matcher(_project(), MODEL, MODEL_LOCATION, creds),
+        matcher=(AgentMatcher(_project(), MODEL, MODEL_LOCATION, creds)
+                 if agent_coverage_enabled()
+                 else Matcher(_project(), MODEL, MODEL_LOCATION, creds)),
         finder=RouteFinder(_project(), MODEL, MODEL_LOCATION, creds),
         builder=FormBuilder(_project(), MODEL, MODEL_LOCATION, creds),
         detect_fn=detect,
