@@ -37,6 +37,7 @@ from migragent.occupations import ShortageReader, Shortages  # noqa: E402
 from migragent.registry import Registry  # noqa: E402
 from migragent.researcher import Researcher  # noqa: E402
 from migragent.agents.lane import LaneClassifier, enabled as lane_check_enabled  # noqa: E402
+from migragent.agents.extractor import AgentExtractor, enabled as agent_extract_enabled  # noqa: E402
 from migragent.meaning import Embedder  # noqa: E402
 from migragent.verify import SecondReader, enabled as second_read_enabled  # noqa: E402
 from migragent.render import BrowserFetcher  # noqa: E402
@@ -71,6 +72,9 @@ def main() -> int:
     # about, so a work page linked from a study index does not get extracted
     # into the study guide. D29 and D32. Off unless asked for.
     with_lane_check = "--lane-check" in sys.argv or lane_check_enabled()
+    # The Extractor as an agent reads one page and retries what the quote check
+    # refuses, instead of dropping it in silence. Same page, same quote check.
+    with_agent_extract = "--agent-extract" in sys.argv or agent_extract_enabled()
     max_depth = None if "--all" in sys.argv else 1
     if "--depth" in sys.argv:
         # `--depth 0` reads only the pages we deliberately seeded.
@@ -101,7 +105,9 @@ def main() -> int:
             corpus=Corpus(writer_db),
             snapshots=SnapshotStore(storage.Client(project=PROJECT, credentials=reader)),
             fetcher=fetcher,
-            extractor=Extractor(PROJECT, MODEL, MODEL_LOCATION, reader),
+            extractor=(AgentExtractor(PROJECT, MODEL, MODEL_LOCATION, reader)
+                       if with_agent_extract
+                       else Extractor(PROJECT, MODEL, MODEL_LOCATION, reader)),
             explainer=Explainer(PROJECT, MODEL, MODEL_LOCATION, reader),
             changes_writer=ChangeWriter(writer_db),
             shortage_reader=ShortageReader(PROJECT, MODEL, MODEL_LOCATION, reader),
