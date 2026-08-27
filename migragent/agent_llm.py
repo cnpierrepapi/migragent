@@ -31,8 +31,20 @@ Getting that split wrong does not raise, it just silently ignores the tools, so
 the split is written out by name below rather than guessed at.
 
 The names below were checked field by field against `GenerateContentConfig` on
-google-genai 2.x, not remembered. It carries 35 fields: 6 top level, 3 that mean
-something only to the client library, and 26 that are sampling settings.
+google-genai 2.18.1, by pushing a config with every settable field through the
+library's own `_GenerateContentParameters_to_vertex` and reading off where each
+one landed. It carries 35 fields: 8 top level, 3 that mean something only to the
+client library, and 22 that are sampling settings.
+
+An earlier version of this file said 6, 3 and 26, because the list was built by
+hand from watching things fail. It missed `modelArmorConfig` and `serviceTier`,
+both of which were being buried in `generationConfig` and ignored. Neither is set
+anywhere in this product, so nothing was actually broken, which is precisely why
+it went unnoticed for as long as it did. See google/adk-python#6880.
+
+The real fix is to stop keeping a list at all and call the library's converter,
+which is what the helper proposed on that issue does. Worth doing here once it
+lands, or sooner if this list is wrong again.
 """
 from __future__ import annotations
 
@@ -48,7 +60,7 @@ from . import model as model_module
 # Fields Vertex expects at the top level of a generateContent request. Anything
 # else in the config is a sampling setting and goes inside generationConfig.
 TOP_LEVEL = {"tools", "toolConfig", "systemInstruction", "safetySettings",
-             "cachedContent", "labels"}
+             "cachedContent", "labels", "modelArmorConfig", "serviceTier"}
 
 # Client side settings that mean something to the genai library and nothing to
 # the REST endpoint. Sent anyway, they are rejected as unknown fields.

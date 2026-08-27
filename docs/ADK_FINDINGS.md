@@ -5,10 +5,14 @@ these should go back to `google/adk-python` rather than sit in our code comments
 
 Version: `google-adk` 2.7.1, August 2026. Every one of these cost real time here.
 
-Field names in 1 and 2 were checked against `GenerateContentConfig` on google-genai 2.x field by
-field, not remembered. The type carries 35 fields and they go to three different places: 6 at the
-top level of a Vertex request, 3 that mean something only to the client library, and 26 sampling
+Field names in 1 and 2 were checked against `GenerateContentConfig` on google-genai 2.18.1 by
+pushing a config with every settable field through the library's own converter and reading off
+where each one landed. The type carries 35 fields and they go to three different places: 8 at the
+top level of a Vertex request, 3 that mean something only to the client library, and 22 sampling
 settings that belong inside `generationConfig`.
+
+Corrected 26 Aug 2026. This doc previously said 6, 3 and 26. The hand-built list missed
+`modelArmorConfig` and `serviceTier`. See the note at the end of section 1.
 
 ## 1. A wrong config split silently drops your tools
 
@@ -31,10 +35,23 @@ The fix on our side is a named list rather than a guess:
 
 ```python
 TOP_LEVEL = {"tools", "toolConfig", "systemInstruction", "safetySettings",
-             "cachedContent", "labels"}
+             "cachedContent", "labels", "modelArmorConfig", "serviceTier"}
 ```
 
-Those six are the complete top level set on google-genai 2.x.
+Those eight are the complete top level set on google-genai 2.18.1.
+
+### The list was wrong, which is the actual lesson
+
+It said six for a while. `modelArmorConfig` and `serviceTier` are top level too and both were
+being buried in `generationConfig` and silently ignored. Nothing broke here because neither is set
+anywhere in this product, and that is the point: a wrong entry in this list does not announce
+itself, it just quietly turns a feature off.
+
+So the list is the bug, not the contents of the list. `GenerateContentConfig` gains fields, and
+every hand-maintained copy of this mapping starts dropping them the day it does. The fix is to call
+the library's own converter instead of keeping a copy, which is what
+[the helper proposed on google/adk-python#6880](https://github.com/google/adk-python/issues/6880)
+does. `agent_llm.py` should move to it once that lands.
 
 What would help upstream: either a documented mapping from `LlmRequest.config` to the REST shape,
 or a helper that does the split. Right now every custom `BaseLlm` has to rediscover it, and the
