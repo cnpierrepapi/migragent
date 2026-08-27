@@ -12,6 +12,7 @@ copied from an earlier fetch would be a small lie of exactly the kind this
 product exists to avoid.
 """
 from __future__ import annotations
+import os
 
 import sys
 
@@ -28,7 +29,7 @@ from migragent.registry import Registry  # noqa: E402
 from migragent.render import BrowserFetcher  # noqa: E402
 from migragent.snapshots import SnapshotStore  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 MODEL = "gemini-3.5-flash"
 MODEL_LOCATION = "global"
 

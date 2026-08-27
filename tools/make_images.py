@@ -10,6 +10,7 @@ returned 200 at both us-central1 and global. See docs/DEFECTS.md D3.
     python tools/make_images.py
 """
 from __future__ import annotations
+import os
 
 import base64
 import json
@@ -19,7 +20,7 @@ import sys
 import urllib.request
 from pathlib import Path
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 LOCATION = "global"
 MODEL = "gemini-2.5-flash-image"
 OUT = Path("web/brand/images")

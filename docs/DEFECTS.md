@@ -1047,7 +1047,7 @@ reading an unrelated page, not by anything failing.
 
 ---
 
-## D31 — The same page filed under two names, because three files each had their own rule
+## D31: The same page filed under two names, because three files each had their own rule
 
 **Found:** 19 August 2026, while wiring the agent, by asking which id it should give a page it
 discovers.
@@ -1081,7 +1081,7 @@ comment saying so.
 
 ---
 
-## D32 — The study guide told people to get a job offer
+## D32: The study guide told people to get a job offer
 
 **Found:** 19 August 2026, by looking at the duplicate rows from D31 and asking what was in the
 corpus underneath them.
@@ -1121,7 +1121,7 @@ it reaches, which is Build 4 and is why the agent is worth having.
 
 ---
 
-## D33 — The laptop stopped matching the image, and only the deploy knew
+## D33: The laptop stopped matching the image, and only the deploy knew
 
 **Found:** 19 August 2026, by the deploy failing on the commit that added the agent.
 
@@ -1149,7 +1149,7 @@ to a laptop, and the pin file is edited in the same breath or the two drift sile
 
 ---
 
-## D34 — A welder was shown two jobs out of two thousand
+## D34: A welder was shown two jobs out of two thousand
 
 **Found:** 20 August 2026, by the end to end test printing what it matched instead of only
 asserting that it matched something.
@@ -1179,7 +1179,7 @@ an assertion on a count is not an assertion on an answer.
 
 ---
 
-## D35 — "The response was not JSON" meant the answer was cut off
+## D35: "The response was not JSON" meant the answer was cut off
 
 **Found:** 20 August 2026, scoring a CV against a job posting.
 
@@ -1239,7 +1239,7 @@ five, and the two that worked were the short adverts.
 
 ---
 
-## D36 — Spain was retired from the pipeline by one morning's answer
+## D36: Spain was retired from the pipeline by one morning's answer
 
 **Found:** 20 August 2026, by reading the daily round's own row rather than trusting that a green job
 means a working job.
@@ -1292,7 +1292,7 @@ verification off.
 
 ---
 
-## D37 — The work guide lost its own front page, and my fix for D32 did it
+## D37: The work guide lost its own front page, and my fix for D32 did it
 
 **Found:** 21 August 2026, while comparing the agent against the walk. The comparison was measuring
 something else entirely and reported that `gov.uk/skilled-worker-visa` held nothing.
@@ -1354,7 +1354,7 @@ and the cost of checking was one more query.
 
 ---
 
-## D38 — A new mode fired at an old image started the most expensive thing here
+## D38: A new mode fired at an old image started the most expensive thing here
 
 **What happened.** The digest was written, tested against the real store, committed, and the deploy
 went green. The scheduler fired it, and instead of exiting in a second with "no active watches", the
@@ -1395,7 +1395,7 @@ is running this code" are two different claims.
 
 ---
 
-## D39 — "It cannot read a case" was a habit described as a wall
+## D39: "It cannot read a case" was a habit described as a wall
 
 **What happened.** Writing `docs/ARCHITECTURE.md` meant reading the IAM policy rather than the
 docstrings, and the researcher holds `roles/datastore.viewer`. The README and the identity module
@@ -1422,7 +1422,7 @@ case read in the product.
 sentences it was never shown are exactly where a false claim lives. Before a document describes a
 boundary, read the policy.
 
-## D40 — The second reader was shown less of the page than the reader it was checking
+## D40: The second reader was shown less of the page than the reader it was checking
 
 **Found:** 24 August 2026, on the first widening of the second read past English. Found by reading
 the model's own reason rather than its verdict, which is the only reason it was found at all.

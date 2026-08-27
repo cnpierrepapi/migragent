@@ -7,6 +7,7 @@ the live one is touched. The second half is the half that matters.
     python tools/test_retention.py
 """
 from __future__ import annotations
+import os
 
 import sys
 from datetime import datetime, timedelta, timezone
@@ -19,7 +20,7 @@ from migragent import identity  # noqa: E402
 from migragent.cases import CASES, Cases  # noqa: E402
 from migragent.documents import Field, ReadDocument  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 
 
 def main() -> int:

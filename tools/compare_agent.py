@@ -33,6 +33,7 @@ A quote is the identity of a requirement here: same sentence from the same
 government page, whoever found it.
 """
 from __future__ import annotations
+import os
 
 import re
 import sys
@@ -46,7 +47,7 @@ from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.registry import JURISDICTIONS, Registry  # noqa: E402
 from migragent.researcher import Researcher  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 MODEL = "gemini-3.5-flash"
 MODEL_LOCATION = "global"
 

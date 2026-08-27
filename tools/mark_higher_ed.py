@@ -31,6 +31,7 @@ rests on it. A school wrongly left unmarked is a school we read later, which
 costs us time and costs nobody anything else.
 """
 from __future__ import annotations
+import os
 
 import sys
 import time
@@ -43,7 +44,7 @@ from migragent import identity  # noqa: E402
 from migragent.institutions import Institutions  # noqa: E402
 from tools.find_school_sites import COUNTRIES, PAUSE, _key, query  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 
 
 def main() -> int:

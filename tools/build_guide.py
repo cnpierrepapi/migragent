@@ -8,6 +8,7 @@ than rendered a second time by a different library. One document, one renderer,
 so the saved file and the page cannot drift apart.
 """
 from __future__ import annotations
+import os
 
 import sys
 from pathlib import Path
@@ -21,7 +22,7 @@ from migragent.corpus import Corpus  # noqa: E402
 from migragent.guide import build, to_html  # noqa: E402
 from migragent.registry import Registry  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 
 
 def main() -> int:

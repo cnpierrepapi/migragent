@@ -13,6 +13,7 @@ inflate the number of claims.
     python tools/expand_registry.py
 """
 from __future__ import annotations
+import os
 
 import sys
 from collections import defaultdict
@@ -27,7 +28,7 @@ from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.render import BrowserFetcher  # noqa: E402
 from migragent.registry import JURISDICTIONS, Registry, Source, source_id  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 MAX_DEPTH = 2
 
 # The first run used 45 and six of the eight lanes came back with exactly 44,

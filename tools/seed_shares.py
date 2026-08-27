@@ -16,6 +16,7 @@ A page is skipped rather than guessed at whenever it does not prove it is about
 the institution we asked for, and the run prints every skip with its reason.
 """
 from __future__ import annotations
+import os
 
 import sys
 
@@ -28,7 +29,7 @@ from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.institutions import Institutions, institution_id  # noqa: E402
 from migragent.shares import BASE, read_share, slug_for  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 
 
 def main() -> int:

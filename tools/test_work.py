@@ -19,6 +19,7 @@ WHAT IS BEING CHECKED, BEYOND "it ran"
   - the board item starts in the first column and nothing else moved it
 """
 from __future__ import annotations
+import os
 
 import sys
 
@@ -38,7 +39,7 @@ from migragent.fit import FitScorer, Fits  # noqa: E402
 from migragent.listings import Listings, matched_for, occupations_matching  # noqa: E402
 from migragent.occupations import Shortages  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 MODEL = "gemini-3.5-flash"
 MODEL_LOCATION = "global"
 

@@ -46,6 +46,7 @@ which is a legitimate way to obtain open data published under the OGL, and the
 row records where it came from so it is still cited like everything else.
 """
 from __future__ import annotations
+import os
 
 import csv
 import io
@@ -63,7 +64,7 @@ from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.institutions import Institutions  # noqa: E402
 from tools.find_school_sites import _key  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 
 IRCC_URL = ("https://www.ircc.canada.ca/opendata-donneesouvertes/data/"
             "ODP-TR-Study-DLI_name_PT_Admin_type.csv")

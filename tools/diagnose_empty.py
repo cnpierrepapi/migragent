@@ -7,6 +7,7 @@ fix is aimed at the actual failure rather than at the first one somebody thought
 of. 135 schools produced nothing and they did not all fail the same way.
 """
 from __future__ import annotations
+import os
 
 import collections
 import sys
@@ -22,7 +23,7 @@ from migragent.institutions import Institutions  # noqa: E402
 from migragent.render import BrowserFetcher  # noqa: E402
 from migragent.schools import course_links  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 
 
 def main() -> int:

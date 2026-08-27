@@ -61,7 +61,7 @@ decision, a run that could not survive long enough. The fix is not a better scri
 
 ---
 
-## Build 1 — The guide, end to end
+## Build 1: The guide, end to end
 
 **Ends with:** answer two questions on the live URL, get a PDF with real requirements and real
 citations. **Done.**
@@ -89,7 +89,7 @@ citations. **Done.**
 
 ---
 
-## Build 2 — Documents, the score, and the fillable form
+## Build 2: Documents, the score, and the fillable form
 
 **Ends with:** uploading a transcript changes the guide, moves a real number, and returns a form
 built for your case. **Done, apart from the CV work now moved to Build 4.**
@@ -116,7 +116,7 @@ built for your case. **Done, apart from the CV work now moved to Build 4.**
 
 ---
 
-## Build 3 — Ingestion that runs itself
+## Build 3: Ingestion that runs itself
 
 **Ends with:** every offered lane is deep, a daily round re-reads the sources without anybody
 starting it, and a real change is caught, dated and explained.
@@ -216,7 +216,7 @@ Ingestion only. What a user sees built on top of this is Build 5.
 
 ---
 
-## Build 4 — The researcher on ADK
+## Build 4: The researcher on ADK
 
 **Ends with:** the daily round is run by an agent that chooses what to read, and the mandatory
 framework is satisfied by something that does real work rather than by a wrapper.
@@ -231,7 +231,8 @@ framework is satisfied by something that does real work rather than by a wrapper
 - **The one thing that must not break:** ADK brings its own model client, which would route around the
   single caller in `migragent/model.py` and lose the retry and the status codes that D20 exists to
   preserve. Model calls stay behind that caller, and this is checked rather than assumed.
-- Same agent, same tools, later reused by the people finder in Build 5.
+- Same agent pattern, later reused for the scout, the extractor and the coverage matcher. The
+  people finder was going to reuse it too and does not: Decision 9 and Decision 12.
 
 **Where it is.** The agent, its tools and the model adapter are built:
 `migragent/researcher.py` holds the desk the agent works at and the five tools it may use,
@@ -259,7 +260,7 @@ reason the two lanes disagree.
 
 ---
 
-## Build 5 — The person, the board, and the work after arrival
+## Build 5: The person, the board, and the work after arrival
 
 **Where it is, measured on 20 August 2026.** The work half is built and running end to end: 2,042
 Canadian listings from Job Bank, filed under the 91 occupations Canada published as short; a CV
@@ -353,7 +354,7 @@ anybody is watching them.
 
 ---
 
-## Build 7 — the second reader, and the agents that earn the name
+## Build 7: the second reader, and the agents that earn the name
 
 **Written 24 August, after Build 6 was already planned. It runs before Build 6, because the
 submission films whatever exists on the day.**
@@ -453,7 +454,7 @@ repaid here.
 Nothing here is allowed to make the live product worse. Each step ships behind a flag, off by
 default, and turns on only after the round has run clean twice.
 
-## Build 6 — The submission
+## Build 6: The submission
 
 **Ends with:** somebody who has never seen this can understand it, run it, and watch it work.
 
@@ -468,14 +469,14 @@ default, and turns on only after the round has run clean twice.
 
 ## The three mandatory requirements
 
-Checked against the code on 24 August 2026, not remembered.
+Checked against the code on 27 August 2026, not remembered.
 
 | Required | Where |
 | --- | --- |
-| Gemini 3.5 or newer | requirement extraction, document reading, CV reading, diff explanation, fit scoring, CV and cover letter drafts, the people finder |
-| A Google agent framework | ADK, on the researcher: `migragent/researcher.py` and `migragent/agent_llm.py`. **Nowhere else.** The people finder was going to be the second one and is not: it is two plain Gemini calls, one of them with Google Search grounding, because grounding and a tool-calling agent solve different halves of that problem and the agent added nothing. |
-| A second model, independent of Gemini | **Cloud Vision**, on the OCR check in `migragent/ocr.py`. Shipping since Build 2 and missing from this table until 24 Aug, which made the table wrong about what this runs on. It is here because a model checking its own transcription proves nothing, and a different engine reading the pixels does. |
-| Google Cloud infrastructure | Cloud Run, Cloud Run jobs, Firestore, Cloud Scheduler, Cloud Storage, Vertex AI, Artifact Registry, Cloud Build, Identity Platform. **Not Pub/Sub**, which was in this table for weeks after Decision 4 removed it. |
+| Gemini 3.5 or newer | requirement extraction, document reading, CV reading, diff explanation, fit scoring, CV and cover letter drafts, the lane check, the people finder |
+| A Google agent framework | ADK, on four agents: the researcher (`migragent/researcher.py`), the scout, the extractor and the coverage matcher (`migragent/agents/`). Each one is a place where the model decides across several steps what to do next. Everything else that touches the model is a single call with a code check on the answer, so it is a call and not an agent, and the people finder is the one that was going to be an agent and is not. `migragent/agent_llm.py` is the `BaseLlm` that routes all of it back through `model.py`. Decision 12 has the split. |
+| A second model, independent of Gemini | Cloud Vision, on the OCR check in `migragent/ocr.py`. Shipping since Build 2. It is here because a model checking its own transcription proves nothing, and a different engine reading the pixels does. |
+| Google Cloud infrastructure | Cloud Run, Cloud Run jobs, Firestore, Cloud Scheduler, Cloud Storage, Vertex AI, Artifact Registry, Cloud Build, Identity Platform. Not Pub/Sub, which was in this table for weeks after Decision 4 removed it. |
 
 Every service above earns its place, and the restraint gets said out loud, because what we
 deliberately did not use is more interesting to a judge than a longer list. That still holds after

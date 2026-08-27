@@ -21,6 +21,7 @@ makes it a real result.
     python tools/test_isolation.py
 """
 from __future__ import annotations
+import os
 
 import sys
 from datetime import datetime, timezone
@@ -32,7 +33,7 @@ from google.cloud import firestore, storage
 sys.path.insert(0, ".")
 from migragent import identity  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 PROBE = "_isolation_probe"
 BUCKET = "migragent-snapshots"
 

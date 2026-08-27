@@ -22,6 +22,7 @@ listing without fetching anything or asking anybody.
 Run this after any registry rebuild.
 """
 from __future__ import annotations
+import os
 
 import sys
 from collections import defaultdict
@@ -34,7 +35,7 @@ from migragent import identity  # noqa: E402
 from migragent.registry import Registry  # noqa: E402
 from migragent.snapshots import BUCKET  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 
 
 def main() -> int:

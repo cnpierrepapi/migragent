@@ -21,6 +21,7 @@ mean guessing which retirements were the collision's fault and which were real,
 and that is a guess about what a government page says.
 """
 from __future__ import annotations
+import os
 
 import sys
 
@@ -31,7 +32,7 @@ from google.cloud import firestore  # noqa: E402
 from migragent import identity  # noqa: E402
 from migragent.corpus import REQUIREMENTS, requirement_id  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 
 
 def main() -> int:

@@ -14,6 +14,7 @@ it chose rather than by the count of requirements.
 which is what the walker would have done, so the two can be read side by side.
 """
 from __future__ import annotations
+import os
 
 import sys
 
@@ -27,7 +28,7 @@ from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.registry import JURISDICTIONS, Registry  # noqa: E402
 from migragent.researcher import Researcher  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 MODEL = "gemini-3.5-flash"
 MODEL_LOCATION = "global"
 

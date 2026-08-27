@@ -7,6 +7,7 @@ The claim in docs/DATA_PROTECTION.md is allowed to stand only while this passes.
     python tools/test_delete.py
 """
 from __future__ import annotations
+import os
 
 import sys
 
@@ -27,7 +28,7 @@ from migragent.cv import CV, Claim, CVStore  # noqa: E402
 from migragent.fit import Fit, Fits, Match  # noqa: E402
 from migragent.documents import Field, ReadDocument  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 
 # A real one-pixel PNG. It has to survive migragent.profile's signature check,
 # so a string of the right length would not do.

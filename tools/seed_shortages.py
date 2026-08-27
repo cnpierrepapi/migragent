@@ -13,6 +13,7 @@ round as everything else, which matters more here than anywhere: Spain republish
 its catalogue every quarter and the UK revises its salary list with the rules.
 """
 from __future__ import annotations
+import os
 
 import hashlib
 import re
@@ -27,7 +28,7 @@ from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.occupations import ShortageReader, Shortages  # noqa: E402
 from migragent.registry import Registry, Source  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 MODEL = "gemini-3.5-flash"
 MODEL_LOCATION = "global"
 

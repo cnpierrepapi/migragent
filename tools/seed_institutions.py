@@ -18,6 +18,7 @@ written down here. A register whose address is copied into code is a register
 that silently goes stale.
 """
 from __future__ import annotations
+import os
 
 import re
 import sys
@@ -31,7 +32,7 @@ from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.institutions import Institutions, from_csv, from_html_table  # noqa: E402
 from migragent.snapshots import SnapshotStore  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 
 UK_PUBLICATION = "https://www.gov.uk/government/publications/register-of-licensed-sponsors-students"
 CA_REGISTER = ("https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/"

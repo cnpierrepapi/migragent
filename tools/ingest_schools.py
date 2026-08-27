@@ -40,6 +40,7 @@ serve robots.txt is not crawled, one that disallows us is not crawled, and the
 outcome is recorded on the row so a later run does not try again for nothing.
 """
 from __future__ import annotations
+import os
 
 import sys
 import time
@@ -57,7 +58,7 @@ from migragent.schools import (Course, CourseReader, Courses, anchor_map,  # noq
                                contact_links, course_links, fee_links,
                                match_course_url)
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 MODEL = "gemini-3.5-flash"
 LOCATION = "global"
 

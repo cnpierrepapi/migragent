@@ -22,6 +22,7 @@ real rows into the real collections under a probe id, reads them back through
 the real Watcher, and deletes them at the end whether it passed or failed.
 """
 from __future__ import annotations
+import os
 
 import sys
 
@@ -40,7 +41,7 @@ from migragent.listings import Listings  # noqa: E402
 from migragent.occupations import Shortages  # noqa: E402
 from migragent.round import CHANGES, ChangeWriter  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 PROBE = "probe-alerts"
 
 

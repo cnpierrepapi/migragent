@@ -16,6 +16,7 @@ A posting is an opportunity, never a source for a requirement. Every row stores
 stay two separate fields so an advert cannot inherit a government's authority.
 """
 from __future__ import annotations
+import os
 
 import sys
 
@@ -28,7 +29,7 @@ from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.listings import JobBank, Listings  # noqa: E402
 from migragent.occupations import Shortages  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 
 BOARDS = {"CA": JobBank}
 

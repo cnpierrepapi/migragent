@@ -26,6 +26,7 @@ keeps the ones that state a requirement, and follows a shell's own links to the
 real page when it finds one. Rejections are printed, not hidden.
 """
 from __future__ import annotations
+import os
 
 import hashlib
 import re
@@ -39,7 +40,7 @@ from migragent import identity  # noqa: E402
 from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.registry import JURISDICTIONS, Registry, Source, source_id  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 MODEL = "gemini-3.5-flash"
 MODEL_LOCATION = "global"
 

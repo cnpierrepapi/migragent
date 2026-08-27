@@ -47,6 +47,7 @@ matched keeps no score rather than an average one: an average would quietly rank
 it mid-table, which is a claim, where absent is not.
 """
 from __future__ import annotations
+import os
 
 import csv
 import io
@@ -63,7 +64,7 @@ from migragent.fetcher import Fetcher  # noqa: E402
 from migragent.institutions import Institutions  # noqa: E402
 from tools.find_school_sites import _key  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 
 TS004 = "https://download.ons.gov.uk/downloads/datasets/TS004/editions/2021/versions/3.csv"
 TS004_PAGE = "https://www.ons.gov.uk/datasets/TS004/editions/2021/versions/3"

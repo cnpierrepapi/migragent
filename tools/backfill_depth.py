@@ -8,6 +8,7 @@ somebody else's bandwidth for nothing.
     python tools/backfill_depth.py
 """
 from __future__ import annotations
+import os
 
 import sys
 
@@ -18,7 +19,7 @@ from google.cloud import firestore  # noqa: E402
 from migragent import identity  # noqa: E402
 from migragent.registry import Registry  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 
 
 def main() -> int:

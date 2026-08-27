@@ -45,6 +45,7 @@ ingestion rather than guessed at.
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import time
@@ -61,7 +62,7 @@ from google.cloud import firestore  # noqa: E402
 from migragent import identity  # noqa: E402
 from migragent.institutions import Institutions  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 ENDPOINT = "https://query.wikidata.org/sparql"
 
 CACHE = Path("out/wikidata_schools.json")

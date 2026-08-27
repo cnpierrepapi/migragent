@@ -39,6 +39,7 @@ that is the agent in Build 4 choosing pages for a stated question rather than a
 walk labelling whatever it reaches.
 """
 from __future__ import annotations
+import os
 
 import sys
 
@@ -53,7 +54,7 @@ from migragent.corpus import Corpus  # noqa: E402
 from migragent.registry import Registry  # noqa: E402
 from tools.seed_registry import CANDIDATES  # noqa: E402
 
-PROJECT = "project-e0928f2f-5abf-46a3-b8a"
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a")
 
 
 def main() -> int:
