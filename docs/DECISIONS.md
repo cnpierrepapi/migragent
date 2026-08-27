@@ -386,51 +386,60 @@ from being extracted into a study guide with a real quote, a real link and a rea
 anti-invention machinery cannot see it, because nothing is invented: a true sentence is filed under
 the wrong question.
 
-**The Lane Classifier reads the page and says which of study and work it is about**, one, both or
-neither, before the round extracts it. It is a `migragent/agents` agent because "which question is
-this page answering" is judgment, not a rule, and the same discipline the rest of the layer keeps
-applies here: every route it names carries a sentence checked against the page, and it is not told
-which lane the walk assigned, so it reads rather than confirms.
+**The lane check reads the page and says which of study and work it is about**, one, both or
+neither, before the round extracts it. Every route it names carries a sentence checked against the
+page in code, and it is not told which lane the walk assigned, so it reads rather than confirms.
+
+**It was an ADK agent for a day, and that was wrong.** A full agent session per page made a watch
+round over 143 pages run for hours (measured, not guessed). Deciding which question a page answers
+is one judgment, not multi-step work: the agent never navigated and its only "revision" was
+retrying a refused quote, which a single call handles by returning a valid one. So it is now one
+`call_json` in `migragent/lanes.py`. Same judgment, same quote check in code, no session. This is
+the concrete case behind Decision 12.
 
 **It runs on depth 1 and deeper government pages only.** Entry pages at depth 0 are hand seeded and
 their lane is a decision somebody made. Depth 0 is also where the researcher agent starts, and that
 branch owns it.
 
-**It fails safe, the same way the second reader does.** No classifier, or a classifier that could
-not answer on a page, and the page is extracted into its assigned lane as before. A second opinion
-being unavailable is not evidence that the walk was wrong. The cost of that choice is that a genuine
-off-lane page slips through on a day the classifier is down, which is the same page that slipped
-through every day before this existed, so the floor does not move.
+**It fails safe, the same way the second reader does.** No check, or a check that could not answer
+on a page, and the page is extracted into its assigned lane as before. The check being unavailable
+is not evidence that the walk was wrong. The cost is that a genuine off-lane page slips through on
+a day the model is down, which is the same page that slipped through every day before this existed,
+so the floor does not move.
 
-**Off by default**, behind `MIGRAGENT_AGENT_LANE`, and rolled out lane by lane: run it, read the
-pages it calls off-lane rather than the count, confirm they are, then widen.
+**Off by default**, behind `MIGRAGENT_LANE_CHECK` (or `--lane-check`), and rolled out lane by lane:
+run it, read the pages it calls off-lane rather than the count, confirm they are, then widen.
 
 ---
 
-## 12. Five agents, not sixteen, and the eleven are the point
+## 12. Four agents, not sixteen, and the twelve are the point
 
-**Decided:** 27 August 2026, after building the first five of a planned sixteen.
+**Decided:** 27 August 2026, after building them.
 
-The plan in an earlier draft of `docs/AGENTS.md` listed sixteen agents. Building the first few made
-the test sharper than "a decision or a loop already exists". An agent earns the name only when the
-model decides **across multiple steps** what to do next: open another page, pick a tool, or revise
-its output because a check refused it. By that test:
+An earlier draft of `docs/AGENTS.md` listed sixteen agents. Building them made the test sharper
+than "a decision or a loop already exists". An agent earns the name only when the model decides
+**across multiple steps** what to do next: open another page, pick a tool, or revise its output
+because a check refused it. By that test:
 
-- **Five have it.** Researcher and Scout navigate. Extractor and Coverage Matcher revise over a
+- **Four have it.** Researcher and Scout navigate. Extractor and Coverage Matcher revise over a
   refusal, and both revise something worth recovering: a mis-copied quote, a wording-miss on the
-  readiness score. Lane Classifier marks, retries and can decide "neither", and it closes a shipped
-  defect.
-- **Eleven do not.** Verifier, Change Interpreter, Translator, Attribution Verifier, the three
-  document readers, Route Finder, Fit Scorer, Digest Router. Each is one model call, then code
-  validates the response. There is no step where the model chooses what to do next. `verify.py` and
-  `changes.py` and `coverage.py` already run them, and well.
+  readiness score.
+- **Twelve do not.** The lane check, Verifier, Change Interpreter, Translator, Attribution
+  Verifier, the three document readers, Route Finder, Fit Scorer, Digest Router. Each is one model
+  call, then code validates the response. There is no step where the model chooses what to do next.
+  `verify.py`, `changes.py`, `coverage.py` and `lanes.py` already run them, and well.
 
-Wrapping the eleven in `LlmAgent` would raise the node count and the demo's headline number. It
+The lane check is the one that had to be walked back. It shipped as an `LlmAgent` on 27 August and
+came out the same day: a full agent session per page made a watch round take hours, and it never
+actually navigated or revised. It is now `migragent/lanes.py`, one call, same judgment. Decision 11
+has the detail.
+
+Wrapping the twelve in `LlmAgent` would raise the node count and the demo's headline number. It
 would also be the exact move this document was started to refuse, the same as not standing up a
 Pub/Sub topic with one publisher (Decision 4) and not making the people finder an agent
 (Decision 9). A judge who reads this file is the reader the restraint is for.
 
-So the submission says five `LlmAgent`s, two `SequentialAgent`s, four non-LLM gate nodes, and a
+So the submission says four `LlmAgent`s, two `SequentialAgent`s, four non-LLM gate nodes, and a
 list of the calls that are deliberately not agents. If that reads as a smaller build than a
 sixteen-agent diagram, it is a more honest one, and the honesty is the thing being judged on the
 architecture axis.

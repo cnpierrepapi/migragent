@@ -23,7 +23,7 @@ from migragent.extract import Extraction  # noqa: E402
 from migragent.fetcher import Fetched  # noqa: E402
 from migragent.registry import Source  # noqa: E402
 from migragent.round import Round  # noqa: E402
-from migragent.agents.lane import LaneVerdict  # noqa: E402
+from migragent.lanes import LaneVerdict  # noqa: E402
 
 WORK_PAGE = (b"<html><body><h1>Skilled Worker visa</h1><p>You must have a "
              b"confirmation of sponsorship from an approved employer.</p></body></html>")

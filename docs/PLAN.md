@@ -416,19 +416,20 @@ fee and demand exactly one.
 
 ### 7.3 The agents
 
-**Full design is in `docs/AGENTS.md`.** It started as sixteen. Building the first five settled the
-honest number: **five agents have genuine agentic structure**, meaning the model decides across
-multiple steps what to do next. The other eleven are single model calls whose response is validated
-in code, and `verify.py`, `changes.py`, `coverage.py` and their neighbours already do them well.
-Wrapping the eleven in `LlmAgent` for the count is the padding this document exists to refuse.
+**Full design is in `docs/AGENTS.md`.** It started as sixteen. Building them settled the honest
+number: **four agents have genuine agentic structure**, meaning the model decides across multiple
+steps what to do next. The other twelve are single model calls whose response is validated in code,
+and `verify.py`, `changes.py`, `coverage.py`, `lanes.py` and their neighbours already do them well.
+Wrapping the twelve in `LlmAgent` for the count is the padding this document exists to refuse.
 
-The five: **Researcher** (navigates), **Scout** (explores from candidates), **Extractor**
-(records, gets the quote check's refusal back, revises), **Lane Classifier** (marks routes, retries,
-decides neither; closes D29 and D32), **Coverage Matcher** (proposes a match, gets back "not
-uploaded", looks again; guards the readiness score). Orchestration: two SequentialAgents over those
-five and four non-LLM BaseAgent gate nodes.
+The four: **Researcher** (navigates), **Scout** (explores from candidates), **Extractor** (records,
+gets the quote check's refusal back, revises), **Coverage Matcher** (proposes a match, gets back
+"not uploaded", looks again; guards the readiness score). The lane check that closes D29 and D32 was
+built as an agent and walked back to one call the same day, because a session per page made a watch
+round take hours (Decision 11). Orchestration: two SequentialAgents over the four agents, the lane
+check, and four non-LLM BaseAgent gate nodes.
 
-**The people finder stays not an agent** (Decision 9), and now sits next to eleven other calls that
+**The people finder stays not an agent** (Decision 9), and now sits next to twelve other calls that
 are deliberately not agents. The restraint is the architecture story.
 
 ### Where this is cheap, and why
