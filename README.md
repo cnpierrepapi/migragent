@@ -207,6 +207,7 @@ python -m tools.test_extractor_agent  # the Extractor retries a refused quote, n
 python -m tools.test_coverage_agent   # a match on a field nobody uploaded is refused
 python -m tools.test_lane_check     # a page's lane is read off the page, not inherited
 python tools/test_isolation.py      # the identity boundaries hold
+python -m tools.test_run            # the run reports every step, and files its own time honestly
 python -m tools.probe_job_boards    # which government boards are readable today
 ```
 

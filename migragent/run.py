@@ -51,6 +51,13 @@ class Run:
         self._times = times
         # Optional, so tools that build a Run without one keep working.
         self._cvs = cvs
+        # How many files this run actually read, counted as it reads them. The
+        # timing bucket is keyed on this, and it used to be read off
+        # `case.document_count`, which nothing has ever written: every finished
+        # run was filed under "no documents" whatever it had read, so the
+        # estimate for anybody who uploaded something never had a sample to
+        # learn from and the no-documents bucket carried other people's times.
+        self._read_count = 0
 
     def stream(self, case) -> Iterator[str]:
         started = time.monotonic()
@@ -69,8 +76,7 @@ class Run:
         # takes. One that died after four seconds would drag every future
         # estimate down and make the screen promise a wait it cannot keep.
         if finished and self._times is not None:
-            self._times.record(case.jurisdiction, case.lane,
-                               getattr(case, "document_count", 0) or 0, took)
+            self._times.record(case.jurisdiction, case.lane, self._read_count, took)
 
         yield _sse({"event": "done", "took": _took(took)})
 
@@ -94,6 +100,7 @@ class Run:
         # 2. The documents, each one its own step, with the words checked against
         #    what the model called it.
         documents = self._cases.documents(case.case_id)
+        self._read_count = len(documents)
         for doc in documents:
             t = time.monotonic()
             state, sentence = doc.agreement_state, doc.agreement_note
@@ -116,6 +123,9 @@ class Run:
         # as far as you can tell, and that is exactly what it looked like.
         cv = self._cvs.get(case.case_id) if self._cvs else None
         if cv is not None:
+            # The working screen counts the CV as something to read, so the
+            # timing bucket has to count it too or the two disagree.
+            self._read_count += 1
             verified = len(cv.verified)
             yield _sse({
                 "what": f"Read your CV: {cv.filename}",
