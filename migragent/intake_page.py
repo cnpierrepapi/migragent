@@ -393,6 +393,41 @@ def working_html(case, file_count: int, estimate=None) -> str:
     etaWhy.textContent = 'Finished. The estimate above was an estimate; this is the real thing.';
   }}
 
+  // Built as nodes with textContent rather than assembled as a string of HTML.
+  // One of these lines is "Read <the name of the file you uploaded>", and the
+  // file name is somebody else's text. Through innerHTML a file called
+  // <img src=x onerror=...>.pdf ran on this page. Only on the page of the
+  // person who uploaded it, which is the small version of the problem, and it
+  // is still the model's own output going into a markup parser on a screen
+  // whose whole argument is that nothing here is taken on trust.
+  function line(tick, what, detail, took) {{
+    var li = document.createElement('li');
+
+    var t = document.createElement('span');
+    t.className = 'tick';
+    t.textContent = tick;
+
+    var w = document.createElement('div');
+    w.className = 'what';
+    var b = document.createElement('b');
+    b.textContent = what || '';
+    w.appendChild(b);
+    if (detail) {{
+      var d2 = document.createElement('span');
+      d2.textContent = detail;
+      w.appendChild(d2);
+    }}
+
+    var k = document.createElement('div');
+    k.className = 'took';
+    k.textContent = took || '';
+
+    li.appendChild(t);
+    li.appendChild(w);
+    li.appendChild(k);
+    return li;
+  }}
+
   source.onmessage = function (e) {{
     var d = JSON.parse(e.data);
     if (d.event === 'done') {{
@@ -402,20 +437,12 @@ def working_html(case, file_count: int, estimate=None) -> str:
       return;
     }}
     if (d.event === 'error') {{
-      var li = document.createElement('li');
-      li.innerHTML = '<span class="tick">!</span><div class="what"><b>' + d.what +
-                     '</b><span>' + (d.detail || '') + '</span></div><div class="took"></div>';
-      steps.appendChild(li);
+      steps.appendChild(line('!', d.what, d.detail || '', ''));
       return;
     }}
     count++;
     n.textContent = count;
-    var li = document.createElement('li');
-    li.innerHTML = '<span class="tick">' + String(count).padStart(2, '0') + '</span>' +
-                   '<div class="what"><b>' + d.what + '</b>' +
-                   (d.detail ? '<span>' + d.detail + '</span>' : '') + '</div>' +
-                   '<div class="took">' + (d.took || '') + '</div>';
-    steps.appendChild(li);
+    steps.appendChild(line(String(count).padStart(2, '0'), d.what, d.detail || '', d.took || ''));
   }};
   source.onerror = function () {{ source.close(); }};
 </script>
