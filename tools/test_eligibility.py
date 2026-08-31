@@ -24,7 +24,7 @@ import sys
 
 sys.path.insert(0, ".")
 
-from migragent.eligibility import (Eligible, next_level, study_countries,  # noqa: E402
+from migragent.eligibility import (next_level, study_countries,  # noqa: E402
                                    work_countries)
 from migragent.entitlements import redact_intake  # noqa: E402
 from migragent.rubric import best, score_study, score_work  # noqa: E402

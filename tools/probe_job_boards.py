@@ -105,12 +105,11 @@ def main() -> int:
     with BrowserFetcher(fetcher=fetcher) as browser:
         for code, country, board, url in BOARDS:
             state, why = fetcher.permission(url)
-            static_ok = listings_static = rendered_ok = listings_rendered = False
+            listings_static = listings_rendered = False
             note = ""
 
             if state == "allowed":
                 page = fetcher.fetch(url)
-                static_ok = page.ok
                 if page.ok:
                     html = page.body.decode("utf-8", "replace")
                     n, _ = looks_like_results(html, page_text(page))
@@ -121,7 +120,6 @@ def main() -> int:
 
                 if not listings_static:
                     r = browser.fetch(url)
-                    rendered_ok = r.ok
                     if r.ok:
                         html = r.body.decode("utf-8", "replace")
                         n, _ = looks_like_results(html, page_text(r))

@@ -41,7 +41,6 @@ PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-e0928f2f-5abf-46a3-b8a
 def main() -> int:
     dry_run = "--dry-run" in sys.argv
 
-    reader = identity.credentials_for(identity.RESEARCHER, PROJECT)
     writer = identity.credentials_for(identity.WRITER, PROJECT)
 
     # Listing needs a principal that may read the archive. The researcher may

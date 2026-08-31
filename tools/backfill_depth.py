@@ -28,7 +28,6 @@ def main() -> int:
         credentials=identity.credentials_for(identity.WRITER, PROJECT),
     )
     rows = Registry(db).all()
-    by_url = {r.url.rstrip("/"): r for r in rows}
 
     seeds = {r.url.rstrip("/") for r in rows if r.discovered_via == "seed"}
     depths: dict[str, int] = {u: 0 for u in seeds}

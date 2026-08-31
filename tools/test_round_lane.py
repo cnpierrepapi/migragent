@@ -17,8 +17,6 @@ import sys
 
 sys.path.insert(0, ".")
 
-from datetime import datetime, timezone  # noqa: E402
-
 from migragent.extract import Extraction  # noqa: E402
 from migragent.fetcher import Fetched  # noqa: E402
 from migragent.registry import Source  # noqa: E402

@@ -98,7 +98,7 @@ def main() -> int:
         print("\nnothing parsed, nothing written")
         return 1
 
-    print(f"\nsample of what was parsed:")
+    print("\nsample of what was parsed:")
     for item in parsed[:3] + parsed[-3:]:
         print(f"  {item.jurisdiction}  {item.name[:52]:<52} {(item.location or '')[:22]}")
 
