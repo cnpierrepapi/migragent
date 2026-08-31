@@ -107,10 +107,20 @@ def _brand() -> str:
 def jobs_html(cv, listings: list[dict[str, Any]], fits: dict[str, dict],
               place: str) -> str:
     """What this person's CV matched, and nothing else."""
+    # A case exists from step one and holds no country until the places screen,
+    # and this page is linked from the dashboard, so somebody can be standing
+    # here with a CV read and nowhere chosen yet. The country's name is dropped
+    # into two sentences, and with nothing to drop in they read "jobs in  that
+    # governments" and "for occupations  has published as short". So the
+    # sentence is picked rather than the name, and it says the same thing the
+    # empty-board message already says.
+    where = f"jobs in {_e(place)}" if place else "jobs"
+    shortage = f"{_e(place)} has" if place else "a government has"
+
     if cv is None:
         body = f'''
         <h1>Work that matches what you already do</h1>
-        <p class="sub">Drop your CV here. We read it, and show you jobs in {_e(place)} that
+        <p class="sub">Drop your CV here. We read it, and show you {where} that
         governments have said they are short of and that your CV actually matches. Nothing else,
         and no searching.</p>
         <form class="drop" id="drop" method="post" action="/cv" enctype="multipart/form-data">
@@ -159,7 +169,7 @@ def jobs_html(cv, listings: list[dict[str, Any]], fits: dict[str, dict],
 
     body = f'''
       <h1>{len(listings)} job{"" if len(listings) == 1 else "s"} matched your CV</h1>
-      <p class="sub">From government job services only, for occupations {_e(place)} has published
+      <p class="sub">From government job services only, for occupations {shortage} published
       as short. Each one is here because of a line in your own CV.</p>
       <p class="why">Read from your CV: <b>{_e(roles)}</b></p>
       {unverified}
