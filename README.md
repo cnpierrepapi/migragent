@@ -192,6 +192,50 @@ The agent layer is off by default and each piece has its own switch: `--agent` o
 `MIGRAGENT_AGENT_COVERAGE` on the web service. Each one ships behind a flag and turns on lane by
 lane, after the round has run clean twice.
 
+## Reproducible testing
+
+Sixteen suites. Fifteen of them need nothing but Python: no Google Cloud project, no credentials,
+no network. Every model is scripted and every client is trapped, so a suite that tries to reach
+Vertex fails rather than quietly costing you money. From a clean clone:
+
+```bash
+git clone https://github.com/cnpierrepapi/migragent && cd migragent
+python -m venv .venv
+. .venv/bin/activate                 # .venv/Scripts/activate on Windows
+pip install -r requirements.txt
+
+for t in tools/test_*.py; do
+  case "$t" in */test_isolation.py|*/test_work.py|*/test_live_work.py) continue;; esac
+  echo "== $t"
+  python "$t" || exit 1
+done
+```
+
+That prints a line per check and stops on the first failure. On 31 August 2026 it is 15 suites
+green on Python 3.12.10. The two worth actually reading the output of are `test_verify` and
+`test_meaning`, because between them they are the whole argument: a quote that is not on the page
+gets refused, and so does a quote that is on the page but has been stitched together out of two
+real fragments.
+
+Three are skipped in that loop because they need something real. `test_isolation` is below.
+`test_work` and `test_live_work` call the model and fetch live government job boards, so they cost
+money and they fail when a board is having a bad afternoon, which is not a reason to fail a build.
+
+The sixteenth is `tools/test_isolation.py` and it cannot be faked. It proves the researcher
+identity can read the registry and cannot write a row, that the writer can write so the denial
+above means something, and that the web identity cannot mint a watcher token. It needs a real
+project with the four service accounts from the section above, and a pass is not "nothing crashed":
+
+```bash
+export GOOGLE_CLOUD_PROJECT=your-project-id
+python tools/test_isolation.py
+```
+
+If you want to watch an agent work without spending anything, run
+`python tools/test_extractor_agent.py`. It scripts a model that returns a true sounding requirement
+the page never states, and you can watch it get turned down and the agent go back for a real
+sentence.
+
 ## The tests, and what each one is for
 
 They are scripts, not a framework, and each proves a claim the product makes out loud.
