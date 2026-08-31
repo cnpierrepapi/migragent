@@ -198,7 +198,8 @@ def documents_html(lane: str, intent: str) -> str:
                "you are most likely applying for next, and which countries have a school for it.")
         note = ("Photographs are fine and are what most people have. We read the text off the "
                 "picture itself, so what we take from it can still be checked against the "
-                "words on your document.")
+                "words on your document. We read up to eight at a time. If you have more, "
+                "add them after.")
         accept = ".pdf,.png,.jpg,.jpeg,.webp"
         hint = "Transcripts, result slips, certificates. Photos are fine."
 

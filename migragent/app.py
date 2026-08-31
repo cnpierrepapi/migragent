@@ -71,6 +71,9 @@ from .work_page import board_html, jobs_html
 
 BRAND_DIR = Path(__file__).resolve().parent.parent / "web" / "brand"
 
+# How many documents one upload reads. See the loop in read_documents.
+MAX_DOCUMENTS = 8
+
 MODEL = os.environ.get("MIGRAGENT_MODEL", "gemini-3.5-flash")
 MODEL_LOCATION = os.environ.get("MIGRAGENT_MODEL_LOCATION", "global")
 
@@ -301,7 +304,13 @@ def read_documents() -> Response:
                     clones.put(case.case_id, code, drafter.clone(cv, code))
     else:
         reader = DocumentReader(_project(), MODEL, MODEL_LOCATION, creds)
-        for uploaded in uploads:
+        # Each document is a model call and they run one after another, about
+        # twelve seconds each, inside a request gunicorn kills at 300 seconds.
+        # Somebody dropping a folder of thirty photographs in got a killed
+        # worker and a blank page, and took the other requests on that worker
+        # with them. Eight is under the ceiling with room to spare, and the
+        # screen says so before they pick, so nothing goes missing quietly.
+        for uploaded in uploads[:MAX_DOCUMENTS]:
             mime = MIME_BY_SUFFIX.get(Path(uploaded.filename).suffix.lower())
             if mime is None:
                 continue
@@ -639,7 +648,6 @@ def working() -> Response:
     if not case.ready:
         return redirect("/start/places")
 
-    db = _db()
     documents = len(cases.documents(case.case_id))
     # The CV counts as something to read. It is stored apart from the documents
     # and the screen said "0 documents to read" to somebody who had just
@@ -686,7 +694,8 @@ def result() -> Response:
     return Response(
         result_html(case, cases.coverage(case.case_id) or {},
                     cases.result(case.case_id) or {},
-                    cases.documents(case.case_id)),
+                    cases.documents(case.case_id),
+                    cv=CVStore(db).get(case.case_id)),
         mimetype="text/html")
 
 
