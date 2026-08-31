@@ -159,5 +159,6 @@ def architecture_html(markdown: str, updated: str = "", **facts: Any) -> str:
   is tested, the test is named and you can run it.
   <br><a href="/">MIGRAGENT</a> &middot;
   <a href="/coverage">What we have read</a> &middot;
+  <a href="/rounds">What the reading job did</a> &middot;
   <a href="/data">What happens to your documents</a></p>
 </main></body></html>'''

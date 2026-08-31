@@ -62,6 +62,7 @@ from .form import FormBuilder
 from .intake_page import working_html
 from .landing_page import landing_html
 from .result_page import result_html
+from .rounds_page import rounds_html
 from .routes import RouteFinder
 from .run import Run, sse_done
 from .timing import RunTimes
@@ -1086,6 +1087,47 @@ def _country_coverage_build(db) -> tuple[list[dict], dict]:
         "jobs": sum(jobs.values()),
     }
     return rows, totals
+
+
+@app.get("/rounds")
+def rounds() -> Response:
+    """What the reading job has been doing, off the rows the job itself wrote.
+
+    The crawl is the half of this product nobody could see. It ran at 04:40 and
+    the only way to look at it was gcloud, so the claim the whole thing rests on,
+    that it keeps reading after you close the tab, was the one claim a visitor
+    had to take on trust.
+
+    No Cloud Run Admin API call. The web identity cannot become the watcher and
+    is not getting a new role so a page can look busier, which is decision 5.
+    What the job wrote is what the job did, and it is already in Firestore.
+
+    Cached for a minute like the other front pages: this walks the rounds and the
+    changes, and those move four times a day, not four times a second.
+    """
+    from .round import ChangeWriter, RunLog
+
+    def build():
+        db = _db()
+        recent = RunLog(db).recent(limit=24)
+        changes: list = []
+        writer = ChangeWriter(db)
+        for code in sorted({r.get("jurisdiction", "") for r in recent} - {""}):
+            changes.extend(writer.for_jurisdiction(code, limit=6))
+        changes.sort(key=lambda c: c.get("after_read_at", ""), reverse=True)
+
+        registry = Registry(db)
+        counts = registry.counts()
+        requirements = sum(_requirement_counts(db).values())
+        return recent, changes[:10], counts, requirements
+
+    recent, changes, counts, requirements = _cached("rounds", build)
+    return Response(
+        rounds_html(recent, changes,
+                    sources=counts.get("total", 0),
+                    read_sources=counts.get("readable", 0),
+                    requirements=requirements),
+        mimetype="text/html")
 
 
 @app.get("/coverage")

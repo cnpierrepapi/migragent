@@ -483,6 +483,7 @@ intake opens, or a job you qualify for is posted.">
     MIGRAGENT reads official government pages and cites them.
     It is not a law firm and does not give immigration advice.
     <a href="/data">What happens to your documents</a> &middot;
-    <a href="/architecture">How it is built</a>
+    <a href="/architecture">How it is built</a> &middot;
+    <a href="/rounds">What the reading job did</a>
   </footer></div>
 </body></html>'''

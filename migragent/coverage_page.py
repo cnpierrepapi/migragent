@@ -133,4 +133,5 @@ def coverage_html(rows: list[dict[str, Any]], totals: dict[str, int]) -> str:
   courses. {totals["jobs"]:,} live job postings.</p>
 
   <a class="cta" href="/start">Find out what it would take</a>
+  <a class="cta ghost" href="/rounds" style="margin-left:10px">What the reading job did</a>
 </main></body></html>'''
