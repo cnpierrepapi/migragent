@@ -68,8 +68,60 @@ class Guide:
         grouped: dict[str, list[dict[str, Any]]] = {}
         for req in self.requirements:
             grouped.setdefault(req.get("category", "requirement"), []).append(req)
-        return [(CATEGORY_HEADINGS.get(cat, cat.title()), grouped[cat])
+        return [(CATEGORY_HEADINGS.get(cat, cat.title()), _merge(grouped[cat]))
                 for cat in CATEGORY_HEADINGS if cat in grouped]
+
+    @property
+    def distinct(self) -> int:
+        """How many requirements the reader actually sees, after merging."""
+        return sum(len(items) for _heading, items in self.by_category())
+
+
+def _merge(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One block per requirement, with every page that states it under it.
+
+    Governments say the same thing in several places. The UK says you must prove
+    your identity on nine separate study pages, and the corpus holds all nine
+    because each one is a real reading of a real page and throwing eight away
+    would be deciding which page counts. That is right for the store and wrong
+    for the guide: a reader met the same sentence nine times in one document and
+    read it as the thing being broken rather than as the government repeating
+    itself.
+
+    So the store keeps every reading and this merges them at the point of
+    reading. Nothing is discarded. The other pages are printed under the
+    requirement, which is stronger evidence than one link, not weaker.
+
+    The row shown is the most recently read one, because the date under a
+    requirement should be the last time anybody checked.
+    """
+    from .fold import fold_ci
+
+    order: list[str] = []
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for req in items:
+        key = fold_ci(str(req.get("text", "")))
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(req)
+
+    merged: list[dict[str, Any]] = []
+    for key in order:
+        rows = sorted(groups[key], key=lambda r: str(r.get("read_at", "")), reverse=True)
+        primary = dict(rows[0])
+        others = [r for r in rows[1:] if r.get("source_url") != primary.get("source_url")]
+        seen: set[str] = set()
+        also: list[dict[str, Any]] = []
+        for row in others:
+            url = str(row.get("source_url", ""))
+            if url and url not in seen:
+                seen.add(url)
+                also.append(row)
+        if also:
+            primary["also"] = also
+        merged.append(primary)
+    return merged
 
 
 def build(jurisdiction: str, lane: str, requirements: list[dict[str, Any]],
@@ -114,6 +166,17 @@ def to_html(guide: Guide) -> str:
             provenance = req.get("provenance", "official")
             label = "Official source" if provenance == "official" else "Course portal"
 
+            also = req.get("also") or []
+            if also:
+                links = " ".join(
+                    f'<a class="source" href="{_e(o.get("source_url"))}">'
+                    f'{_e(o.get("source_url"))}</a>' for o in also)
+                page = "page" if len(also) == 1 else "pages"
+                also_html = (f'<p class="also">Also stated on {len(also)} other official '
+                             f'{page}: {links}</p>')
+            else:
+                also_html = ""
+
             steps.append(f'''
     <section class="req">
       <h3><span class="n">{number}</span>{_e(req.get("text"))}</h3>
@@ -124,6 +187,7 @@ def to_html(guide: Guide) -> str:
         <a class="source" href="{_e(req.get("source_url"))}">{_e(req.get("source_url"))}</a>
         <span class="read-on">read on {_e(_pretty_date(req.get("read_at", "")))}</span>
       </p>
+      {also_html}
     </section>''')
 
     if guide.open_questions:
@@ -181,6 +245,8 @@ def to_html(guide: Guide) -> str:
   .tag {{ font: 500 .7rem var(--font-body); text-transform: uppercase; letter-spacing: .08em;
           color: var(--primary); border: 1px solid var(--rule); border-radius: 100px;
           padding: 2px 9px }}
+  .also {{ margin: 10px 0 0; font-size: .78rem; line-height: 1.7; color: var(--ink-soft) }}
+  .also a {{ margin-right: 10px }}
   .oq {{ margin: 0; padding: 0; list-style: none }}
   .oq li {{ border-left: 2px solid var(--warn); padding: 4px 0 4px 16px; margin-bottom: 14px;
             line-height: 1.6; color: var(--ink) }}
@@ -216,7 +282,8 @@ def to_html(guide: Guide) -> str:
   <p class="sub">This is not legal advice. It reports what official sources say.</p>
 
   <div class="counts">
-    {len(guide.requirements)} requirements &nbsp;·&nbsp;
+    {guide.distinct} requirements &nbsp;·&nbsp;
+    {len(guide.requirements)} readings behind them &nbsp;·&nbsp;
     {guide.sources_read} pages cited &nbsp;·&nbsp;
     {guide.total_sources} sources in the registry &nbsp;·&nbsp;
     built {_e(_pretty_date(guide.generated_at))}
