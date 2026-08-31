@@ -51,7 +51,7 @@ def _next_step(lane: str) -> str:
             f'Jobs your CV matched</a>')
 
 
-def result_html(case, coverage: dict, result: dict, documents: list) -> str:
+def result_html(case, coverage: dict, result: dict, documents: list, cv=None) -> str:
     score = int(coverage.get("score", 0))
     covered = int(coverage.get("covered", 0))
     of = int(coverage.get("document_requirements", 0))
@@ -63,7 +63,27 @@ def result_html(case, coverage: dict, result: dict, documents: list) -> str:
         f'<span>{_e(d.filename)} &middot; {len(d.fields)} fields, '
         f'{len(d.verified_fields)} verified'
         f'{"" if d.text_layer else " &middot; no text layer, so unverified"}</span></li>'
-        for d in documents) or '<li class="none">You did not upload anything, so this guide is the general one for this lane.</li>'
+        for d in documents)
+
+    # The CV is kept in its own store rather than with the documents, so this
+    # list did not know about it and told somebody who had just uploaded one
+    # that they had given us nothing. The working screen had the same hole and
+    # it was closed there; this is one screen further on, where the same person
+    # reads the same false sentence about the same file.
+    #
+    # It sits with the documents and says plainly that it does not answer the
+    # requirements, because a CV is a claim somebody makes about themselves and
+    # the score is about what a government asked for. See migragent/cv.py.
+    if cv is not None:
+        doc_rows = (
+            f'<li><b>Your CV</b>'
+            f'<span>{_e(cv.filename)} &middot; {len(cv.claims)} things it says about you, '
+            f'{len(cv.verified)} checked word for word'
+            f'{"" if cv.text_layer else " &middot; no text layer, so unverified"}'
+            f' &middot; it is what the job matching runs on, and it does not answer the '
+            f'requirements above</span></li>') + doc_rows
+
+    doc_rows = doc_rows or '<li class="none">You did not upload anything, so this guide is the general one for this lane.</li>'
 
     route_blocks = []
     for route in result.get("routes", []):
