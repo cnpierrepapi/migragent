@@ -101,8 +101,14 @@ class Run:
         #    what the model called it.
         documents = self._cases.documents(case.case_id)
         self._read_count = len(documents)
+        # No time on these lines, and that is the honest answer rather than a
+        # missing one. The document was read during the upload, before this
+        # stream existed, so all this step does is report what that reading
+        # produced. Timing it timed the reporting and printed "0.0s" beside
+        # "Read your passport", which is a number this screen has not earned and
+        # reads like a step that did not happen. The CV line below has said
+        # nothing for the same reason since it was added.
         for doc in documents:
-            t = time.monotonic()
             state, sentence = doc.agreement_state, doc.agreement_note
             verified = len(doc.verified_fields)
             detail = (f"{len(doc.fields)} fields, {verified} verified against the document's own "
@@ -111,7 +117,7 @@ class Run:
                 "what": f"Read {doc.filename} as a {doc.kind.replace('_', ' ')}"
                         + ("" if state != "disagreed" else "  (the words disagree)"),
                 "detail": detail,
-                "took": _took(time.monotonic() - t),
+                "took": "",
             })
 
         # A CV lives in its own store rather than with the documents, because it
