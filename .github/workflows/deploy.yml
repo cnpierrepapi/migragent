@@ -64,6 +64,7 @@ jobs:
             --region "$REGION" \
             --service-account "migragent-web@$PROJECT.iam.gserviceaccount.com" \
             --allow-unauthenticated \
+            --timeout 900 \
             --quiet
 
       # A deploy that reports success while the service returns 500 is a deploy

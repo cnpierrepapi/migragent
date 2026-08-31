@@ -23,9 +23,17 @@ EXPOSE 8080
 # instead of erroring. That cost a deploy cycle on the previous build.
 ENV MIGRAGENT_AMBIENT_PRINCIPAL=migragent-web
 
-# The worker timeout matches Cloud Run's request timeout of 300 seconds rather
-# than sitting under it. At 120 a request that was still working got its worker
-# killed and the caller got nothing to read, which looks like a crash and is a
-# deadline. The real cap on a slow route is the model budget in
-# migragent/model.py, which is a number with a reason attached.
-CMD exec gunicorn --bind :$PORT --workers 2 --threads 8 --timeout 300 migragent.app:app
+# The worker timeout matches Cloud Run's request timeout rather than sitting
+# under it. At 120 a request that was still working got its worker killed and
+# the caller got nothing to read, which looks like a crash and is a deadline.
+# The real cap on a slow route is the model budget in migragent/model.py, which
+# is a number with a reason attached.
+#
+# Both numbers went from 300 to 900 on 31 August 2026. A measured UK study run
+# with three documents held the event stream open for 225 seconds, and one step
+# in it, writing the form, was 88 seconds on its own. That is 75 seconds of
+# headroom against a hard ceiling, and what happens past the ceiling is the
+# stream being cut with no `done` event: the working screen sits there counting
+# while the guide it is waiting for has already been built and saved. Deploy
+# sets the matching number on the service, see .github/workflows/deploy.yml.
+CMD exec gunicorn --bind :$PORT --workers 2 --threads 8 --timeout 900 migragent.app:app
