@@ -47,6 +47,19 @@ from .model import call_json
 # drag a score down for a reason the person cannot act on by uploading.
 ACTION_CATEGORIES = {"timing", "cost"}
 
+# How many requirements go into the one matching call.
+#
+# The score's denominator is every requirement a document could answer, so a
+# requirement left out of the call can never be matched and quietly costs
+# somebody a point they had earned. This was 200, and UK study now holds 201
+# satisfiable requirements, so the cap had started to bite: measured on 31
+# August 2026, 290 requirements read for that lane, 89 of them actions or fees.
+#
+# It is still a cap rather than no cap, because a prompt has to end somewhere.
+# Raising it costs prompt size and not a second call, which is the trade worth
+# making while one call still fits.
+MAX_REQUIREMENTS_PER_CALL = 400
+
 
 @dataclass
 class Match:
@@ -191,7 +204,7 @@ class Matcher:
         try:
             parsed = self._call(PROMPT.format(
                 documents="\n".join(doc_lines),
-                requirements="\n".join(req_lines[:200]),
+                requirements="\n".join(req_lines[:MAX_REQUIREMENTS_PER_CALL]),
             ))
         except Exception as exc:  # noqa: BLE001
             coverage.dropped_matches.append({"why": str(exc)})
