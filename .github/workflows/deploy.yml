@@ -56,6 +56,10 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
+      # The $MIGRA price: whichever is more, 1,000 tokens or $3.49 worth, shown
+      # only in tokens. See migragent/credits.py. The token and treasury
+      # addresses are set on the service after launch, and until both are set
+      # payments stay off and the page says so.
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy "$SERVICE" \
@@ -65,6 +69,7 @@ jobs:
             --service-account "migragent-web@$PROJECT.iam.gserviceaccount.com" \
             --allow-unauthenticated \
             --timeout 900 \
+            --update-env-vars MIGRAGENT_MIGRA_PER_MONTH=1000,MIGRAGENT_MIGRA_USD_PER_MONTH=3.49 \
             --quiet
 
       # A deploy that reports success while the service returns 500 is a deploy
