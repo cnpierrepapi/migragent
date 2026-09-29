@@ -49,12 +49,13 @@ from typing import Any
 
 # What the subscription costs. One tier, and the only one: the product does not
 # have a cheaper version that is worse or a dearer one that is the real one.
-# Priced in $MIGRA, a fixed number of tokens a month; see credits.py for why it
-# is not pegged to dollars.
+# Priced in $MIGRA: the larger of a token floor and a dollar amount's worth,
+# shown only in tokens. credits.month_price has the rule. The label names the
+# floor because that is the one number that never moves.
 from .credits import settings as _credit_settings
 
 PRICE_TOKENS = _credit_settings().per_month
-PRICE_LABEL = (f"{PRICE_TOKENS:,} $MIGRA a month" if PRICE_TOKENS
+PRICE_LABEL = (f"{PRICE_TOKENS:,}+ $MIGRA a month" if PRICE_TOKENS
                else "$MIGRA a month")
 
 # The fields that are the subscription. Held for everybody, shown to subscribers.

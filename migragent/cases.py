@@ -56,6 +56,7 @@ SUBSCRIBE_INTEREST = "subscribe_interest"
 # migragent/credits.py explains the split.
 WALLET_LINKS = "case_wallets"
 NONCES = "wallet_nonces"
+QUOTES = "migra_quotes"
 
 # Long enough to come back and finish, short enough that nothing sits around for
 # a reason nobody could defend. docs/DATA_PROTECTION.md explains the choice.
@@ -326,9 +327,10 @@ class Cases:
         if n:
             batch.commit()
 
-        nonce = self._db.collection(NONCES).document(case_id)
-        if nonce.get().exists:
-            nonce.delete()
+        for pending in (NONCES, QUOTES):
+            ref = self._db.collection(pending).document(case_id)
+            if ref.get().exists:
+                ref.delete()
         link = self._db.collection(WALLET_LINKS).document(case_id)
         if link.get().exists:
             link.delete()

@@ -219,7 +219,7 @@ def _pay_panel(wallet: dict[str, Any], has_case: bool) -> str:
                 '<a href="/start">Start here</a>.</p></div>')
 
     linked = wallet.get("wallet", "")
-    per_month = f'{int(wallet.get("per_month", 0)):,}'
+    amount = wallet.get("price_label", "")
     until = (wallet.get("paid_until") or "")[:10]
     state = (f'Linked: <b>{_e(_short(linked))}</b>. Credit: '
              f'<b>{_e(wallet.get("balance_label", "0"))} $MIGRA</b>.'
@@ -237,14 +237,19 @@ def _pay_panel(wallet: dict[str, Any], has_case: bool) -> str:
         "balance": wallet.get("balance", "0"), "wallet": linked}).replace("</", "<\\/")
 
     hide_if_unlinked = "" if linked else "hidden"
+    hide_buy = "" if linked and amount else "hidden"
+    ask = (f"Connect a wallet and send {_e(amount)} $MIGRA. The dates show up for 30 "
+           "days. Pay early and the days stack, you don't lose any."
+           if amount else
+           "Can't read the $MIGRA price right now, so there's nothing to pay yet. "
+           "Try again in a minute.")
     return f'''<div class="pay" id="pay">
     <h2>Pay with $MIGRA</h2>
-    <p>Connect a wallet and send {per_month} $MIGRA. The dates show up for 30
-    days. Pay early and the days stack, you don't lose any.</p>
+    <p>{ask}</p>
     <p class="status" id="acct">{state}</p>
     <div class="row">
       <button class="cta ghost" type="button" id="connect">{"Switch wallet" if linked else "Connect wallet"}</button>
-      <button class="cta" type="button" id="buy" {hide_if_unlinked}>Send {per_month} $MIGRA for a month</button>
+      <button class="cta" type="button" id="buy" {hide_buy}>Send {_e(amount)} $MIGRA for a month</button>
       <button class="cta ghost" type="button" id="spend" hidden>Use my credit for a month</button>
     </div>
     <div class="row" {hide_if_unlinked}>

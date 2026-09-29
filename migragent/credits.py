@@ -39,14 +39,27 @@ exchange rate to manage and no second currency to explain.
 
 HOW A CREDIT IS SPENT
 ---------------------
-`unlock` takes MIGRAGENT_MIGRA_PER_MONTH tokens off the balance and extends
-`paid_until` by thirty days from whichever is later, now or the current end.
-Paying early never loses days.
+`unlock` takes a month's price off the balance and extends `paid_until` by
+thirty days from whichever is later, now or the current end. Paying early never
+loses days.
 
-The price is a fixed number of tokens, not dollars. A token priced in dollars
-needs an oracle, and an oracle on a new bonding-curve token is a number anybody
-with a few hundred dollars can move. A fixed token price moves with the market
-instead, and whoever runs this can change it with one variable.
+A month costs whichever is more: MIGRAGENT_MIGRA_PER_MONTH tokens (1,000), or
+MIGRAGENT_MIGRA_USD_PER_MONTH dollars' worth ($3.49). It is always shown in
+$MIGRA, never in dollars.
+
+The dollar leg reads Orbio's own price for the token: ORBIO per token from the
+bonding curve, times ORBIO's price in micro-dollars, both integers, so nothing
+rounds a cheap token down to zero. The published `priceMicroUsd` field is not
+used because it is rounded to a whole micro-dollar, which for a token worth
+seven and a bit micro-dollars is a ten percent error.
+
+The floor is what makes a price feed safe to use here. Pumping the token to
+make a month cheaper stops working at 1,000 tokens, and pushing the price down
+only makes a month dearer for the person doing it.
+
+The price is quoted when the page is drawn and held for thirty minutes, so a
+curve that moves while the transfer confirms cannot leave somebody who sent
+exactly what they were asked for a few tokens short.
 
 WHAT IS KEPT, AND FOR HOW LONG
 ------------------------------
@@ -83,6 +96,8 @@ NONCE_TTL = timedelta(minutes=10)
 
 from .cases import NONCES, WALLET_LINKS  # noqa: E402  deleted with the case
 
+from .cases import QUOTES  # noqa: E402  deleted with the case
+
 WALLETS = "migra_wallets"
 DEPOSITS = "migra_deposits"
 LEDGER = "migra_ledger"
@@ -108,16 +123,17 @@ class Settings:
     token: str
     treasury: str
     rpc: str
-    per_month: int          # whole tokens
+    per_month: int          # whole tokens, the floor
     confirmations: int
     decimals: int           # 18 unless the environment says otherwise
+    usd_micro: int = 0      # the dollar leg, in millionths of a dollar
 
     @property
     def live(self) -> bool:
         return is_address(self.token) and is_address(self.treasury) and self.per_month > 0
 
     @property
-    def price_units(self) -> int:
+    def floor_units(self) -> int:
         return self.per_month * 10 ** self.decimals
 
 
@@ -130,13 +146,95 @@ def settings() -> Settings:
         per_month=int(os.environ.get("MIGRAGENT_MIGRA_PER_MONTH", "0") or 0),
         confirmations=int(os.environ.get("MIGRAGENT_MIGRA_CONFIRMATIONS", "3") or 3),
         decimals=int(os.environ.get("MIGRAGENT_MIGRA_DECIMALS", "18") or 18),
+        usd_micro=_micro(os.environ.get("MIGRAGENT_MIGRA_USD_PER_MONTH", "0")),
     )
 
 
-def format_units(units: int, decimals: int) -> str:
-    """Base units as a human number, without float rounding."""
+def _micro(dollars: str) -> int:
+    from decimal import Decimal, InvalidOperation
+
+    try:
+        return max(0, int(Decimal(dollars.strip() or "0") * 1_000_000))
+    except InvalidOperation:
+        return 0
+
+
+# --- price -------------------------------------------------------------------
+
+ORBIO_AGENT_API = "https://www.orbio.so/api/protocol/agents/"
+QUOTE_TTL = timedelta(minutes=30)
+_PRICE_FRESH = 60          # seconds before asking Orbio again
+_PRICE_STALE = 3600        # seconds a last-known price is still good enough
+_price_cache: dict[str, tuple[float, int, int]] = {}
+
+
+def usd_units(usd_micro: int, orbio_per_token_wei: int, orbio_micro_usd: int,
+              decimals: int) -> int:
+    """Base units of the token worth `usd_micro`, rounded up.
+
+    One token costs orbio_per_token_wei / 1e18 ORBIO, and one ORBIO costs
+    orbio_micro_usd micro-dollars. Kept in integers end to end.
+    """
+    denom = orbio_per_token_wei * orbio_micro_usd
+    if denom <= 0:
+        raise CreditError("price")
+    num = usd_micro * 10 ** decimals * 10 ** 18
+    return -(-num // denom)
+
+
+def fetch_orbio_price(token: str, timeout: float = 10.0) -> tuple[int, int]:
+    """(ORBIO wei per token, ORBIO micro-dollars) from Orbio's public read."""
+    req = urllib.request.Request(ORBIO_AGENT_API + token,
+                                 headers={"User-Agent": "migragent/credits"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        data = json.loads(resp.read())
+    per_token = int((data.get("price") or {}).get("orbioPerToken") or 0)
+    orbio_usd = int(data.get("orbioMicroUsd") or 0)
+    if per_token <= 0 or orbio_usd <= 0:
+        raise CreditError("price")
+    return per_token, orbio_usd
+
+
+def month_price(cfg: Settings, fetch=fetch_orbio_price, clock=None) -> int:
+    """What a month costs right now, in base units. The larger of the two legs.
+
+    Raises CreditError("price") only when Orbio has not answered for an hour and
+    there is no last-known price, so a month is never sold at the floor just
+    because the dollar leg could not be read.
+    """
+    import time
+
+    floor = cfg.floor_units
+    if cfg.usd_micro <= 0:
+        return floor
+    now = (clock or time.time)()
+    cached = _price_cache.get(cfg.token)
+    if not cached or now - cached[0] > _PRICE_FRESH:
+        try:
+            per_token, orbio_usd = fetch(cfg.token)
+            cached = (now, per_token, orbio_usd)
+            _price_cache[cfg.token] = cached
+        except (OSError, ValueError, CreditError):
+            if not cached or now - cached[0] > _PRICE_STALE:
+                raise CreditError("price") from None
+    # Whole tokens, rounded up, so the wallet asks for the same round number the
+    # page shows.
+    one = 10 ** cfg.decimals
+    usd_leg = -(-usd_units(cfg.usd_micro, cached[1], cached[2], cfg.decimals) // one) * one
+    return max(floor, usd_leg)
+
+
+def format_units(units: int, decimals: int, places: int = 4) -> str:
+    """Base units as a human number, without float rounding.
+
+    places=0 rounds up to a whole token, for prices: asking for 1,234 when the
+    real number is 1,233.2 costs the payer under a token and never leaves them
+    short.
+    """
+    if places == 0:
+        return f"{-(-int(units) // 10 ** decimals):,}"
     whole, frac = divmod(int(units), 10 ** decimals)
-    frac_s = str(frac).rjust(decimals, "0").rstrip("0")[:4]
+    frac_s = str(frac).rjust(decimals, "0").rstrip("0")[:places]
     return f"{whole:,}" + (f".{frac_s}" if frac_s else "")
 
 
@@ -364,6 +462,24 @@ class Credits:
                            paid_until=data.get("paid_until", ""))
 
         return apply(self._db.transaction())
+
+    # quotes
+
+    def quote(self, case_id: str, units: int) -> None:
+        """Hold today's price for this case while the transfer confirms."""
+        self._db.collection(QUOTES).document(case_id).set({
+            "case_id": case_id, "units": str(units), "at": _iso(_now())})
+
+    def price_for(self, case_id: str, current: int) -> int:
+        """The held quote if it is recent and lower, otherwise the current price."""
+        snap = self._db.collection(QUOTES).document(case_id).get()
+        if not snap.exists:
+            return current
+        data = snap.to_dict() or {}
+        at = _parse(data.get("at", ""))
+        if not at or _now() - at > QUOTE_TTL:
+            return current
+        return min(current, int(data.get("units", "0") or 0) or current)
 
     def unlock(self, wallet: str, price: int) -> Balance:
         """Spend `price` base units on thirty more days."""

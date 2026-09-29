@@ -50,7 +50,7 @@ from .rubric import best, score_study, score_work
 from .courses_page import courses_html
 from .coverage_page import coverage_html
 from .credits import (CHAIN_ID, CreditError, Credits, Chain, check_deposit, format_units,
-                      is_address, is_tx_hash, settings as credit_settings)
+                      is_address, is_tx_hash, month_price, settings as credit_settings)
 from .entitlements import is_subscriber, redact_all
 from .gaps import with_gaps
 from .subscribe_page import subscribe_html
@@ -1192,22 +1192,31 @@ def subscribe() -> Response:
                                    saved=request.args.get("saved", ""),
                                    email=getattr(profile, "email", "") or "",
                                    has_case=case is not None,
-                                   wallet=_wallet_state(db, case)),
+                                   wallet=_wallet_state(db, case, quote=True)),
                     mimetype="text/html")
 
 
-def _wallet_state(db, case) -> dict[str, Any]:
+def _wallet_state(db, case, quote: bool = False) -> dict[str, Any]:
     """What the pay panel needs to draw itself. Never anything secret."""
     cfg = credit_settings()
     state: dict[str, Any] = {
         "live": cfg.live, "token": cfg.token, "treasury": cfg.treasury,
-        "chain_id": CHAIN_ID, "price_units": str(cfg.price_units) if cfg.live else "0",
+        "chain_id": CHAIN_ID, "price_units": "0", "price_label": "",
         "per_month": cfg.per_month, "decimals": cfg.decimals,
         "wallet": "", "balance": "0", "balance_label": "0", "paid_until": "",
         "active": False}
-    if case is None:
+    if not cfg.live or case is None:
         return state
     store = Credits(db)
+    try:
+        price = store.price_for(case.case_id, month_price(cfg))
+        if quote:
+            store.quote(case.case_id, price)
+        state.update(price_units=str(price),
+                     price_label=format_units(price, cfg.decimals, places=0))
+    except CreditError:
+        # No price means no buy button, not the floor. The page says so.
+        pass
     wallet = store.wallet_for(case.case_id)
     if wallet:
         acct = store.account(wallet)
@@ -1297,8 +1306,11 @@ def credits_unlock() -> Response:
     if not wallet:
         return jsonify({"error": "Connect a wallet first."}), 400
     try:
-        store.unlock(wallet, cfg.price_units)
+        store.unlock(wallet, store.price_for(case.case_id, month_price(cfg)))
     except CreditError as exc:
+        if str(exc) == "price":
+            return jsonify({"error": "Can't read the $MIGRA price right now. "
+                                     "Your credit is safe, try again in a minute."}), 503
         return jsonify({"error": str(exc)}), 400
     return jsonify(_wallet_state(db, case))
 
