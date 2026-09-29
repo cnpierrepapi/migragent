@@ -21,7 +21,8 @@ from migragent.alerts import Alert, Alerts, Watches, alert_id  # noqa: E402
 from migragent.board import Piece  # noqa: E402
 from migragent.cases import (ALERTS, BOARD_ITEMS, CASE_DOCUMENTS, CASES, COVERAGE,
                              CV_CLONES, CV_FIELDS, FITS, PROFILES, RESULTS,
-                             SUBSCRIBE_INTEREST, WATCHES, Cases)  # noqa: E402
+                             SUBSCRIBE_INTEREST, WALLET_LINKS, WATCHES,
+                             Cases)  # noqa: E402
 from migragent.cv import CVClones  # noqa: E402
 from migragent.profile import Profiles  # noqa: E402
 from migragent.cv import CV, Claim, CVStore  # noqa: E402
@@ -103,17 +104,21 @@ def main() -> int:
     # Saying you would pay for this is a row about you, and it goes too.
     db.collection(SUBSCRIBE_INTEREST).document(case.case_id).set(
         {"case_id": case.case_id, "lane": "study"})
+    # A linked wallet says which address paid for this person's case. The link
+    # goes; the wallet's balance does not, and that is checked below too.
+    db.collection(WALLET_LINKS).document(case.case_id).set(
+        {"case_id": case.case_id, "wallet": "0x" + "ab" * 20})
 
     watched = (CASES, CASE_DOCUMENTS, COVERAGE, RESULTS, CV_FIELDS, FITS,
                BOARD_ITEMS, CV_CLONES, PROFILES, SUBSCRIBE_INTEREST,
-               WATCHES, ALERTS)
+               WATCHES, ALERTS, WALLET_LINKS)
     before = {c: count(db, c, case.case_id) for c in watched}
     print(f"before delete: {before}")
     if (before[CASE_DOCUMENTS] != 3 or before[CASES] != 1 or before[COVERAGE] != 1
             or before[CV_FIELDS] != 1 or before[FITS] != 2 or before[BOARD_ITEMS] != 2
             or before[WATCHES] != 1 or before[ALERTS] != 2
             or before[CV_CLONES] != 3 or before[PROFILES] != 1
-            or before[SUBSCRIBE_INTEREST] != 1):
+            or before[SUBSCRIBE_INTEREST] != 1 or before[WALLET_LINKS] != 1):
         print("FAIL  the fixture did not write what it meant to, so a clean")
         print("      delete afterwards would prove nothing")
         return 1
@@ -130,7 +135,7 @@ def main() -> int:
         return 1
     if removed != {"documents": 3, "coverage": 1, "result": 1, "cv": 1,
                    "fits": 2, "board_items": 2, "cv_clones": 3, "profile": 1,
-                   "interest": 1, "watch": 1, "alerts": 2, "case": 1}:
+                   "interest": 1, "watch": 1, "alerts": 2, "wallet": 1, "case": 1}:
         print(f"\nFAIL  delete reported {removed}, which does not match what was written")
         return 1
 

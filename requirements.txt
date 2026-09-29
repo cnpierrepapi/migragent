@@ -14,3 +14,5 @@ grpcio==1.83.0
 truststore==0.9.1
 pypdf==5.1.0
 google-adk==2.7.1
+# Recovers the address behind a wallet sign-in signature. See migragent/credits.py.
+eth-account==0.13.7

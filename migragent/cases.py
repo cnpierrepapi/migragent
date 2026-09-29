@@ -51,6 +51,12 @@ PROFILES = "case_profiles"
 # is a marketing database, which is not what they agreed to.
 SUBSCRIBE_INTEREST = "subscribe_interest"
 
+# Which wallet paid for this case. The link goes with the case; the wallet's own
+# balance and deposits do not, because they are money somebody already paid.
+# migragent/credits.py explains the split.
+WALLET_LINKS = "case_wallets"
+NONCES = "wallet_nonces"
+
 # Long enough to come back and finish, short enough that nothing sits around for
 # a reason nobody could defend. docs/DATA_PROTECTION.md explains the choice.
 RETENTION_DAYS = 30
@@ -245,7 +251,7 @@ class Cases:
         """
         removed = {"documents": 0, "coverage": 0, "result": 0, "cv": 0,
                    "fits": 0, "board_items": 0, "cv_clones": 0, "profile": 0,
-                   "interest": 0, "watch": 0, "alerts": 0, "case": 0}
+                   "interest": 0, "watch": 0, "alerts": 0, "wallet": 0, "case": 0}
 
         query = self._db.collection(CASE_DOCUMENTS).where(
             filter=firestore.FieldFilter("case_id", "==", case_id))
@@ -319,6 +325,14 @@ class Cases:
                 batch = self._db.batch()
         if n:
             batch.commit()
+
+        nonce = self._db.collection(NONCES).document(case_id)
+        if nonce.get().exists:
+            nonce.delete()
+        link = self._db.collection(WALLET_LINKS).document(case_id)
+        if link.get().exists:
+            link.delete()
+            removed["wallet"] = 1
 
         case = self._db.collection(CASES).document(case_id)
         if case.get().exists:

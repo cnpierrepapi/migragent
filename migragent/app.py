@@ -49,6 +49,8 @@ from .profile import AvatarRejected, Profiles
 from .rubric import best, score_study, score_work
 from .courses_page import courses_html
 from .coverage_page import coverage_html
+from .credits import (CHAIN_ID, CreditError, Credits, Chain, check_deposit, format_units,
+                      is_address, is_tx_hash, settings as credit_settings)
 from .entitlements import is_subscriber, redact_all
 from .gaps import with_gaps
 from .subscribe_page import subscribe_html
@@ -1157,7 +1159,7 @@ def courses() -> Response:
     for score in ranked:
         app.logger.info("rubric study %s", score.explain())
 
-    subscriber = is_subscriber(case)
+    subscriber = is_subscriber(case, db)
     schools = {r.get("name", ""): r
                for r in (d.to_dict() for d in
                          db.collection("institutions").stream())}
@@ -1188,8 +1190,117 @@ def subscribe() -> Response:
     profile = Profiles(db).get(case.case_id) if case else None
     return Response(subscribe_html(lane=lane,
                                    saved=request.args.get("saved", ""),
-                                   email=getattr(profile, "email", "") or ""),
+                                   email=getattr(profile, "email", "") or "",
+                                   has_case=case is not None,
+                                   wallet=_wallet_state(db, case)),
                     mimetype="text/html")
+
+
+def _wallet_state(db, case) -> dict[str, Any]:
+    """What the pay panel needs to draw itself. Never anything secret."""
+    cfg = credit_settings()
+    state: dict[str, Any] = {
+        "live": cfg.live, "token": cfg.token, "treasury": cfg.treasury,
+        "chain_id": CHAIN_ID, "price_units": str(cfg.price_units) if cfg.live else "0",
+        "per_month": cfg.per_month, "decimals": cfg.decimals,
+        "wallet": "", "balance": "0", "balance_label": "0", "paid_until": "",
+        "active": False}
+    if case is None:
+        return state
+    store = Credits(db)
+    wallet = store.wallet_for(case.case_id)
+    if wallet:
+        acct = store.account(wallet)
+        state.update(wallet=wallet, balance=str(acct.balance),
+                     balance_label=format_units(acct.balance, cfg.decimals),
+                     paid_until=acct.paid_until,
+                     active=cfg.live and acct.active())
+    return state
+
+
+def _json_case():
+    return load_case(on_missing=(jsonify({"error": "Start a case first."}), 400))
+
+
+@app.get("/credits")
+def credits_state() -> Response:
+    db, _cases, case = _json_case()
+    return jsonify(_wallet_state(db, case))
+
+
+@app.post("/wallet/nonce")
+def wallet_nonce() -> Response:
+    """The message the wallet will sign, written and remembered here."""
+    db, _cases, case = _json_case()
+    address = ((request.get_json(silent=True) or {}).get("address") or "").strip()
+    if not is_address(address):
+        return jsonify({"error": "That is not a wallet address."}), 400
+    message = Credits(db).issue_nonce(case.case_id, request.host, address)
+    return jsonify({"message": message})
+
+
+@app.post("/wallet/verify")
+def wallet_verify() -> Response:
+    db, cases, case = _json_case()
+    body = request.get_json(silent=True) or {}
+    address = (body.get("address") or "").strip()
+    signature = (body.get("signature") or "").strip()
+    if not is_address(address) or not signature:
+        return jsonify({"error": "Missing the address or the signature."}), 400
+    try:
+        Credits(db).verify(case.case_id, address, signature)
+    except CreditError as exc:
+        return jsonify({"error": str(exc)}), 400
+    cases.touch(case.case_id)
+    return jsonify(_wallet_state(db, case))
+
+
+@app.post("/credits/deposit")
+def credits_deposit() -> Response:
+    """Credit a $MIGRA transfer to the treasury, once, after reading it on chain.
+
+    Answers 202 while the transaction is unmined or short of confirmations, so
+    the page can ask again rather than showing a failure that is really a wait.
+    """
+    db, _cases, case = _json_case()
+    cfg = credit_settings()
+    if not cfg.live:
+        return jsonify({"error": "$MIGRA payments are not open yet."}), 409
+    tx_hash = ((request.get_json(silent=True) or {}).get("tx_hash") or "").strip().lower()
+    if not is_tx_hash(tx_hash):
+        return jsonify({"error": "That is not a transaction hash."}), 400
+
+    store = Credits(db)
+    wallet = store.wallet_for(case.case_id)
+    if not wallet:
+        return jsonify({"error": "Connect a wallet first."}), 400
+    try:
+        amount, block = check_deposit(Chain(cfg.rpc), cfg, tx_hash, wallet)
+        store.credit(wallet, tx_hash, amount, block)
+    except CreditError as exc:
+        if str(exc) == "pending":
+            return jsonify({"pending": True}), 202
+        return jsonify({"error": str(exc)}), 400
+    except OSError:
+        return jsonify({"pending": True, "note": "The chain did not answer."}), 202
+    return jsonify(_wallet_state(db, case))
+
+
+@app.post("/credits/unlock")
+def credits_unlock() -> Response:
+    db, _cases, case = _json_case()
+    cfg = credit_settings()
+    if not cfg.live:
+        return jsonify({"error": "$MIGRA payments are not open yet."}), 409
+    store = Credits(db)
+    wallet = store.wallet_for(case.case_id)
+    if not wallet:
+        return jsonify({"error": "Connect a wallet first."}), 400
+    try:
+        store.unlock(wallet, cfg.price_units)
+    except CreditError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(_wallet_state(db, case))
 
 
 @app.post("/subscribe")

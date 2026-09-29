@@ -31,10 +31,13 @@ not having it, and everybody can see that it exists.
 
 HOW IT WORKS TODAY
 ------------------
-There is no billing. `is_subscriber` returns False for everybody, always, and
-says so rather than pretending. What matters is that every screen already asks
-this module instead of deciding for itself, so the day billing exists there is
-one function to change and no screen that quietly forgot.
+Payment is in $MIGRA, through migragent/credits.py. A case is a subscriber when
+it has a linked wallet whose paid month has not run out. Until the token address
+is configured, nobody is, and `is_subscriber` still answers False honestly
+rather than pretending.
+
+Every screen asks this module instead of deciding for itself, so the switch from
+"no billing" to "billing" was one function and no screen that quietly forgot.
 
 `redact_intake` is the enforcement. Course rows keep their intake dates in the
 database, because the watch needs them to tell a subscriber when something
@@ -46,8 +49,13 @@ from typing import Any
 
 # What the subscription costs. One tier, and the only one: the product does not
 # have a cheaper version that is worse or a dearer one that is the real one.
-PRICE_USD = 7
-PRICE_LABEL = "$7 a month"
+# Priced in $MIGRA, a fixed number of tokens a month; see credits.py for why it
+# is not pegged to dollars.
+from .credits import settings as _credit_settings
+
+PRICE_TOKENS = _credit_settings().per_month
+PRICE_LABEL = (f"{PRICE_TOKENS:,} $MIGRA a month" if PRICE_TOKENS
+               else "$MIGRA a month")
 
 # The fields that are the subscription. Held for everybody, shown to subscribers.
 TIMING_FIELDS = ("intake", "intake_open", "intake_date", "application_opens",
@@ -59,15 +67,26 @@ TIMING_FIELDS = ("intake", "intake_open", "intake_date", "application_opens",
 WITHHELD = "with a subscription"
 
 
-def is_subscriber(case: Any = None) -> bool:
-    """Whether this case has paid. Always False, honestly, until billing exists.
+def is_subscriber(case: Any = None, db: Any = None) -> bool:
+    """Whether this case has a paid month running. False without a case or a db.
 
     Not a stub that returns True in development. A default of True would mean
     every screen was built and tested against the paid experience and nobody
     would notice the free one was broken until somebody who had not paid used
     it, which is everybody at launch.
     """
-    return False
+    case_id = getattr(case, "case_id", "") if case is not None else ""
+    if not case_id or db is None:
+        return False
+    from .credits import Credits
+
+    try:
+        return Credits(db).active_for_case(case_id)
+    except Exception:  # noqa: BLE001
+        # A ledger read that fails shows the free product, which is complete,
+        # rather than an error page. Nobody loses paid days to a hiccup: the
+        # month is stored, not consumed by being looked at.
+        return False
 
 
 def redact_intake(course: dict[str, Any], subscriber: bool) -> dict[str, Any]:
