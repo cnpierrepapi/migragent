@@ -148,6 +148,7 @@ class ShortageReader:
                 project=self._project, model=self._model, location=self._location,
                 credentials=self._credentials,
                 parts=[{"text": PROMPT + text[:MAX_CHARS]}],
+                public=True,  # an official shortage list, nothing else
             )
         except Exception as exc:  # noqa: BLE001
             result.model_error = str(exc)

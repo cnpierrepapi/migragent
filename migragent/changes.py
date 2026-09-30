@@ -143,6 +143,7 @@ class Explainer:
                 project=self._project, model=self._model, location=self._location,
                 credentials=self._credentials,
                 parts=[{"text": PROMPT + diff_sample}],
+                public=True,  # the diff of a public page, nothing else
             )
         except ModelError as exc:
             # The change itself is already recorded and checkable. A missing

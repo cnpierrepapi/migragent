@@ -177,7 +177,7 @@ def _json_from(payload: dict[str, Any]) -> tuple[dict[str, Any] | None, str]:
 def call_json(*, project: str, model: str, location: str, credentials,
               parts: list[dict[str, Any]], temperature: float = 0.0,
               max_output_tokens: int | None = None,
-              interactive: bool = False) -> dict[str, Any]:
+              interactive: bool = False, public: bool = False) -> dict[str, Any]:
     """Call Gemini and parse the JSON it returns.
 
     `parts` is the content parts list, so a caller can pass text, or inline
@@ -196,6 +196,10 @@ def call_json(*, project: str, model: str, location: str, credentials,
     into none. A second failure is reported rather than retried forever, because
     a prompt that reliably produces half an object is a bug and should look like
     one.
+
+    `public=True` is a promise by the caller that `parts` holds nothing but
+    text from public web pages. Only then may the call go through Orbio; see
+    `migragent/orbio.py`. Everything else goes to Vertex, always.
     """
     config: dict[str, Any] = {"temperature": temperature,
                               "responseMimeType": "application/json"}
@@ -203,12 +207,19 @@ def call_json(*, project: str, model: str, location: str, credentials,
         config["maxOutputTokens"] = max_output_tokens
     body = {"contents": [{"role": "user", "parts": parts}], "generationConfig": config}
 
+    from . import orbio
+
     why = ""
     # One attempt when somebody is waiting. The second is worth a second on a
     # job and is not worth another minute in front of a person.
     for attempt in ((1,) if interactive else (1, 2)):
-        payload = call_content(project=project, model=model, location=location,
-                               credentials=credentials, body=body, interactive=interactive)
+        payload = None
+        if public and orbio.enabled():
+            payload = orbio.generate_json(model=model, parts=parts, temperature=temperature,
+                                          max_output_tokens=max_output_tokens)
+        if payload is None:
+            payload = call_content(project=project, model=model, location=location,
+                                   credentials=credentials, body=body, interactive=interactive)
         parsed, why = _json_from(payload)
         if parsed is not None:
             return parsed

@@ -159,6 +159,11 @@ this application.
   are Google Cloud services inside the same project as the rest of this application. They are used to
   read the document you submitted and for nothing else. What comes back is the fields, and the
   document itself is still not stored anywhere.
+- **Public pages are read through Orbio, and nothing about you goes with them.** The daily job that
+  reads government and school websites sends that page text to Gemini through Orbio, and $MIGRA's
+  trading fees pay for it. It is public text from a public site. Your documents, your CV and your case
+  stay on Vertex, and `tools/test_orbio_route.py` fails if code that handles them is ever pointed at
+  Orbio.
 - `migragent-researcher` reads government pages, calls the model, and cannot write anything down.
   **It can read the database, and that includes cases.** Firestore grants read access to a database
   rather than to a collection, so there is no role that says "the registry but not the cases". The
@@ -188,7 +193,8 @@ real pieces of work and none of them exists yet.
 | Delete removes everything and reports counts | built, and tested by counting rows |
 | The watch is off until you turn it on | true in code; there is no default-on path |
 | Alerts go when the case goes | true; `tools/test_delete.py` counts them before and after |
-| Nothing is emailed, and nothing goes to a vendor outside Google Cloud | true; no sender exists |
+| Nothing is emailed, and nothing about you goes to a vendor outside Google Cloud | true; no sender exists. Public page text goes to Orbio, nothing personal does, and `tools/test_orbio_route.py` checks it |
+| Paying in $MIGRA links your wallet address to your case | true; deleting the case removes the link. The payment record stays, because it's money you already paid |
 | Your document's contents are read by a model | true; sent to Vertex AI Gemini, and to Cloud Vision for a photograph's text layer, both in this project |
 | The researcher cannot read the case collections | **false, and corrected above.** It holds database-wide read. D39 |
 | Documents are never kept | true in code, unchanged |

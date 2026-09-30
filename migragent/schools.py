@@ -292,6 +292,7 @@ class CourseReader:
                 credentials=self._credentials,
                 parts=[{"text": PROMPT + "\n\nPAGE:\n" + text}],
                 max_output_tokens=8192,
+                public=True,  # a school's own page, nothing else
             )
         except Exception as exc:  # noqa: BLE001
             return [], [{"why": f"the reader failed: {type(exc).__name__}"}]
@@ -365,6 +366,7 @@ class CourseReader:
                 project=self._project, model=self._model, location=self._location,
                 credentials=self._credentials,
                 parts=[{"text": DETAIL_PROMPT + "\n\nPAGE:\n" + text}],
+                public=True,  # a school's own page, nothing else
                 # 8192, not 2048. Thinking shares this budget, so a small
                 # ceiling truncates the answer before the JSON is finished and
                 # every page returns "the answer was cut off at the token limit

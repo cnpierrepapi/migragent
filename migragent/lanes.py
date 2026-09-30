@@ -118,6 +118,7 @@ class LaneCheck:
             parsed = call_json(
                 project=self._project, model=self._model, location=self._location,
                 credentials=self._credentials, parts=[{"text": PROMPT + text}],
+                public=True,  # a public page, nothing else
             )
         except Exception as exc:  # noqa: BLE001
             verdict.error = f"{type(exc).__name__}: {exc}"[:200]
