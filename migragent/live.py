@@ -31,7 +31,7 @@ ORBIO_PAGE = "https://www.orbio.so/launchpad/" + TOKEN
 
 # What Cloud Scheduler starts, in UTC. Mirrors the table on /rounds.
 SCHEDULE = (("03:17", "retention sweep"), ("04:40", "watch round"),
-            ("05:00", "job listings"), ("05:20", "digest"))
+            ("05:00", "job listings"), ("05:20", "digest"), ("05:40", "articles"))
 
 CACHE_SECONDS = 30
 _cache: dict[str, Any] = {"at": 0.0, "state": None}

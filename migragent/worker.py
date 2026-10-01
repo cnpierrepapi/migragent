@@ -72,7 +72,7 @@ MODE = os.environ.get("MIGRAGENT_MODE", "extract")
 #
 # An unknown mode is now a refusal rather than the most expensive thing this
 # codebase can do by accident.
-MODES = ("extract", "watch", "listings", "digest", "selftest", "robots")
+MODES = ("extract", "watch", "listings", "digest", "articles", "selftest", "robots")
 
 # Who reads an entry page: the agent that chooses what to open next, or the flat
 # extractor that reads whatever the walk queued. Off unless asked for, so the
@@ -218,6 +218,46 @@ def robots_probe() -> int:
     return 0
 
 
+def write_articles() -> int:
+    """Turn the morning's rule changes into articles, each with its report.
+
+        MIGRAGENT_MODE=articles  python -m migragent.worker
+
+    Runs after the watch round and the digest, as one task, on its own schedule.
+    Reads changes the round wrote, reads the page back from the snapshot store,
+    and writes to `articles`, or to `article_skips` with the reason when nothing
+    survives the quote check. See migragent/articles.py.
+    """
+    from .articles import Writer
+
+    credentials = identity.credentials_for(identity.WATCHER, PROJECT)
+    db = firestore.Client(project=PROJECT, credentials=credentials)
+    gcs = storage.Client(project=PROJECT, credentials=credentials)
+    days = int(os.environ.get("MIGRAGENT_ARTICLE_DAYS", "2"))
+    writer = Writer(db, SnapshotStore(gcs), PROJECT, MODEL, MODEL_LOCATION, credentials, days=days)
+
+    groups = writer.pending()
+    print(f"{len(groups)} pages with rule changes and no article yet, looking back {days} days",
+          flush=True)
+    written = skipped = failed = 0
+    for group in groups:
+        try:
+            outcome = writer.write(group)
+        except Exception as exc:  # noqa: BLE001
+            failed += 1
+            print(f"FAILED {group[-1].get('source_url')}: {type(exc).__name__}: {exc}"[:300], flush=True)
+            continue
+        if "written" in outcome:
+            written += 1
+            print(f"written: {outcome['written']}", flush=True)
+        else:
+            skipped += 1
+            print(f"skipped {group[-1].get('source_url')}: {outcome['skipped']}", flush=True)
+    print(f"articles: {written} written, {skipped} skipped, {failed} failed; "
+          f"orbio carried {orbio.served['orbio']} calls for ${orbio.served['usd']:.4f}", flush=True)
+    return 1 if failed and not written else 0
+
+
 def digest() -> int:
     """Turn what the watch round observed into what particular people are told.
 
@@ -360,6 +400,9 @@ def main() -> int:
 
     if MODE == "digest":
         return digest()
+
+    if MODE == "articles":
+        return write_articles()
 
     if MODE == "robots":
         return robots_probe()

@@ -4,8 +4,8 @@ WHAT GOES THROUGH HERE
 ----------------------
 Only calls whose caller passed `public=True` to `model.call_json`, which means
 the prompt is text from public government and school pages and nothing else.
-Today that is extraction, change notes, lane checks, shortage lists and school
-courses, all run by the daily worker. Nothing about a person ever comes here:
+Today that is extraction, change notes, lane checks, shortage lists, school
+courses and articles, all run by the daily worker. Nothing about a person ever comes here:
 documents, CVs, cases, drafts and fit scores stay on Vertex, which is what
 docs/DATA_PROTECTION.md promises. `tools/test_orbio_route.py` checks that none of
 those callers can reach this file.

@@ -17,16 +17,17 @@ pool, because a person waiting on their guide is watching a progress line, not a
 server-sent events carry it.
 
 A Cloud Run job called `migragent-ingest` does the reading. Ten tasks, five at a time, and the
-task index picks the lane. It is one program with six modes:
+task index picks the lane. It is one program with seven modes:
 
 - `extract` reads pages nobody has read yet
 - `watch` re-reads pages we have read and works out what moved
 - `listings` pulls new postings off government job boards
 - `digest` works out who needs telling, and tells them
+- `articles` writes up each rule change for the wire, with who it is for and a report; every claim must quote the page (`migragent/articles.py`)
 - `selftest` proves the watcher can add to the snapshot archive and cannot rewrite it
 - `robots` prints robots.txt as the job receives it, for when a block looks wrong
 
-Four Cloud Scheduler jobs start those, in this order and for this reason:
+Five Cloud Scheduler jobs start those, in this order and for this reason:
 
 | Time (UTC) | What runs |
 | --- | --- |
@@ -34,8 +35,9 @@ Four Cloud Scheduler jobs start those, in this order and for this reason:
 | 04:40 | watch round |
 | 05:00 | job listings |
 | 05:20 | digest |
+| 05:40 | articles, for the wire |
 
-Read the government pages first, then ask the boards, then tell people. Run the digest first and
+Read the government pages first, then ask the boards, then tell people, then write it up. Run the digest first and
 it reports on yesterday.
 
 ## The path one sentence takes
