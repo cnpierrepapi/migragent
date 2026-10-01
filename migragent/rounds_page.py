@@ -28,15 +28,17 @@ from typing import Any
 
 from .flow_page import STYLE
 from .result_page import HEAD, LOGO
+from .masthead import MASTHEAD
 
 # What Cloud Scheduler starts, and when. Written here rather than read from the
 # scheduler API for the same reason as above: no new role for a label. These are
-# the four jobs in docs/ARCHITECTURE.md and they are checked against it.
+# the five jobs in docs/ARCHITECTURE.md and they are checked against it.
 SCHEDULE = (
     ("03:17", "retention sweep", "deletes every case past its window"),
     ("04:40", "watch round", "re-reads what we hold, and works out what moved"),
     ("05:00", "job listings", "new postings off government boards"),
     ("05:20", "digest", "who does today's changes affect, and tell them"),
+    ("05:40", "articles", "write up each rule change for the wire, with its report"),
 )
 
 MODE_WORDS = {
@@ -187,7 +189,7 @@ def rounds_html(rounds: list[dict[str, Any]], changes: list[dict[str, Any]],
         'do not change most days.</li>')
 
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}
+<html lang="en" data-theme="newsroom"><head>{HEAD}
 <title>What the reading job did</title>
 <style>{STYLE}
   .lede {{ color: var(--ink-soft); line-height: 1.7; max-width: 66ch; margin: 0 0 30px }}
@@ -242,8 +244,7 @@ def rounds_html(rounds: list[dict[str, Any]], changes: list[dict[str, Any]],
   .foot {{ color: var(--ink-soft); font-size: .84rem; line-height: 1.7;
            border-top: 1px solid var(--rule); padding-top: 20px; max-width: 70ch }}
 </style></head>
-<body><main>
-  <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
+<body>{MASTHEAD}<main>
 
   <h1>What the reading job did</h1>
   <p class="lede">Nobody starts these. Cloud Scheduler does, four times before six in the morning,

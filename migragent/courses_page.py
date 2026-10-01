@@ -39,6 +39,7 @@ from typing import Any
 from .entitlements import PRICE_LABEL
 from .registry import JURISDICTIONS
 from .result_page import HEAD, LOGO
+from .masthead import MASTHEAD
 
 
 def _e(x: Any) -> str:
@@ -167,10 +168,9 @@ def courses_html(*, by_country: list[tuple[str, list[dict[str, Any]]]],
       </div>'''
 
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}<title>Courses you can apply to</title>
+<html lang="en" data-theme="newsroom"><head>{HEAD}<title>Courses you can apply to</title>
 <style>{STYLE}</style></head>
-<body><main>
-  <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
+<body>{MASTHEAD}<main>
   <h1>Courses you can apply to</h1>
   <p class="sub">{what}, at schools on the official register in the countries you chose.
   Each one links to the page it was read from. Where a school does not publish

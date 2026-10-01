@@ -520,6 +520,26 @@ def _coverage() -> tuple[dict, int, int]:
     return _cached("coverage", build)
 
 
+@app.get("/articles")
+def articles_index() -> Response:
+    """The wire. Articles the agent wrote, newest first. See migragent/articles.py."""
+    from .articles import recent
+    from .articles_page import index_html
+
+    return Response(index_html(recent(_db(), limit=60)), mimetype="text/html")
+
+
+@app.get("/articles/<slug>")
+def article(slug: str) -> Response:
+    from .articles import by_slug
+    from .articles_page import article_html
+
+    found = by_slug(_db(), slug)
+    if not found:
+        return redirect("/articles")
+    return Response(article_html(found), mimetype="text/html")
+
+
 @app.get("/api/state")
 def live_state() -> Response:
     """What the agent is doing, polled by the front page. See migragent/live.py."""
@@ -571,9 +591,16 @@ def landing() -> Response:
 
     waiting = len(rows) - len(places)
 
+    from .articles import recent
+
+    try:
+        filed = recent(db, limit=5)
+    except Exception:  # noqa: BLE001
+        # The front page must not fall over because the wire has a bad moment.
+        filed = []
     return Response(landing_html(live=live, sources=sources, lanes_open=open_lanes,
                                  places=places, openings=Listings(db).total(),
-                                 waiting=waiting),
+                                 waiting=waiting, articles=filed),
                     mimetype="text/html")
 
 

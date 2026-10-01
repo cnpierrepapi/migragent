@@ -35,6 +35,22 @@ DARK = {
     "warn": "#E0765A",
 }
 
+# The newsroom face, from the October 2026 rebrand: newsprint paper, near-black
+# ink, wire red for headlines and actions, agent green for live signals and
+# anything the agent itself wrote. Every page uses this one now.
+NEWSROOM = {
+    "paper": "#F6F3EC",
+    "paper_raised": "#FFFDF8",
+    "ink": "#141413",
+    "ink_soft": "#5B574F",
+    "rule": "#D8D1C2",
+    "primary": "#8C1C13",
+    "primary_hot": "#A3241A",
+    "accent": "#1F6F4A",
+    "link": "#1D4E89",
+    "warn": "#9A3412",
+}
+
 # Every pair that carries text somewhere in the product. Anything not listed
 # here is decoration and must never be used for text.
 TEXT_PAIRS = [
@@ -92,6 +108,7 @@ def report(name: str, palette: dict[str, str]) -> int:
 if __name__ == "__main__":
     report("LIGHT, bright and youthful", LIGHT)
     report("DARK, elite and mature", DARK)
+    report("NEWSROOM, the wire", NEWSROOM)
     print("\nA number below 4.50 is not a bug by itself. It means that colour is")
     print("a fill or a rule, and the palette notes must say so.")
     sys.exit(0)

@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 from .clock import now_iso
+from .masthead import MASTHEAD
 
 JURISDICTION_NAMES = {
     "UK": "the United Kingdom", "US": "the United States", "CA": "Canada",
@@ -203,7 +204,7 @@ def to_html(guide: Guide) -> str:
                       'by the pages that were read.</p>')
 
     return f'''<!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="newsroom">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -269,11 +270,8 @@ def to_html(guide: Guide) -> str:
 </style>
 </head>
 <body>
+{MASTHEAD}
 <main>
-  <div class="mark">
-    <svg viewBox="0 0 64 64"><path d="M10 36 V8 L32 28 L54 8 V36" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 50 Q32 61 45 50" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linecap="round"/></svg>
-    <span>MIGRAGENT</span>
-  </div>
 
   <h1>{_e(guide.title)}</h1>
   <p class="sub">Every requirement below carries the official page it came from and the date that

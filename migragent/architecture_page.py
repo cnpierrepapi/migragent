@@ -24,6 +24,7 @@ from typing import Any
 
 from .data_page import STYLE, render
 from .result_page import HEAD, LOGO
+from .masthead import MASTHEAD
 
 MERMAID = re.compile(r"```mermaid.*?```", re.S)
 PLACEHOLDER = "@@DIAGRAM@@"
@@ -125,6 +126,8 @@ EXTRA = '''
   svg .band { font: 500 9.5px var(--font-mono); letter-spacing: .08em; fill: var(--ink-soft) }
   svg .e { fill: none; stroke: var(--ink-soft); stroke-width: 1.3 }
   svg marker path { fill: var(--ink-soft) }
+  dl, dd, dt { min-width: 0 }
+  dd { overflow-wrap: anywhere }
 '''
 
 
@@ -135,11 +138,10 @@ def architecture_html(markdown: str, updated: str = "", **facts: Any) -> str:
     body = render(MERMAID.sub(PLACEHOLDER, text)).replace(
         f"<p>{PLACEHOLDER}</p>", DIAGRAM)
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}
+<html lang="en" data-theme="newsroom"><head>{HEAD}
 <title>How MIGRAGENT is put together</title>
 <style>{STYLE}{EXTRA}</style></head>
-<body><main>
-  <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
+<body>{MASTHEAD}<main>
 
   <div class="masthead">
     <h1>How MIGRAGENT is put together</h1>

@@ -36,6 +36,7 @@ from typing import Any
 
 from .registry import JURISDICTIONS
 from .result_page import HEAD, LOGO
+from .masthead import MASTHEAD
 
 
 def _e(x: Any) -> str:
@@ -121,10 +122,9 @@ def _crumbs(active: int) -> str:
 def choose_html(live: int, sources: int) -> str:
     """Step one. What are you trying to do, and nothing else on the screen."""
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}<title>Start</title>
+<html lang="en" data-theme="newsroom"><head>{HEAD}<title>Start</title>
 <style>{STYLE}</style></head>
-<body><main>
-  <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
+<body>{MASTHEAD}<main>
   {_crumbs(1)}
   <h1>What are you trying to do?</h1>
   <p class="sub">One question. We work out where you can go from what you upload next,
@@ -184,7 +184,7 @@ def documents_html(lane: str, intent: str) -> str:
     if lane == "work":
         title = "What do you do?"
         sub = ("Upload your CV. We read what it says, then work out which countries have "
-               "published a shortage that fits it &mdash; and we lay the same CV out the way "
+               "published a shortage that fits it. Then we lay the same CV out the way "
                "employers in Canada, the United Kingdom and the EU expect to receive it.")
         note = ("<b>No CV?</b> That is normal, and it is not a problem. A great many people "
                 "who can do the work a country is short of have never needed the document. "
@@ -193,7 +193,7 @@ def documents_html(lane: str, intent: str) -> str:
         hint = "Your CV. A PDF, or a photo of it."
     else:
         title = "What have you finished?"
-        sub = ("Upload your transcripts or your national exam results &mdash; a WASSCE or NECO "
+        sub = ("Upload your transcripts or your national exam results: a WASSCE or NECO "
                "slip, a degree certificate, whatever you hold. We read them to work out what "
                "you are most likely applying for next, and which countries have a school for it.")
         note = ("Photographs are fine and are what most people have. We read the text off the "
@@ -214,10 +214,9 @@ def documents_html(lane: str, intent: str) -> str:
             else "what you uploaded")
 
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}<title>What you have</title>
+<html lang="en" data-theme="newsroom"><head>{HEAD}<title>What you have</title>
 <style>{STYLE}</style></head>
-<body><main>
-  <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
+<body>{MASTHEAD}<main>
   {_crumbs(2)}
   <h1>{title}</h1>
   <p class="sub">{sub}</p>
@@ -235,7 +234,7 @@ def documents_html(lane: str, intent: str) -> str:
     <a href="/data">What happens to your documents</a>.</p>
     <p style="margin-top:26px">
       <button class="go" id="go" type="submit">Read them</button>
-      <a class="quiet" href="/start/places">Skip &mdash; I have nothing to upload</a></p>
+      <a class="quiet" href="/start/places">Skip, I have nothing to upload</a></p>
   </form>
 </main>
 <script>
@@ -367,10 +366,9 @@ def places_html(lane: str, eligible: list, reading=None, assumed_level: str = ""
         </form>'''
 
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}<title>Where you can go</title>
+<html lang="en" data-theme="newsroom"><head>{HEAD}<title>Where you can go</title>
 <style>{STYLE}</style></head>
-<body><main>
-  <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
+<body>{MASTHEAD}<main>
   {_crumbs(3)}
   <h1>Where you can actually go</h1>
   <p class="sub">These are the countries whose own published documents fit what you gave us.
@@ -407,10 +405,9 @@ def level_html(held: str, assumed: str, subjects: list[str],
             f'</span></label>')
 
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}<title>What are you studying?</title>
+<html lang="en" data-theme="newsroom"><head>{HEAD}<title>What are you studying?</title>
 <style>{STYLE}</style></head>
-<body><main>
-  <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
+<body>{MASTHEAD}<main>
   {_crumbs(3)}
   <h1>What are you applying for?</h1>
   <p class="sub">We worked this out from your documents. If it is wrong, change it

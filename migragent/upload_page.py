@@ -12,6 +12,7 @@ Everything stops under prefers-reduced-motion.
 from __future__ import annotations
 
 import html
+from .masthead import MASTHEAD
 from typing import Any
 
 LABELS = {
@@ -85,7 +86,7 @@ def upload_html(case, worth, uploaded, coverage, requirement_count,
         for m in matched) or '<li class="none">Nothing matched yet.</li>'
 
     return f'''<!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="newsroom">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -161,11 +162,8 @@ def upload_html(case, worth, uploaded, coverage, requirement_count,
 </head>
 <body>
 <canvas id="confetti"></canvas>
+{MASTHEAD}
 <main>
-  <div class="mark-logo">
-    <svg viewBox="0 0 64 64"><path d="M10 36 V8 L32 28 L54 8 V36" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 50 Q32 61 45 50" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linecap="round"/></svg>
-    <span>MIGRAGENT</span>
-  </div>
 
   <h1>What you already have</h1>
   <p class="sub">Upload what is in your drawer. Nothing is required, and you can take the guide at
@@ -276,7 +274,7 @@ def upload_html(case, worth, uploaded, coverage, requirement_count,
     var c = document.getElementById('confetti');
     var ctx = c.getContext('2d');
     c.width = innerWidth; c.height = innerHeight;
-    var colours = ['#16467D', '#1E5FA8', '#FFC53D', '#55627A'];
+    var colours = ['#8C1C13', '#1F6F4A', '#141413', '#D8D1C2'];  // newsroom: wire red, agent green, ink, rule
     var bits = [];
     for (var i = 0; i < 140; i++) bits.push({{
       x: Math.random() * c.width, y: -20 - Math.random() * c.height * 0.4,

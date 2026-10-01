@@ -26,6 +26,7 @@ from typing import Any
 
 from .cv_builder import FIELDS
 from .result_page import HEAD, LOGO
+from .masthead import MASTHEAD
 
 
 def _e(x: Any) -> str:
@@ -77,15 +78,14 @@ def clone_html(clone: dict[str, Any]) -> str:
     """
     body = clone.get("body") or ""
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}
+<html lang="en" data-theme="newsroom"><head>{HEAD}
 <title>{_e(clone.get("title"))}</title>
 <style>{STYLE}
   pre {{ white-space: pre-wrap; font: .88rem/1.7 var(--font-mono); color: var(--ink);
          background: var(--paper-raised); border: 1px solid var(--rule);
          border-radius: var(--radius); padding: 22px 24px; margin: 0 0 22px }}
 </style></head>
-<body><main>
-  <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
+<body>{MASTHEAD}<main>
   <h1>{_e(clone.get("title"))}</h1>
   <p class="note">{_e(clone.get("note"))}</p>
   <pre>{_e(body) or "This one came back empty. Try building it again."}</pre>
@@ -108,11 +108,10 @@ def cv_builder_html(answers: dict[str, str] | None = None,
         for kind, label, hint, _many in FIELDS)
 
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}
+<html lang="en" data-theme="newsroom"><head>{HEAD}
 <title>{"Edit your CV" if editing else "Create a CV"}</title>
 <style>{STYLE}</style></head>
-<body><main>
-  <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
+<body>{MASTHEAD}<main>
   <h1>{"Your CV" if editing else "Let us write it with you."}</h1>
   <p class="sub">You do not need a CV to use this. Answer what you can and we will
   shape it into one, then into a Canadian one, a British one and a Europass one,

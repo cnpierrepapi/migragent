@@ -35,6 +35,7 @@ from typing import Any
 
 from .board import COLUMN_NAMES, COLUMNS
 from .result_page import HEAD, LOGO
+from .masthead import MASTHEAD
 
 
 def _e(x: Any) -> str:
@@ -224,11 +225,10 @@ def dashboard_html(*, profile: Any, place: str, clones: list[dict],
         notice = f'<p class="hint" style="color:var(--warn)">{_e(error)}</p>'
 
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}<title>Your dashboard</title>
+<html lang="en" data-theme="newsroom"><head>{HEAD}<title>Your dashboard</title>
 <style>{STYLE}</style></head>
-<body><main>
+<body>{MASTHEAD}<main>
   <div class="top">
-    <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
     <div class="who">{_face(profile)}
       <div><b>{_e(getattr(profile, "name", "") or "Your case")}</b>
       <span>{_e(place)} &middot; kept 30 days after you last touch it</span></div>

@@ -162,3 +162,72 @@ body {
     transition-duration: 1ms !important;
   }
 }
+
+/* NEWSROOM, the wire. October 2026.
+ *
+ * MIGRAGENT reports what official pages say, so it looks like the thing that
+ * does that: newsprint, a serif headline, rules instead of cards. The agent
+ * shows through wherever it speaks for itself, in monospace and in the one
+ * green, so a reader can always tell a filing from the machinery behind it.
+ *
+ * Ratios from `python tools/contrast.py`, NEWSROOM block. */
+:root[data-theme="newsroom"] {
+  --paper: #F6F3EC;         /* newsprint */
+  --paper-raised: #FFFDF8;
+  --ink: #141413;           /* 16.63 on paper */
+  --ink-soft: #5B574F;      /*  6.49 on paper */
+  --rule: #D8D1C2;
+  --rule-strong: #141413;
+  --primary: #8C1C13;       /*  8.27 on paper. Wire red: headlines, actions */
+  --primary-hot: #A3241A;   /*  6.71 on paper */
+  --accent: #1F6F4A;        /*  5.52 on paper. Agent green: live, and machine output */
+  --link: #1D4E89;          /*  7.57 on paper */
+  --warn: #9A3412;          /*  6.59 on paper */
+
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+
+  --shadow: none;
+  --ring: 0 0 0 3px rgba(140, 28, 19, .22);
+  --radius: 3px;
+  --radius-sm: 2px;
+  --display-wght: 640;
+  --display-soft: 0;
+  --display-wonk: 0;
+  --display-tracking: -0.018em;
+  --body-tracking: 0em;
+}
+
+:root[data-theme="newsroom"] h1,
+:root[data-theme="newsroom"] h2,
+:root[data-theme="newsroom"] h3 { font-variation-settings: "opsz" 144, "SOFT" 0, "WONK" 0 }
+
+/* The masthead. One for every page, from migragent/masthead.py. */
+.mast { border-bottom: 3px double var(--rule-strong, var(--ink)); margin: 0 auto 34px;
+        max-width: 1160px; padding: 0 24px; background: var(--paper) }
+.mast-top { display: flex; justify-content: space-between; align-items: center; gap: 12px;
+            flex-wrap: wrap; padding: 10px 0 8px; border-bottom: 1px solid var(--rule);
+            font: .7rem var(--font-mono); color: var(--ink-soft); letter-spacing: .02em }
+.mast-top b { color: var(--ink); font-weight: 500 }
+.mast-live { display: inline-flex; align-items: center; gap: 7px; color: var(--accent) }
+.mast-live i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+               box-shadow: 0 0 0 0 rgba(31, 111, 74, .5); animation: mastbeat 2.4s infinite }
+.mast-live.idle i { animation: none; opacity: .55 }
+@keyframes mastbeat { 70% { box-shadow: 0 0 0 7px rgba(31, 111, 74, 0) } }
+.mast-name { display: flex; align-items: center; justify-content: center; gap: 14px;
+             padding: 18px 0 6px; text-decoration: none; color: var(--ink) }
+.mast-name svg { width: 34px; height: 34px; color: var(--primary) }
+.mast-name span { font-family: var(--font-display); font-size: clamp(2rem, 6vw, 3.2rem);
+                  font-weight: 700; letter-spacing: -.02em; line-height: 1;
+                  font-variation-settings: "opsz" 144, "SOFT" 0, "WONK" 0 }
+.mast-tag { text-align: center; font: italic .95rem var(--font-serif, Georgia, serif);
+            color: var(--ink-soft); margin: 0 0 12px }
+.mast-nav { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 22px;
+            border-top: 1px solid var(--rule); padding: 9px 0 10px;
+            font: 500 .74rem var(--font-mono); text-transform: uppercase; letter-spacing: .08em }
+.mast-nav a { color: var(--ink); text-decoration: none; padding-bottom: 2px;
+              border-bottom: 2px solid transparent }
+.mast-nav a:hover, .mast-nav a[aria-current="page"] { border-bottom-color: var(--primary) }
+.mast-nav a.act { color: var(--primary) }
+@media (max-width: 640px) { .mast-top span.hide-sm { display: none } }
+@media print { .mast-top, .mast-nav, .mast-tag { display: none } .mast { border-bottom-width: 1px } }

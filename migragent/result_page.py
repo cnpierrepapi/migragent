@@ -24,13 +24,11 @@ HEAD = '''<meta charset="utf-8">
 <link rel="icon" href="/brand/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/brand/tokens.css">'''
 
-LOGO = ('<svg viewBox="0 0 64 64"><path d="M10 36 V8 L32 28 L54 8 V36" fill="none" '
-        'stroke="currentColor" stroke-width="9" stroke-linecap="round" '
-        'stroke-linejoin="round"/><path d="M19 50 Q32 61 45 50" fill="none" '
-        'stroke="currentColor" stroke-width="7.5" stroke-linecap="round"/></svg>')
+# The mark lives in masthead.py now; re-exported here because eleven pages import it from this file.
+from .masthead import LOGO, MASTHEAD  # noqa: E402,F401
 
 
 def _next_step(lane: str) -> str:
@@ -123,7 +121,7 @@ def result_html(case, coverage: dict, result: dict, documents: list, cv=None) ->
       </div>''' for q in questions)
 
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}<title>Your guide</title>
+<html lang="en" data-theme="newsroom"><head>{HEAD}<title>Your guide</title>
 <style>
   * {{ box-sizing: border-box }}
   body {{ margin: 0; padding: 52px 24px 96px }}
@@ -179,8 +177,7 @@ def result_html(case, coverage: dict, result: dict, documents: list, cv=None) ->
   .yn label {{ font-weight: 400 }}
   .declared {{ border-left: 2px solid var(--accent); padding-left: 12px; margin-top: 14px }}
 </style></head>
-<body><main>
-  <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
+<body>{MASTHEAD}<main>
   <h1>Your guide is ready</h1>
   <p class="sub">Built from {result.get("requirement_count", 0)} requirements read across
   {result.get("source_count", 0)} official pages. Every line in it carries the page it came from and

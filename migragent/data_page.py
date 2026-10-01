@@ -27,6 +27,7 @@ import re
 from typing import Any
 
 from .result_page import HEAD, LOGO
+from .masthead import MASTHEAD
 
 # The registered entity. A data protection notice that does not say who is
 # holding the data is not a notice, it is a blog post.
@@ -207,11 +208,10 @@ STYLE = '''
 
 def data_html(markdown: str, updated: str = "") -> str:
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}
+<html lang="en" data-theme="newsroom"><head>{HEAD}
 <title>Data protection notice</title>
 <style>{STYLE}</style></head>
-<body><main>
-  <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
+<body>{MASTHEAD}<main>
 
   <div class="masthead">
     <h1>Data protection notice</h1>

@@ -35,6 +35,7 @@ import html
 from typing import Any
 
 from .registry import JURISDICTIONS
+from .masthead import MASTHEAD
 
 
 def _e(x: Any) -> str:
@@ -163,7 +164,7 @@ def intake_html(coverage_by_lane: dict, total_sources: int, live: int = 0) -> st
         </label>''')
 
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}<title>MIGRAGENT</title>
+<html lang="en" data-theme="newsroom"><head>{HEAD}<title>MIGRAGENT</title>
 <style>{HERO_CSS}{SHARED_CSS}
   .drop {{ border: 1.5px dashed var(--rule); border-radius: var(--radius); padding: 26px;
            text-align: center; background: var(--paper-raised); cursor: pointer }}
@@ -175,8 +176,7 @@ def intake_html(coverage_by_lane: dict, total_sources: int, live: int = 0) -> st
   .counts {{ font-family: var(--font-mono); font-size: .76rem; color: var(--ink-soft);
              border-top: 1px solid var(--rule); margin-top: 26px; padding-top: 13px }}
 </style></head>
-<body><main class="band">
-  <div class="brand" style="padding-top:34px">{LOGO}<span>MIGRAGENT</span></div>
+<body>{MASTHEAD}<main class="band">
   <h1>Two questions, and we start reading.</h1>
   <p class="sub">Tell us where you are going and whether it is study or work. Add whatever
   paperwork you already have, or none at all. <a href="/">What this is</a>.</p>
@@ -294,7 +294,7 @@ def working_html(case, file_count: int, estimate=None) -> str:
     seconds = int(round(getattr(estimate, "seconds", 0) or 0))
     basis = getattr(estimate, "basis", "") or ""
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}<title>Working</title>
+<html lang="en" data-theme="newsroom"><head>{HEAD}<title>Working</title>
 <style>{SHARED_CSS}
   .steps {{ list-style: none; margin: 26px 0 0; padding: 0 }}
   .steps li {{ display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; align-items: start;
@@ -325,8 +325,7 @@ def working_html(case, file_count: int, estimate=None) -> str:
   .done {{ margin-top: 30px; display: none }}
   @media (prefers-reduced-motion: reduce) {{ .steps li {{ animation: none; opacity: 1; transform: none }} }}
 </style></head>
-<body><main>
-  <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
+<body>{MASTHEAD}<main>
   <h1>Reading the sources</h1>
   <p class="sub">Every line below is a step that actually ran, with what it actually produced.
   The clock is an estimate of how long to wait, not a measure of how much is done.</p>

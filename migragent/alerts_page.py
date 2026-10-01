@@ -28,6 +28,7 @@ from typing import Any
 
 from .alerts import KIND_LABELS
 from .result_page import HEAD, LOGO
+from .masthead import MASTHEAD
 
 
 def _e(x: Any) -> str:
@@ -160,12 +161,11 @@ def alerts_html(rows: list[dict[str, Any]], watch: Any, place: str) -> str:
                 'yet.</div>')
 
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}<title>What moved</title>
+<html lang="en" data-theme="newsroom"><head>{HEAD}<title>What moved</title>
 <style>{STYLE}</style></head>
-<body><main>
-  <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
+<body>{MASTHEAD}<main>
   <h1>What moved</h1>
-  <p class="sub">Rules that changed, doors that opened, and jobs you qualify for &mdash;
+  <p class="sub">Rules that changed, doors that opened, and jobs you qualify for. All of it
   found by reading the official pages, not by anybody telling us.</p>
   {state}
   {body}

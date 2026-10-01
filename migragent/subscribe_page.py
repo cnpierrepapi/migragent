@@ -39,6 +39,7 @@ from typing import Any
 from .credits import CHAIN_ID, CHAIN_NAME, DEFAULT_RPC, EXPLORER
 from .entitlements import PRICE_LABEL
 from .result_page import HEAD, LOGO
+from .masthead import MASTHEAD
 
 
 def _e(x: Any) -> str:
@@ -292,10 +293,9 @@ def subscribe_html(lane: str = "study", saved: str = "", email: str = "",
   </form>'''
 
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}<title>{PRICE_LABEL}</title>
+<html lang="en" data-theme="newsroom"><head>{HEAD}<title>{PRICE_LABEL}</title>
 <style>{STYLE}</style></head>
-<body><main>
-  <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
+<body>{MASTHEAD}<main>
   <h1>{_e(headline)}</h1>
   <p class="sub">Everything you have seen so far is free and stays free. What
   {PRICE_LABEL} buys is timing: the dates, and being told the day they move.</p>

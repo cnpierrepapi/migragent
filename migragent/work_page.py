@@ -26,6 +26,7 @@ from typing import Any
 from .board import COLUMNS, COLUMN_NAMES
 from .fit import CAVEAT
 from .result_page import HEAD, LOGO
+from .masthead import MASTHEAD
 
 
 def _e(x: Any) -> str:
@@ -100,10 +101,6 @@ STYLE = '''
 '''
 
 
-def _brand() -> str:
-    return f'<div class="brand">{LOGO}<span>MIGRAGENT</span></div>'
-
-
 def jobs_html(cv, listings: list[dict[str, Any]], fits: dict[str, dict],
               place: str) -> str:
     """What this person's CV matched, and nothing else."""
@@ -138,7 +135,7 @@ def jobs_html(cv, listings: list[dict[str, Any]], fits: dict[str, dict],
              them to come back with one is telling them to solve the problem they
              came here with. -->
         <p class="sub" style="margin-top:22px">Do not have a CV?
-        <a href="/cv/new">Create one here</a> &mdash; five questions, and we shape the
+        <a href="/cv/new">Create one here</a>. Five questions, and we shape the
         answers into a Canadian CV, a British one and a Europass one.</p>
         <script>
           var d = document.getElementById('drop'), i = document.getElementById('cv');
@@ -336,6 +333,6 @@ def _card(item, column: str) -> str:
 
 
 def _page(title: str, body: str) -> str:
-    return (f'<!doctype html>\n<html lang="en" data-theme="dark"><head>{HEAD}'
-            f'<title>{_e(title)}</title>\n<style>{STYLE}</style></head>\n<body><main>'
-            f'{_brand()}{body}</main></body></html>')
+    return (f'<!doctype html>\n<html lang="en" data-theme="newsroom"><head>{HEAD}'
+            f'<title>{_e(title)}</title>\n<style>{STYLE}</style></head>\n<body>{MASTHEAD}<main>'
+            f'{body}</main></body></html>')

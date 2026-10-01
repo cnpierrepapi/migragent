@@ -1,604 +1,388 @@
-"""The landing page: what this is, for somebody who has never heard of it.
+"""The front page: the wire, the desk, and the way in.
 
-WHAT THE PRODUCT ACTUALLY IS, HAVING GOT THIS WRONG THREE TIMES
----------------------------------------------------------------
-Version one led with "nothing is stated without a source". That is a sentence
-about our internal discipline, and nobody arrives caring about our discipline.
+A NEWSPAPER, BECAUSE THAT IS WHAT IT IS NOW
+-------------------------------------------
+Earlier versions of this page learned that the product is not the evidence
+discipline and not the guide: it is an agent that keeps working after you close
+the tab. October 2026 made that visible. The agent reads official immigration
+pages every morning and writes up every rule change as an article, with who it
+is for and a report that shows its working. So the front page is a front page.
 
-Version two led with the guide. Closer, and still only half of it: a guide is a
-document, and a document is a thing you read once and then have to keep checking
-yourself, which is exactly the labour this is supposed to remove.
+The lead is the newest article the agent filed, with who it is for. Down the
+side is the desk: what the agent did today, what it cost, and how long its
+$MIGRA-funded balance lasts. Below the fold is the product, for anybody who
+wants the agent reading on their behalf, and every call to action still goes to
+`/start`, which does the work.
 
-The product is an agent that keeps working after you close the tab. You tell it
-who you are and where you want to go, it carves a route out of the official
-rules for your case, and then it stays on watch: when a rule moves, when an
-intake opens, when a job in a shortage occupation you actually qualify for is
-posted, it tells you. The guide is the first thing it gives you. The alerts are
-why you keep it.
+NOTHING HERE IS A MOCK-UP
+-------------------------
+The articles come from `articles`, which the agent wrote and the quote check
+passed. The desk comes from /api/state, built from rows the reading job wrote.
+Where there is nothing yet, the page says so. The old page carried an
+illustrated alert feed and a kept-and-dropped demo; both said they were
+examples, and both went once the real thing existed.
 
-So this page is ordered that way. The hero says what it does. The second beat is
-the watch, because that is the part nobody else does. The evidence discipline
-comes after, as the reason the alerts are worth opening, which is where it
-belongs rather than at the top.
-
-THE FORM IS NOT HERE
---------------------
-This page sells; `/start` does the work. Every call to action points there.
-
-DARK, DELIBERATELY
-------------------
-The tokens carry two faces and this page asks for the mature one. Note that in
-dark `--primary` is a pale blue, so anything painting text on it uses
-`var(--paper)` and never `#fff`, or the label disappears into its own background.
-That is why this could not be the light page with one attribute changed.
+THE NEWSROOM FACE
+-----------------
+Paper, ink, wire red for headlines and actions, agent green for anything the
+agent says about itself. See the NEWSROOM block in web/brand/tokens.css.
 """
 from __future__ import annotations
 
 import html
 from typing import Any
 
-from .intake_page import HEAD, LOGO
+from .masthead import MASTHEAD
+from .registry import JURISDICTIONS
+from .result_page import HEAD
 
 
 def _e(x: Any) -> str:
-    return html.escape(str(x or ""))
+    return html.escape(str(x if x is not None else ""))
 
 
-def _picture(stem: str, alt: str, ratio: str = "4 / 3", lazy: bool = True) -> str:
-    """One image, at the two widths that exist.
-
-    Both files are always written by tools/prepare_images.py, including when the
-    source is smaller than the larger label, because a srcset that names a file
-    which is not there shows nothing at all. That is how the first version of
-    this page shipped with a broken image on every large screen.
-    """
-    base = f"/brand/images/web/{stem}"
-    return (f'<img class="shot" style="aspect-ratio:{ratio}" src="{base}-800.webp" '
-            f'srcset="{base}-800.webp 800w, {base}-1600.webp 1600w" '
-            f'sizes="(max-width: 900px) 100vw, 620px" alt="{_e(alt)}" '
-            f'{"loading=\"lazy\" " if lazy else ""}decoding="async">')
+def _country(code: str) -> str:
+    return JURISDICTIONS.get(code, {}).get("name", code)
 
 
 CSS = '''
   * { box-sizing: border-box }
-  body { margin: 0; background: var(--paper); color: var(--ink);
-         font-family: var(--font-body) }
-  a { color: inherit }
-  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px }
+  body { margin: 0 }
+  .page { max-width: 1160px; margin: 0 auto; padding: 0 24px }
+  a { color: var(--link) }
+  .kicker { font: 500 .7rem var(--font-mono); letter-spacing: .08em; text-transform: uppercase;
+            color: var(--accent); margin: 0 0 10px }
+  .kicker b { color: var(--primary); font-weight: 500 }
 
-  .top { display: flex; align-items: center; justify-content: space-between;
-         padding: 22px 0 8px }
-  .brand { display: flex; align-items: center; gap: 11px; color: var(--primary) }
-  .brand svg { width: 26px; height: 26px }
-  .brand span { font-family: var(--font-display); font-size: 1.16rem; color: var(--ink);
-                letter-spacing: .02em }
+  .front { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr) 290px; gap: 0;
+           border-bottom: 1px solid var(--ink); padding-bottom: 30px }
+  .front > div { padding: 0 24px; border-right: 1px solid var(--rule) }
+  .front > div:first-child { padding-left: 0 }
+  .front > div:last-child { padding-right: 0; border-right: 0 }
 
-  /* On dark, --primary is pale. White on pale blue is unreadable, so the label
-     takes the page colour instead. */
-  .cta { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px;
-         border-radius: var(--radius); background: var(--primary); color: var(--paper);
-         text-decoration: none; font: 600 .95rem var(--font-body); border: 0; cursor: pointer;
-         transition: background var(--motion-fast) var(--ease) }
-  .cta.small { padding: 9px 16px; font-size: .88rem }
-  .cta.ghost { background: transparent; color: var(--ink); border: 1px solid var(--rule) }
-  .cta.ghost:hover { border-color: var(--primary); background: var(--paper-raised) }
-  .cta:hover { background: var(--primary-hot) }
+  .lead h1 { font-size: clamp(2rem, 4.4vw, 3.2rem); line-height: 1.04; margin: 0 0 14px }
+  .lead h1 a { color: var(--ink); text-decoration: none }
+  .lead h1 a:hover { color: var(--primary) }
+  .lead .dek { font: italic 1.22rem/1.5 var(--font-serif); margin: 0 0 18px }
+  .lead h2 { font: 600 .74rem var(--font-mono); letter-spacing: .1em; text-transform: uppercase;
+             color: var(--primary); border-top: 3px solid var(--primary); padding-top: 8px; margin: 0 0 6px }
+  .lead ul { list-style: none; margin: 0 0 16px; padding: 0 }
+  .lead li { font: 1.04rem/1.55 var(--font-serif); padding: 9px 0; border-bottom: 1px dotted var(--rule) }
+  .lead li b { font-weight: 600 }
+  .lead li small { font: .74rem/1.6 var(--font-mono); color: var(--accent) }
+  .lead .more { font: 500 .8rem var(--font-mono) }
+  .lead .stamp { font: .72rem/1.7 var(--font-mono); color: var(--ink-soft); margin-top: 14px }
 
-  .hero { display: grid; grid-template-columns: 1.02fr 1fr; gap: 48px; align-items: center;
-          padding: 44px 0 60px }
-  .kicker { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .1em;
-            text-transform: uppercase; color: var(--accent); margin: 0 0 16px }
-  .hero h1 { font-family: var(--font-display); font-size: clamp(2.2rem, 4.7vw, 3.6rem);
-             line-height: 1.05; margin: 0 0 18px; letter-spacing: var(--display-tracking);
-             text-wrap: balance }
-  .hero h1 em { font-style: normal; color: var(--primary) }
-  .hero p { font-size: 1.09rem; line-height: 1.62; color: var(--ink-soft); margin: 0 0 26px;
-            max-width: 48ch }
-  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center }
-  .under { font-family: var(--font-mono); font-size: .73rem; color: var(--ink-soft);
-           margin-top: 18px }
+  .second h3, .desk h3 { font: 500 .7rem var(--font-mono); letter-spacing: .1em; text-transform: uppercase;
+             border-bottom: 1px solid var(--ink); padding-bottom: 6px; margin: 0 0 4px;
+             display: flex; justify-content: space-between }
+  .desk h3 { margin-bottom: 10px }
+  .desk h3 span { color: var(--accent) }
+  .story { padding: 14px 0; border-bottom: 1px solid var(--rule) }
+  .story:last-child { border-bottom: 0 }
+  .story h4 { font: 640 1.14rem/1.25 var(--font-display); margin: 4px 0 6px;
+              font-variation-settings: "opsz" 36, "SOFT" 0, "WONK" 0 }
+  .story .kicker { font: 500 .66rem var(--font-mono); letter-spacing: .08em; text-transform: uppercase;
+                   color: var(--accent); margin: 0 }
+  .story h4 a { color: var(--ink); text-decoration: none }
+  .story h4 a:hover { color: var(--primary) }
+  .story p { font: .95rem/1.5 var(--font-serif); margin: 0; color: var(--ink) }
+  .story .for { font: .72rem/1.6 var(--font-mono); color: var(--ink-soft); margin-top: 6px }
 
-  .shot { display: block; width: 100%; object-fit: cover; border-radius: var(--radius);
-          background: var(--paper-raised) }
-  /* Photographs shot in daylight sit on a near-black page like open windows. A
-     hair of contrast and a border settles them into it rather than letting them
-     glare out of it. */
-  .figures .shot, .step .shot, .split .shot { box-shadow: var(--shadow);
-          border: 1px solid var(--rule); filter: saturate(.94) contrast(1.03) }
-
-  .strip { border-block: 1px solid var(--rule); background: var(--paper-raised) }
-  .strip .wrap { display: flex; gap: 30px; flex-wrap: wrap; justify-content: space-between;
-                 padding-block: 20px }
-  .stat b { font-family: var(--font-display); font-size: 1.55rem; display: block;
-            font-variant-numeric: tabular-nums; line-height: 1.1 }
-  .stat span { font-family: var(--font-mono); font-size: .71rem; color: var(--ink-soft) }
-
-  section { padding: 68px 0 }
-  h2 { font-family: var(--font-display); font-size: clamp(1.55rem, 3vw, 2.2rem); margin: 0 0 12px;
-       line-height: 1.13; text-wrap: balance }
-  h2 em { font-style: normal; color: var(--primary) }
-  .lede { color: var(--ink-soft); line-height: 1.62; margin: 0 0 32px; max-width: 62ch;
-          font-size: 1.02rem }
-
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px }
-  .step .shot { aspect-ratio: 4 / 3; margin-bottom: 15px }
-  .step b { display: block; font: 600 1.03rem var(--font-body); margin-bottom: 6px }
-  .step p { margin: 0; color: var(--ink-soft); line-height: 1.56; font-size: .95rem }
-  .step em { font-style: normal; font-family: var(--font-mono); font-size: .69rem;
-             color: var(--accent); display: block; margin-bottom: 8px; letter-spacing: .08em;
-             text-transform: uppercase }
-
-  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 46px; align-items: center }
-  .split .shot { aspect-ratio: 5 / 4 }
-
-  .routes { display: grid; grid-template-columns: 1fr 1fr; gap: 22px }
-  .route { border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden;
-           background: var(--paper-raised) }
-  .route .shot { border-radius: 0; border: 0; aspect-ratio: 16 / 9 }
-  .route div { padding: 20px 22px 24px }
-  .route b { display: block; font-family: var(--font-display); font-size: 1.2rem;
-             margin-bottom: 7px }
-  .route p { margin: 0; color: var(--ink-soft); line-height: 1.55; font-size: .95rem }
-
-  .places { display: flex; gap: 10px; flex-wrap: wrap }
-  .place { border: 1px solid var(--rule); border-radius: var(--radius-sm);
-           background: var(--paper-raised); padding: 13px 16px; min-width: 172px }
-  .place b { display: block; font-weight: 600 }
-  .place span { font-family: var(--font-mono); font-size: .71rem; color: var(--ink-soft) }
-  /* Places nothing has been read for are named in one line below the grid rather
-     than given a greyed-out card each. A faded card is a promise with a shape,
-     and this product does not make promises with a shape. */
-  .later { font-family: var(--font-mono); font-size: .73rem; color: var(--ink-soft);
-           margin-top: 16px; line-height: 1.7 }
-
-  .end { text-align: center; padding: 80px 0 96px; border-top: 1px solid var(--rule) }
-  .end h2 { margin-bottom: 14px }
-  .end .lede { margin: 0 auto 28px }
-
-  footer { border-top: 1px solid var(--rule); padding: 26px 0 44px;
-           font-family: var(--font-mono); font-size: .72rem; color: var(--ink-soft);
-           line-height: 1.8 }
-  footer a { color: var(--link) }
-
-  @media (prefers-reduced-motion: reduce) { .figures video { display: none } }
-  @media (max-width: 900px) {
-    .hero { grid-template-columns: 1fr; gap: 30px; padding-top: 26px }
-    .steps, .routes { grid-template-columns: 1fr }
-    .split { grid-template-columns: 1fr; gap: 28px }
-    section { padding: 48px 0 }
-  }
-'''
-
-# THE MOTION ON THIS PAGE
-# -----------------------
-# There is one animated thing and it is the alert feed, because the watch is the
-# claim this page makes and a still picture of three rows does not say "these
-# arrive". Rows enter on a stagger and the loop restarts, which is what the thing
-# actually does: it is quiet, and then it is not.
-#
-# CSS and SVG only. No library, no canvas, nothing that needs JavaScript to have
-# loaded before the page means anything.
-FEED = '''
-  .feed { border: 1px solid var(--rule); border-radius: var(--radius);
-          background: var(--paper-raised); padding: 8px 20px 14px; box-shadow: var(--shadow) }
-  .feed .head { display: flex; align-items: center; gap: 9px; padding: 12px 0 10px;
-                border-bottom: 1px solid var(--rule); font-family: var(--font-mono);
-                font-size: .71rem; color: var(--ink-soft); letter-spacing: .06em }
-  .feed .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
-               animation: pulse 2.6s var(--ease) infinite }
-  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .25 } }
-
-  .alert { display: flex; gap: 13px; align-items: flex-start; padding: 15px 0;
-           border-bottom: 1px solid var(--rule); opacity: 0;
-           animation: arrive 9s var(--ease) infinite }
-  .alert:last-child { border-bottom: 0 }
-  .alert:nth-of-type(1) { animation-delay: .4s }
-  .alert:nth-of-type(2) { animation-delay: 2.2s }
-  .alert:nth-of-type(3) { animation-delay: 4.0s }
-  @keyframes arrive {
-    0%   { opacity: 0; transform: translateY(9px) }
-    7%   { opacity: 1; transform: none }
-    88%  { opacity: 1; transform: none }
-    100% { opacity: 0; transform: none }
-  }
-
-  .alert .mark { flex: 0 0 auto; width: 26px; height: 26px; margin-top: 1px;
-                 color: var(--primary) }
-  .alert.job .mark { color: var(--accent) }
-  .alert .tag { font-family: var(--font-mono); font-size: .66rem; letter-spacing: .09em;
-                text-transform: uppercase; color: var(--ink-soft); display: block;
-                margin-bottom: 4px }
-  .alert .txt { font-size: .98rem; line-height: 1.5; display: block }
-  .alert q { display: block; font-family: var(--font-mono); font-size: .73rem;
-             color: var(--ink-soft); margin-top: 5px; quotes: none }
-
-  @media (prefers-reduced-motion: reduce) {
-    .alert { animation: none; opacity: 1 }
-    .feed .dot { animation: none }
-  }
-'''
-
-# The evidence block. It shows the product refusing something rather than
-# producing something, which is the opposite of what every other entry will show.
-REFUSAL = '''
-  .refuse { background: var(--paper-raised); border: 1px solid var(--rule);
-            border-radius: var(--radius); padding: 24px 26px 20px }
-  .refuse .line { display: flex; gap: 12px; align-items: flex-start; padding: 13px 0;
-                  border-bottom: 1px solid var(--rule); font-size: .97rem; line-height: 1.5 }
-  .refuse .line:last-child { border-bottom: 0 }
-  .refuse .mark { flex: 0 0 auto; width: 20px; height: 20px; margin-top: 2px }
-  .refuse .kept .mark { color: var(--primary) }
-  .refuse .cut .mark { color: var(--warn) }
-  .refuse .mark circle { fill: none }
-  .refuse q { display: block; font-family: var(--font-mono); font-size: .74rem;
-              color: var(--ink-soft); margin-top: 5px; quotes: none }
-  .refuse .cut .txt { position: relative; color: var(--ink-soft) }
-  .refuse .cut .txt::after { content: ""; position: absolute; left: 0; top: .62em; height: 1.5px;
-                             background: var(--warn); width: 0;
-                             animation: strike 5.5s var(--ease) infinite }
-  .refuse .why { font-family: var(--font-mono); font-size: .72rem; color: var(--warn);
-                 opacity: 0; animation: showwhy 5.5s var(--ease) infinite; margin-top: 6px }
-  @keyframes strike { 0%,42% { width: 0 } 58%,100% { width: 100% } }
-  @keyframes showwhy { 0%,56% { opacity: 0 } 70%,100% { opacity: 1 } }
-  @media (prefers-reduced-motion: reduce) {
-    .refuse .cut .txt::after { animation: none; width: 100% }
-    .refuse .why { animation: none; opacity: 1 }
-  }
-'''
-
-TICK = ('<svg class="mark" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" '
-        'stroke="currentColor" stroke-width="1.5"/><path d="M6 10.4l2.6 2.6L14 7.6" fill="none" '
-        'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" '
-        'stroke-linejoin="round"/></svg>')
-CROSS = ('<svg class="mark" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" '
-         'stroke="currentColor" stroke-width="1.5"/><path d="M7 7l6 6M13 7l-6 6" fill="none" '
-         'stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>')
-
-# Three marks for three kinds of alert: a page that moved, a door that opened, a
-# job that appeared. Drawn rather than fetched, so they cost nothing, carry no
-# licence, and match the type.
-MOVED = ('<svg class="mark" viewBox="0 0 26 26" fill="none" stroke="currentColor" '
-         'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-         '<rect x="4" y="3" width="18" height="20" rx="2.5"/><path d="M8 9h10M8 13h10M8 17h6"/>'
-         '</svg>')
-OPENED = ('<svg class="mark" viewBox="0 0 26 26" fill="none" stroke="currentColor" '
-          'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-          '<path d="M14 22H5V4h9"/><path d="M14 4v18"/><path d="M18 9l4 4-4 4"/>'
-          '<path d="M22 13h-7"/></svg>')
-POSTED = ('<svg class="mark" viewBox="0 0 26 26" fill="none" stroke="currentColor" '
-          'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-          '<rect x="3" y="8" width="20" height="14" rx="2.5"/>'
-          '<path d="M9 8V6a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M3 14h20"/></svg>')
-
-
-# The live console. Everything in it comes from /api/state, which is built from
-# rows the reading job wrote and a balance the worker read from Orbio. Nothing
-# is animated into existence: until the first poll answers, the figures are
-# dashes, and a figure the state does not have stays a dash.
-LIVE = '''
-  .live { padding: 64px 0 8px }
-  .live .pills { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px }
-  .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px;
-          border: 1px solid var(--rule); border-radius: 999px; background: var(--paper-raised);
-          font: .72rem var(--font-mono); color: var(--ink-soft); text-decoration: none }
-  .pill b { color: var(--ink); font-weight: 500 }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary);
-         box-shadow: 0 0 0 0 rgba(127,176,242,.6); animation: beat 2.4s infinite }
-  .dot.idle { background: var(--ink-soft); animation: none }
-  @keyframes beat { 0% { box-shadow: 0 0 0 0 rgba(127,176,242,.55) }
-                    70% { box-shadow: 0 0 0 9px rgba(127,176,242,0) }
-                    100% { box-shadow: 0 0 0 0 rgba(127,176,242,0) } }
-  .live h2 { margin-bottom: 10px }
-  .cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 28px 0 22px }
-  .card { border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper-raised);
-          padding: 16px 18px; min-width: 0 }
-  .card span { display: block; font: .7rem var(--font-mono); color: var(--ink-soft) }
-  .card b { display: block; font-family: var(--font-display); font-size: 1.7rem; margin: 6px 0 4px;
-            color: var(--ink); overflow-wrap: anywhere }
-  .card.gold b { color: var(--accent) }
-  .ticker { overflow: hidden; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
-            white-space: nowrap; font: .74rem var(--font-mono); color: var(--ink-soft); padding: 9px 0 }
-  .ticker div { display: inline-block; padding-left: 100%; animation: crawl 90s linear infinite }
-  .ticker i { font-style: normal; color: var(--primary); margin: 0 6px 0 22px }
-  @keyframes crawl { to { transform: translateX(-100%) } }
-  .log { list-style: none; margin: 18px 0 0; padding: 0; font: .78rem var(--font-mono) }
-  .log li { display: grid; grid-template-columns: 74px 70px 1fr auto; gap: 12px; padding: 9px 0;
-            border-bottom: 1px solid var(--rule); align-items: baseline }
+  .figs { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--rule) }
+  .fig { padding: 10px 0; border-bottom: 1px solid var(--rule); min-width: 0 }
+  .fig:nth-child(odd) { padding-right: 10px; border-right: 1px solid var(--rule) }
+  .fig:nth-child(even) { padding-left: 10px }
+  .fig span { display: block; font: .64rem var(--font-mono); color: var(--ink-soft); text-transform: uppercase;
+              letter-spacing: .06em }
+  .fig b { display: block; font: 640 1.45rem var(--font-display); margin: 3px 0 1px; color: var(--ink);
+           overflow-wrap: anywhere }
+  .fig.paid b { color: var(--accent) }
+  .fig small { font: .64rem var(--font-mono); color: var(--ink-soft) }
+  .log { list-style: none; margin: 12px 0 0; padding: 0; font: .7rem/1.55 var(--font-mono) }
+  .log li { padding: 7px 0; border-bottom: 1px dotted var(--rule) }
   .log time { color: var(--ink-soft) }
-  .log .role { color: var(--primary) }
-  .log .role.CHANGE { color: var(--accent) }
-  .log .what { color: var(--ink); min-width: 0; overflow-wrap: anywhere }
-  .log .what a { color: var(--ink) }
-  .log .cost { color: var(--ink-soft); white-space: nowrap }
-  .live .fine { font: .72rem var(--font-mono); color: var(--ink-soft); margin-top: 14px; line-height: 1.7 }
-  @media (max-width: 900px) { .cards { grid-template-columns: repeat(2, 1fr) }
-    .log li { grid-template-columns: auto 1fr; gap: 4px 10px }
-    .log .what, .log .cost { grid-column: 1 / -1 } .log .cost:empty { display: none } }
-  @media (prefers-reduced-motion: reduce) { .ticker div, .dot { animation: none } }
+  .log .role { color: var(--accent); margin: 0 4px }
+  .log .role.CHANGE { color: var(--primary) }
+  .log .cost { color: var(--accent) }
+  .desk .fine { font: .66rem/1.6 var(--font-mono); color: var(--ink-soft); margin-top: 10px }
+
+  .band { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 3px double var(--ink) }
+  .band div { padding: 16px 18px; border-right: 1px solid var(--rule) }
+  .band div:first-child { padding-left: 0 }
+  .band div:last-child { border-right: 0 }
+  .band b { display: block; font: 640 1.9rem var(--font-display) }
+  .band span { font: .68rem var(--font-mono); color: var(--ink-soft) }
+
+  section { padding: 44px 0 10px }
+  section > h2 { font-size: clamp(1.6rem, 3.2vw, 2.3rem); margin: 0 0 8px }
+  .lede { font: 1.14rem/1.65 var(--font-serif); max-width: 62ch; margin: 0 0 22px }
+  .cols { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--ink) }
+  .cols > div { padding: 16px 22px 6px 0; margin-right: 22px; border-right: 1px solid var(--rule) }
+  .cols > div:last-child { border-right: 0; margin-right: 0 }
+  .cols em { font: 500 .68rem var(--font-mono); letter-spacing: .1em; text-transform: uppercase;
+             color: var(--primary); font-style: normal }
+  .cols b { display: block; font: 640 1.2rem var(--font-display); margin: 6px 0 6px }
+  .cols p { font: 1rem/1.6 var(--font-serif); margin: 0 0 12px }
+  .two { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--ink) }
+  .two > div { padding: 16px 22px 6px 0 }
+  .two > div + div { padding-left: 22px; border-left: 1px solid var(--rule) }
+  .two b { display: block; font: 640 1.3rem var(--font-display); margin-bottom: 6px }
+  .two p { font: 1rem/1.6 var(--font-serif); margin: 0 }
+  .cta { display: inline-block; padding: 13px 24px; background: var(--primary); color: var(--paper);
+         text-decoration: none; font: 600 .95rem var(--font-body); border-radius: var(--radius) }
+  .cta.ghost { background: transparent; color: var(--ink); border: 1px solid var(--ink) }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 18px 0 8px }
+  .under { font: .74rem var(--font-mono); color: var(--ink-soft) }
+  .places { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            border-top: 1px solid var(--ink) }
+  .place { padding: 14px 16px 14px 0; border-bottom: 1px solid var(--rule) }
+  .place b { display: block; font: 640 1.15rem var(--font-display) }
+  .place span { display: block; font: .74rem/1.6 var(--font-mono); color: var(--ink-soft) }
+  .later { font: italic .98rem/1.6 var(--font-serif); color: var(--ink-soft); margin-top: 14px }
+  .print { border: 1px solid var(--ink); background: var(--paper-raised); padding: 20px 22px; max-width: 760px }
+  .print p { font: 1.02rem/1.65 var(--font-serif); margin: 0 0 10px }
+  .print code { font: .82rem var(--font-mono); color: var(--accent) }
+  .print code.out { color: var(--warn) }
+  .end { text-align: center; padding: 56px 0 30px; border-top: 3px double var(--ink); margin-top: 40px }
+  .end h2 { font-size: clamp(1.8rem, 3.6vw, 2.6rem); margin: 0 0 10px }
+  footer { border-top: 1px solid var(--rule); padding: 20px 0 50px; font: .74rem/1.8 var(--font-mono);
+           color: var(--ink-soft) }
+  footer a { color: var(--ink-soft) }
+
+  @media (max-width: 1000px) {
+    .front { grid-template-columns: 1fr 1fr }
+    .front > div.desk { grid-column: 1 / -1; padding: 24px 0 0; border-right: 0;
+                        border-top: 1px solid var(--ink); margin-top: 20px }
+    .front > div.second { padding-right: 0; border-right: 0 }
+  }
+  @media (max-width: 700px) {
+    .front { grid-template-columns: 1fr }
+    .front > div { padding: 0; border-right: 0 }
+    .front > div.second { border-top: 1px solid var(--ink); margin-top: 22px; padding-top: 14px }
+    .band { grid-template-columns: 1fr 1fr }
+    .band div:nth-child(3) { padding-left: 0 }
+    .band div:nth-child(2) { border-right: 0 }
+    .cols, .two { grid-template-columns: 1fr }
+    .cols > div { border-right: 0; margin-right: 0; border-bottom: 1px solid var(--rule) }
+    .two > div + div { padding-left: 0; border-left: 0; border-top: 1px solid var(--rule) }
+  }
 '''
 
-LIVE_HTML = '''
-  <div class="wrap"><section class="live" id="live" aria-live="off">
-    <div class="pills">
-      <a class="pill" id="lv-orbio" href="https://www.orbio.so/launchpad/0xdebc1c4ea1689a7507568ecfeacb42599b493b60"
-         target="_blank" rel="noopener"><span class="dot"></span><b>Live on Orbio</b> paid by $MIGRA</a>
-      <span class="pill"><span class="dot idle" id="lv-dot"></span><b id="lv-phase">-</b> <span id="lv-next"></span></span>
-      <a class="pill" id="lv-token" href="https://www.orbio.so/launchpad/0xdebc1c4ea1689a7507568ecfeacb42599b493b60"
-         target="_blank" rel="noopener">$MIGRA <b>-</b></a>
-    </div>
-    <h2>Everything it did today, <em>and what it cost.</em></h2>
-    <p class="lede">Every morning it re-reads the government and school pages it holds. A page
-    that didn't move costs nothing. One that did gets read again, and $MIGRA's trading fees pay
-    for that. This is the log, as the job wrote it.</p>
-
-    <div class="cards">
-      <div class="card gold"><span>Orbio balance</span><b id="lv-balance">-</b><span>from $MIGRA fees</span></div>
-      <div class="card"><span>Spent today</span><b id="lv-spent">-</b><span>by the agent, on its own</span></div>
-      <div class="card"><span>Pages read today</span><b id="lv-pages">-</b><span id="lv-unchanged">-</span></div>
-      <div class="card"><span>Pages that moved</span><b id="lv-changes">-</b><span id="lv-rules">in the last 7 days</span></div>
-      <div class="card"><span>Runway</span><b id="lv-runway">-</b><span>at this week's pace</span></div>
-    </div>
-
-    <div class="ticker"><div id="lv-ticker">waiting for the first reading...</div></div>
-    <ol class="log" id="lv-log"></ol>
-    <p class="fine">Balance read from Orbio by the job after its last round, <span id="lv-asof">-</span>.
-    Your documents never go through Orbio, only public pages do.
-    <a href="/rounds">Every round, in full</a>.</p>
-  </section></div>
+DESK = '''<div class="desk" id="live">
+  <h3>The desk <span id="lv-phase">-</span></h3>
+  <div class="figs">
+    <div class="fig paid"><span>Orbio balance</span><b id="lv-balance">-</b><small>from $MIGRA fees</small></div>
+    <div class="fig"><span>Spent today</span><b id="lv-spent">-</b><small>by the agent</small></div>
+    <div class="fig"><span>Pages read today</span><b id="lv-pages">-</b><small id="lv-unchanged">-</small></div>
+    <div class="fig"><span>Pages that moved</span><b id="lv-changes">-</b><small id="lv-rules">this week</small></div>
+    <div class="fig"><span>Runway</span><b id="lv-runway">-</b><small>at this week's pace</small></div>
+    <div class="fig"><span>$MIGRA</span><b id="lv-mcap">-</b><small id="lv-grad">market cap</small></div>
+  </div>
+  <ol class="log" id="lv-log"></ol>
+  <p class="fine">Every line is a row the reading job wrote. Balance read from Orbio <span id="lv-asof">-</span>.
+  Only public pages go through Orbio, never your documents. <a href="/rounds">Every round</a>.</p>
+</div>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const money = (n) => n == null ? "-" : (n < 1 ? "$" + n.toFixed(4) : "$" + n.toFixed(2));
-  const ago = (iso) => { const s = (Date.now() - Date.parse(iso)) / 1000;
-    if (!isFinite(s)) return "";
-    return s < 90 ? "now" : s < 5400 ? Math.round(s / 60) + "m ago" : s < 129600 ? Math.round(s / 3600) + "h ago" : Math.round(s / 86400) + "d ago"; };
-  const until = (iso) => { const m = Math.max(0, Math.round((Date.parse(iso) - Date.now()) / 60000));
-    return m < 60 ? m + "m" : Math.floor(m / 60) + "h " + (m % 60) + "m"; };
+  const ago = (iso) => { const s = (Date.now() - Date.parse(iso)) / 1000; if (!isFinite(s)) return "";
+    return s < 90 ? "now" : s < 5400 ? Math.round(s / 60) + "m" : s < 129600 ? Math.round(s / 3600) + "h" : Math.round(s / 86400) + "d"; };
   async function poll() {
-    let s;
-    try { s = await (await fetch("/api/state", {cache: "no-store"})).json(); } catch (e) { return; }
+    let s; try { s = await (await fetch("/api/state", {cache: "no-store"})).json(); } catch (e) { return; }
     const o = s.orbio || {}, st = s.stats || {}, t = s.token;
-    $("lv-phase").textContent = s.status.phase;
-    $("lv-dot").className = "dot" + (s.status.phase === "READING" ? "" : " idle");
-    $("lv-next").textContent = "next: " + s.status.next.what + " in " + until(s.status.next.at);
-    if (t) $("lv-token").innerHTML = "$MIGRA <b>$" + (t.market_cap_usd / 1000).toFixed(1) + "K</b> " + t.graduation_pct + "% to graduation";
+    $("lv-phase").textContent = s.status.phase === "READING" ? "reading now" : "idle";
     $("lv-balance").textContent = money(o.available);
     $("lv-spent").textContent = money(o.spent_today);
     $("lv-pages").textContent = (st.pages_today ?? "-").toLocaleString();
     $("lv-unchanged").textContent = (st.unchanged_today ?? 0) + " unchanged, $0";
     $("lv-changes").textContent = (st.changes_week ?? "-").toLocaleString();
-    $("lv-rules").textContent = "this week, " + (st.rule_changes_week ?? 0) + " changed a rule";
+    $("lv-rules").textContent = (st.rule_changes_week ?? 0) + " changed a rule";
     $("lv-runway").textContent = o.runway_days == null ? "-" : o.runway_days + " days";
-    $("lv-asof").textContent = o.at ? ago(o.at) : "not yet";
-    const feed = s.feed || [];
-    if (feed.length) $("lv-ticker").innerHTML = feed.slice(0, 16).map((f) =>
-      "<i>" + esc(f.role) + "</i>" + esc(f.text) + (f.cost ? " · " + esc(f.cost) : "")).join("");
-    $("lv-log").innerHTML = feed.slice(0, 14).map((f) =>
-      '<li><time>' + esc(ago(f.at)) + '</time><span class="role ' + esc(f.role) + '">' + esc(f.role) +
-      '</span><span class="what">' + (f.url ? '<a href="' + esc(f.url) + '" rel="noopener" target="_blank">' + esc(f.text) + "</a>" : esc(f.text)) +
-      '</span><span class="cost">' + esc(f.cost) + "</span></li>").join("");
+    if (t) { $("lv-mcap").textContent = "$" + (t.market_cap_usd / 1000).toFixed(1) + "K";
+             $("lv-grad").textContent = t.graduation_pct + "% to graduation"; }
+    $("lv-asof").textContent = o.at ? ago(o.at) + " ago" : "after the next round";
+    $("lv-log").innerHTML = (s.feed || []).slice(0, 9).map((f) =>
+      '<li><time>' + esc(ago(f.at)) + '</time><span class="role ' + esc(f.role) + '">' + esc(f.role) + '</span>' +
+      esc(f.text) + (f.cost ? ' <span class="cost">' + esc(f.cost) + '</span>' : '') + '</li>').join("");
   }
   poll(); setInterval(poll, 20000);
 })();
-</script>
-'''
+</script>'''
+
+
+def _lead(a: dict[str, Any] | None) -> str:
+    if not a:
+        return '''<div class="lead">
+  <p class="kicker"><b>The wire</b> · waiting for the first filing</p>
+  <h1>Rules move. It reads them first.</h1>
+  <p class="dek">Every morning the agent re-reads the official immigration pages it holds. When one
+  changes a rule, it writes it up here, with who it is for and a report that shows its working.</p>
+  <p class="stamp">Nothing has been filed yet.</p></div>'''
+    r = a.get("report") or {}
+    groups = a.get("who_for") or []
+    def _conds(g: dict[str, Any]) -> str:
+        cs = (g.get("conditions") or [])[:3]
+        return ("<br><small>" + " · ".join(_e(c.get("text")) for c in cs) + "</small>") if cs else ""
+
+    items = "".join(f"<li><b>{_e(g.get('group'))}</b>{(' ' + _e(g.get('why'))) if g.get('why') else ''}"
+                    f"{_conds(g)}</li>" for g in groups[:4])
+    more = (f"All {len(groups)} groups, with the quotes" if len(groups) > 4 else "Read it, with the quotes")
+    return f'''<div class="lead">
+  <p class="kicker"><b>{_e(_country(a.get("jurisdiction", "")))}</b> · {_e(a.get("lane", ""))} · filed by the agent</p>
+  <h1><a href="/articles/{_e(a["slug"])}">{_e(a.get("headline"))}</a></h1>
+  <p class="dek">{_e(a.get("dek"))}</p>
+  <h2>Who this is for</h2>
+  <ul>{items}</ul>
+  <a class="more" href="/articles/{_e(a["slug"])}">{more}</a>
+  <p class="stamp">From {len(r.get("sources") or [])} official {"page" if len(r.get("sources") or []) == 1 else "pages"}. {r.get("quotes_kept", 0)} of
+  {r.get("quotes_checked", 0)} claims found word for word on the page; the rest were dropped.
+  <a href="/articles/{_e(a["slug"])}#report">Report</a></p>
+</div>'''
+
+
+def _second(articles: list[dict[str, Any]]) -> str:
+    if not articles:
+        return '''<div class="second"><h3>More filings</h3>
+  <div class="story"><p>The next rule change the agent catches lands here.</p></div></div>'''
+    stories = "".join(f'''<div class="story">
+  <p class="kicker"><b>{_e(_country(a.get("jurisdiction", "")))}</b> · {_e(a.get("lane", ""))}</p>
+  <h4><a href="/articles/{_e(a["slug"])}">{_e(a.get("headline"))}</a></h4>
+  <p>{_e(a.get("dek"))}</p>
+  <p class="for">For: {_e("; ".join(g.get("group", "") for g in (a.get("who_for") or [])[:2]))}</p>
+</div>''' for a in articles)
+    return f'<div class="second"><h3>More filings <a href="/articles">all</a></h3>{stories}</div>'
+
+
+def weight(a: dict[str, Any]) -> int:
+    """How much an article tells its readers: groups, and the conditions on each."""
+    groups = a.get("who_for") or []
+    return len(groups) * 2 + sum(len(g.get("conditions") or []) for g in groups) + len(a.get("dates") or [])
+
+
+def lead_first(articles: list[dict[str, Any]], days: int = 3) -> list[dict[str, Any]]:
+    """The strongest of the last few days' filings leads; the rest keep date order.
+
+    A paper leads with its biggest story, not its latest. An article whose page
+    says almost nothing about who it touches is still filed, just not on top.
+    """
+    if not articles:
+        return []
+    newest = max(a.get("observed_on", "") for a in articles)
+    from datetime import date, timedelta
+
+    try:
+        floor = (date.fromisoformat(newest) - timedelta(days=days)).isoformat()
+    except ValueError:
+        floor = ""
+    recent = [a for a in articles if a.get("observed_on", "") >= floor]
+    lead = max(recent, key=lambda a: (weight(a), a.get("observed_on", "")))
+    return [lead] + [a for a in articles if a is not lead]
 
 
 def landing_html(live: int, sources: int, lanes_open: int,
                  places: list[tuple[str, str, str]],
-                 openings: int = 0, waiting: int = 0) -> str:
-    """`places` is (name, note, offered), so the page never invents coverage.
+                 openings: int = 0, waiting: int = 0,
+                 articles: list[dict[str, Any]] | None = None) -> str:
+    """`places` is (name, what it is open for, note), so the page never invents coverage.
 
-    `openings` is how many postings have actually been ingested. It is passed in
-    rather than typed into the template, and where it is zero the stat is
-    replaced instead of printing a nought beside a sentence about opportunities.
+    `openings` is how many postings have actually been ingested; where it is zero
+    the figure is replaced rather than printing a nought.
     """
-    # `places` is (name, what it is open for, note). Only countries where the
-    # whole path works reach this page: study needs courses to point at, work
-    # needs a job board we can read. Everything else lives on /coverage, with
-    # its real numbers, rather than being listed here as a promise.
-    place_cards = "".join(
-        f'<div class="place"><b>{_e(name)}</b>'
-        f'<span>{_e(opens)}</span><span>{_e(note)}</span></div>'
-        for name, opens, note in places)
-
-    later_line = (f'<p class="later">{waiting} more countries are being read. '
-                  f'A country appears here when we can take you all the way, '
-                  f'not when we have started.</p>' if waiting else "")
-
-    openings_stat = (f'<div class="stat"><b>{openings:,}</b>'
-                     f'<span>live postings matched against cases</span></div>'
-                     if openings else
-                     '<div class="stat"><b>Daily</b>'
-                     '<span>re-read, so it cannot go stale</span></div>')
+    articles = lead_first(articles or [])
+    place_cards = "".join(f'<div class="place"><b>{_e(name)}</b><span>{_e(opens)}</span>'
+                          f'<span>{_e(note)}</span></div>' for name, opens, note in places)
+    later = (f'<p class="later">{waiting} more countries are being read. A country appears here when we '
+             f'can take you all the way through, not when we have started.</p>' if waiting else "")
+    openings_fig = (f'<div><b>{openings:,}</b><span>live job postings matched against cases</span></div>'
+                    if openings else '<div><b>Daily</b><span>re-read, so nothing goes stale</span></div>')
 
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}
-<title>MIGRAGENT: the agent that keeps watch on your move</title>
-<meta name="description" content="Upload what you have. MIGRAGENT reads the official
-immigration rules, works out which countries fit you, and tells you when a rule changes, an
-intake opens, or a job you qualify for is posted.">
-<meta name="theme-color" content="#080B12">
-<style>{CSS}{FEED}{REFUSAL}{LIVE}</style></head>
+<html lang="en" data-theme="newsroom"><head>{HEAD}
+<title>MIGRAGENT, the immigration wire</title>
+<meta name="description" content="An agent reads the official immigration pages every morning and writes
+up every rule change: what changed, exactly who it is for, and a report showing its working.">
+<meta name="theme-color" content="#F6F3EC">
+<style>{CSS}</style></head>
 <body>
-  <div class="wrap">
-    <div class="top">
-      <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
-      <a class="cta small" href="/start">Start free</a>
-    </div>
-
-    <div class="hero">
-      <div>
-        <p class="kicker">Your immigration agent</p>
-        <h1>Tell it what you want. <em>It does the reading.</em></h1>
-        <p>Upload what you already have. It works out which countries fit you and what each
-        one takes, then keeps checking after you close the tab.</p>
-        <div class="row">
-          <a class="cta" href="/start">Start free</a>
-          <a class="cta ghost" href="#watch">What it tells you</a>
-        </div>
-        <p class="under">No account. Your documents are never kept.</p>
-      </div>
-      <div class="figures">
-        <video class="shot" style="aspect-ratio:5 / 4" autoplay muted loop playsinline
-               preload="metadata" poster="/brand/images/web/01-departure-hall-morning-800.webp"
-               aria-label="A traveller crossing a bright airport departure hall">
-          <!-- mp4 first, deliberately. VP9 came out larger than h264 on this
-               clip, and a browser takes the first source it can play, so
-               listing webm first was handing most people the heavier file. -->
-          <source src="/brand/video/hero.mp4" type="video/mp4">
-          <source src="/brand/video/hero.webm" type="video/webm">
-        </video>
-        <noscript>{_picture("01-departure-hall-morning",
-                  "A traveller crossing a bright airport departure hall", "5 / 4", lazy=False)}</noscript>
-      </div>
-    </div>
+{MASTHEAD}
+<div class="page">
+  <div class="front">
+    {_lead(articles[0] if articles else None)}
+    {_second(articles[1:5])}
+    {DESK}
   </div>
 
-  <div class="strip"><div class="wrap">
-    <div class="stat"><b>{live:,}</b><span>requirements read from official pages</span></div>
-    <div class="stat"><b>{sources:,}</b><span>government pages under watch</span></div>
-    <div class="stat"><b>{lanes_open}</b><span>routes you can take today</span></div>
-    {openings_stat}
-  </div></div>
-  {LIVE_HTML}
-
-  <div class="wrap">
-    <section id="watch">
-      <h2>The useful part happens <em>after</em> you leave.</h2>
-      <p class="lede">A checklist is a photograph. It was true the day it was written. Then the
-      salary floor moves, the intake opens on a Tuesday with no announcement, and the job that
-      would have carried your visa is gone in nine days. So it keeps reading while you get on
-      with your life.</p>
-      <div class="split">
-        <div class="feed" role="img"
-             aria-label="Example alerts: a salary threshold change, an intake opening, and a matching job posting">
-          <div class="head"><span class="dot"></span> YOUR AGENT &middot; TODAY</div>
-
-          <div class="alert">{MOVED}<div>
-            <span class="tag">A rule moved</span>
-            <span class="txt">The Skilled Worker salary floor went up. Your offer is
-            &pound;900 short now.</span>
-            <q>read on gov.uk this morning &middot; both versions kept</q></div></div>
-
-          <div class="alert">{OPENED}<div>
-            <span class="tag">A door opened</span>
-            <span class="txt">January applications just opened at the two schools on your
-            shortlist.</span>
-            <q>register updated &middot; deadline in 41 days</q></div></div>
-
-          <div class="alert job">{POSTED}<div>
-            <span class="tag">A job you qualify for</span>
-            <span class="txt">Three welding jobs went up. Your ticket and your skills
-            already match.</span>
-            <q>Job Bank &middot; employer-submitted &middot; posted yesterday</q></div></div>
-        </div>
-        <div>
-          {_picture("08-window-seat-cloud",
-                    "The view through an aeroplane window onto bright cloud")}
-        </div>
-      </div>
-    </section>
-
-    <section id="how">
-      <h2>You do three things. It does the rest.</h2>
-      <p class="lede">Nothing to search, nothing to compare, nothing to go and find. Moving
-      country already turns you into a part-time researcher. That is the job we are taking
-      off you.</p>
-      <div class="steps">
-        <div class="step">
-          {_picture("03-folder-and-hands", "Hands holding a folder of papers while waiting")}
-          <em>Step one</em>
-          <b>Say what you want</b>
-          <p>Study or work. Then drop in whatever paperwork you have. A phone photo is fine,
-          and none at all is fine too.</p>
-        </div>
-        <div class="step">
-          {_picture("06-consulate-waiting-daylight", "A calm official waiting area in daylight")}
-          <em>Step two</em>
-          <b>It works out your route</b>
-          <p>The steps for your case, in order. Documents, money, waiting times. Every line
-          carries the sentence it came from.</p>
-        </div>
-        <div class="step">
-          {_picture("07-keys-new-flat", "A hand setting keys down in an empty sunlit flat")}
-          <em>Step three</em>
-          <b>It keeps watching</b>
-          <p>Rules that change, intakes that open, jobs you qualify for. You hear about them
-          when they happen, not when you remember to look.</p>
-        </div>
-      </div>
-    </section>
-
-    <section>
-      <h2>Both reasons for going.</h2>
-      <p class="lede">Study and work are different rulebooks with different registers and
-      different deadlines. You pick. It knows which one it is reading.</p>
-      <div class="routes">
-        <div class="route">
-          {_picture("05-campus-courtyard-daylight",
-                    "A university courtyard in bright daylight", "16 / 9")}
-          <div>
-            <b>To study</b>
-            <p>What the visa needs, what money you have to show, and which schools the
-            government's own register says can actually take you. Plus a nudge when the next
-            intake opens.</p>
-          </div>
-        </div>
-        <div class="route">
-          {_picture("04-new-city-street-morning",
-                    "A person walking a wide unfamiliar city street at dawn", "16 / 9")}
-          <div>
-            <b>To work</b>
-            <p>The route, the salary floor, the sponsorship rules. Then real postings in
-            occupations that country has said out loud it is short of, matched against what
-            you can prove you can do.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section>
-      <h2>It would rather say nothing than say something wrong.</h2>
-      <p class="lede">Every line carries the sentence it came from, on the government's own
-      page, with the date it was read. If it cannot show you the sentence, it throws the line
-      away before you see it. That is why the alerts are worth opening.</p>
-      <div class="refuse">
-        <div class="line kept">{TICK}<div><span class="txt">You must have a confirmed job offer
-          before you apply.</span>
-          <q>"You must have a confirmed job offer before you apply for your visa."</q></div></div>
-        <div class="line kept">{TICK}<div><span class="txt">You must be paid at least
-          &pound;41,700 a year, or the going rate for the job.</span>
-          <q>"the 'standard' salary rate of at least &pound;41,700 per year"</q></div></div>
-        <div class="line cut">{CROSS}<div><span class="txt">You must provide six months of bank
-          statements.</span>
-          <div class="why">Refused: no sentence on the page says this.</div></div></div>
-      </div>
-    </section>
-
-    <section>
-      <h2>Where you can go today</h2>
-      <p class="lede">Two countries, all the way through. We would rather open one
-      properly than list ten we cannot finish.</p>
-      <div class="places">{place_cards}</div>
-      {later_line}
-      <p style="margin-top:22px">
-        <a class="cta ghost" href="/coverage">See everything we have read</a></p>
-    </section>
+  <div class="band">
+    <div><b>{live:,}</b><span>requirements read from official pages</span></div>
+    <div><b>{sources:,}</b><span>government pages under watch</span></div>
+    <div><b>{lanes_open}</b><span>routes you can take today</span></div>
+    {openings_fig}
   </div>
 
-  <div class="wrap end">
+  <section id="qualify">
+    <p class="kicker"><b>For you</b> · the agent on your side</p>
+    <h2>The wire is for everyone. Your case is just yours.</h2>
+    <p class="lede">An article can tell you that a rule moved. Whether it moves for you depends on
+    your passport, your grades, your job and your money. So give the agent what you have. It reads the
+    rules against that, then keeps reading after you close the tab.</p>
+    <div class="cols">
+      <div><em>One</em><b>Say what you want</b><p>Study or work. Then drop in whatever paperwork you
+      have. A phone photo is fine. None at all is fine too.</p></div>
+      <div><em>Two</em><b>It works out your route</b><p>Which countries fit, and the steps for each in
+      order: documents, money, waiting times. Every line carries the sentence it came from.</p></div>
+      <div><em>Three</em><b>It keeps watching</b><p>When a rule that touches you changes, an intake
+      opens, or a job you qualify for is posted, you hear about it that day.</p></div>
+    </div>
+    <div class="row"><a class="cta" href="/start">Check where you qualify</a>
+      <a class="cta ghost" href="/articles">Read the wire</a></div>
+    <p class="under">No account. Your documents are read, then thrown away.</p>
+  </section>
+
+  <section>
+    <h2>How a line gets printed</h2>
+    <p class="lede">The agent can propose anything. It can only print what an official page says. Every
+    claim in every article and every guide has to carry a quote, and the quote is looked up on the page
+    in code before anything goes out. A claim whose quote isn't there gets dropped, and the article's
+    report lists it with the reason.</p>
+    <div class="print">
+      <p><code>kept</code> Care workers must be sponsored by a registered care home. The quote is on the page.</p>
+      <p><code class="out">dropped</code> A line about which nationalities get priority. The page never
+      says it, so it never reaches you.</p>
+      <p>That second kind is why the reports exist. Open any article and scroll to the bottom.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Both reasons for going</h2>
+    <div class="two">
+      <div><b>To study</b><p>What the visa needs, the money you have to show, and the schools the
+      government's own register says can take you. Plus a note when the next intake opens.</p></div>
+      <div><b>To work</b><p>The route, the salary floor, the sponsorship rules. Then real job postings in
+      the occupations that country says it can't fill, matched against what you can prove you can do.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Where you can go today</h2>
+    <p class="lede">A country is open here when we can take you all the way through it. We'd rather open
+    two properly than list ten we can't finish.</p>
+    <div class="places">{place_cards}</div>
+    {later}
+    <p style="margin-top:18px"><a class="cta ghost" href="/coverage">Everything we have read</a></p>
+  </section>
+
+  <div class="end">
     <h2>Find out what it would take.</h2>
-    <p class="lede">Two taps and an upload. You can stop there. No account, no card.</p>
-    <a class="cta" href="/start">Start free</a>
+    <p class="lede" style="margin:0 auto 20px">Two taps and an upload. You can stop there.</p>
+    <a class="cta" href="/start">Check where you qualify</a>
   </div>
 
-  <div class="wrap"><footer>
-    MIGRAGENT reads official government pages and cites them.
-    It is not a law firm and does not give immigration advice.
-    <a href="/data">What happens to your documents</a> &middot;
-    <a href="/architecture">How it is built</a> &middot;
-    <a href="/rounds">What the reading job did</a>
-  </footer></div>
+  <footer>MIGRAGENT reads official government pages and cites them. It is not a law firm and does not
+  give immigration advice. <a href="/data">What happens to your documents</a> ·
+  <a href="/architecture">How it is built</a> · <a href="/rounds">The desk</a> ·
+  <a href="/articles">The wire</a> · <a href="/subscribe">$MIGRA</a></footer>
+</div>
 </body></html>'''

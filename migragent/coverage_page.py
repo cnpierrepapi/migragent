@@ -21,6 +21,7 @@ import html
 from typing import Any
 
 from .result_page import HEAD, LOGO
+from .masthead import MASTHEAD
 
 
 def _e(x: Any) -> str:
@@ -41,6 +42,7 @@ STYLE = '''
   .sub { color: var(--ink-soft); line-height: 1.65; margin: 0 0 30px; max-width: 62ch }
 
   table { width: 100%; border-collapse: collapse; font-size: .93rem }
+  @media (max-width: 700px) { table { display: block; overflow-x: auto; white-space: nowrap } }
   th { text-align: left; font: 600 .72rem var(--font-body); text-transform: uppercase;
        letter-spacing: .12em; color: var(--ink-soft); padding: 0 10px 10px 0;
        border-bottom: 1px solid var(--rule) }
@@ -101,10 +103,9 @@ def coverage_html(rows: list[dict[str, Any]], totals: dict[str, int]) -> str:
             f'</tr>')
 
     return f'''<!doctype html>
-<html lang="en" data-theme="dark"><head>{HEAD}<title>Everything we have read</title>
+<html lang="en" data-theme="newsroom"><head>{HEAD}<title>Everything we have read</title>
 <style>{STYLE}</style></head>
-<body><main>
-  <div class="brand">{LOGO}<span>MIGRAGENT</span></div>
+<body>{MASTHEAD}<main>
   <h1>Everything we have read</h1>
   <p class="sub">Two countries are open today. Here is every country we hold anything
   for, including the ones with nothing, because a number next to a name is more use
