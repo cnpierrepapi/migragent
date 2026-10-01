@@ -194,6 +194,21 @@ def _claims(items: list[dict[str, Any]], sources: list[dict[str, Any]], head: st
     return f'<h2{cls}>{head}</h2><ul>{"".join(out)}</ul>'
 
 
+def _voice_line(v: dict[str, Any]) -> str:
+    """What the voice check did to the agent's own words. Quotes are never touched."""
+    if not v:
+        return "not recorded for this article"
+    parts = [f"{v.get('fields', 0)} written fields checked against the house rules"]
+    if v.get("rewritten"):
+        parts.append("headline or dek rewritten once to meet them")
+    if v.get("dropped_why"):
+        parts.append(f"{v['dropped_why']} explanation(s) dropped; their quotes stand")
+    remaining = v.get("remaining") or []
+    parts.append("nothing left that breaks them" if not remaining
+                 else "still breaking them: " + "; ".join(remaining))
+    return ". ".join(parts) + "."
+
+
 def article_html(a: dict[str, Any]) -> str:
     r = a.get("report") or {}
     sources = r.get("sources") or []
@@ -275,6 +290,7 @@ def article_html(a: dict[str, Any]) -> str:
     <tr><td>Written by</td><td>{_e(r.get("model"))}, through {_e(served_line)}</td></tr>
     <tr><td>Written at</td><td>{_e(_when(r.get("generated_at", "")))}</td></tr>
     <tr><td>Change records</td><td>{_e(", ".join(r.get("change_ids") or []))}</td></tr>
+    <tr><td>House voice</td><td>{_e(_voice_line(r.get("voice") or {}))}</td></tr>
   </tbody></table>
 </section>'''
     return _page(f"{a.get('headline')}, MIGRAGENT", body, a.get("dek", ""))

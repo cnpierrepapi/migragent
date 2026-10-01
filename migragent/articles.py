@@ -43,6 +43,9 @@ from typing import Any
 
 from .fetcher import Fetched
 from .fold import fold as _normalise
+from .voice import RULES as VOICE_RULES
+from .voice import hits as voice_hits
+from .voice import tidy
 
 ARTICLES = "articles"
 SKIPPED = "article_skips"
@@ -99,6 +102,14 @@ Rules:
 DIFF SAMPLE:
 """
 
+# The house voice goes in just before the material, so it is the last instruction
+# the model reads before writing. See migragent/voice.py.
+PROMPT = PROMPT.replace("\nDIFF SAMPLE:\n", VOICE_RULES + "\nDIFF SAMPLE:\n")
+
+REWRITE = """Rewrite this headline and dek so they follow the voice rules below. Keep every
+fact and add none: use only the facts listed. Return JSON only: {"headline": "...", "dek": "..."}
+"""
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -143,6 +154,7 @@ class Report:
     quotes_kept: int = 0
     dropped: list[dict[str, str]] = field(default_factory=list)
     unreadable: list[str] = field(default_factory=list)
+    voice: dict[str, Any] = field(default_factory=dict)
     generated_at: str = ""
 
 
@@ -340,13 +352,69 @@ class Writer:
 
         headline = (str(parsed.get("headline") or "").strip()[:120]
                     or sources[0].change_summary or "An official page changed")
+        headline, dek = self._voice(kept, headline, str(parsed.get("dek") or "").strip()[:300], report)
         observed = max(s.after_read_at for s in sources)[:10]
         doc = {"id": aid, "slug": f"{observed}-{slugify(headline)}", "headline": headline,
-               "dek": str(parsed.get("dek") or "").strip()[:300], "published_at": report.generated_at,
+               "dek": dek, "published_at": report.generated_at,
                "observed_on": observed, "jurisdiction": report.jurisdiction, "lane": report.lane,
                **kept, "report": asdict(report)}
         self._db.collection(ARTICLES).document(aid).set(doc)
         return {"written": doc["slug"]}
+
+    def _voice(self, kept: dict[str, list], headline: str, dek: str, report: Report) -> tuple[str, str]:
+        """The house voice, enforced on every field the agent wrote. Quotes are never touched."""
+        from .model import call_json
+
+        fields = 0
+        for section in ("what_changed", "who_for", "who_not_for", "dates", "what_to_do"):
+            for item in kept[section]:
+                for key in ("group", "why", "text", "what"):
+                    if item.get(key):
+                        item[key] = tidy(item[key])
+                        fields += 1
+                for cond in item.get("conditions") or []:
+                    cond["text"] = tidy(cond["text"])
+                    fields += 1
+        kept["not_said"] = [tidy(g) for g in kept["not_said"]]
+        headline, dek = tidy(headline), tidy(dek)
+        fields += len(kept["not_said"]) + 2
+
+        rewritten = False
+        if voice_hits(headline) or voice_hits(dek):
+            facts = [i.get("text") or i.get("group") or i.get("what") or ""
+                     for sec in ("what_changed", "who_for", "dates") for i in kept[sec]]
+            try:
+                fixed = call_json(project=self._project, model=self._model, location=self._location,
+                                  credentials=self._credentials, max_output_tokens=2048,
+                                  public=True,  # the article's own headline and kept facts
+                                  parts=[{"text": REWRITE + VOICE_RULES + "\nHEADLINE: " + headline
+                                          + "\nDEK: " + dek + "\nFACTS:\n- " + "\n- ".join(facts)}])
+                new_h, new_d = tidy(str(fixed.get("headline") or "")), tidy(str(fixed.get("dek") or ""))
+                if new_h and len(voice_hits(new_h)) <= len(voice_hits(headline)):
+                    headline, rewritten = new_h[:120], True
+                if new_d and len(voice_hits(new_d)) <= len(voice_hits(dek)):
+                    dek, rewritten = new_d[:300], True
+            except Exception:  # noqa: BLE001
+                pass  # the original stands, and the report below names what it breaks
+
+        dropped_why = 0
+        for section in ("who_for", "who_not_for"):
+            for item in kept[section]:
+                if item.get("why") and voice_hits(item["why"]):
+                    item.pop("why")  # its quote already says it, in the government's own words
+                    dropped_why += 1
+
+        remaining = []
+        for label, text in [("headline", headline), ("dek", dek)] + [
+                (sec, i.get(k, "")) for sec in ("what_changed", "who_for", "who_not_for", "dates", "what_to_do")
+                for i in kept[sec] for k in ("group", "why", "text", "what")] + [
+                ("condition", c.get("text", "")) for sec in ("who_for",) for i in kept[sec]
+                for c in i.get("conditions") or []] + [("not said", g) for g in kept["not_said"]]:
+            for h in voice_hits(text):
+                remaining.append(f"{label}: {h}")
+        report.voice = {"fields": fields, "rewritten": rewritten, "dropped_why": dropped_why,
+                        "remaining": sorted(set(remaining))}
+        return headline, dek
 
     def _skip(self, aid: str, report: Report, why: str) -> dict[str, Any]:
         """Not published, and written down as not published, with the reason."""
