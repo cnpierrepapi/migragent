@@ -271,6 +271,120 @@ POSTED = ('<svg class="mark" viewBox="0 0 26 26" fill="none" stroke="currentColo
           '<path d="M9 8V6a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M3 14h20"/></svg>')
 
 
+# The live console. Everything in it comes from /api/state, which is built from
+# rows the reading job wrote and a balance the worker read from Orbio. Nothing
+# is animated into existence: until the first poll answers, the figures are
+# dashes, and a figure the state does not have stays a dash.
+LIVE = '''
+  .live { padding: 64px 0 8px }
+  .live .pills { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px }
+  .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px;
+          border: 1px solid var(--rule); border-radius: 999px; background: var(--paper-raised);
+          font: .72rem var(--font-mono); color: var(--ink-soft); text-decoration: none }
+  .pill b { color: var(--ink); font-weight: 500 }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary);
+         box-shadow: 0 0 0 0 rgba(127,176,242,.6); animation: beat 2.4s infinite }
+  .dot.idle { background: var(--ink-soft); animation: none }
+  @keyframes beat { 0% { box-shadow: 0 0 0 0 rgba(127,176,242,.55) }
+                    70% { box-shadow: 0 0 0 9px rgba(127,176,242,0) }
+                    100% { box-shadow: 0 0 0 0 rgba(127,176,242,0) } }
+  .live h2 { margin-bottom: 10px }
+  .cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 28px 0 22px }
+  .card { border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper-raised);
+          padding: 16px 18px; min-width: 0 }
+  .card span { display: block; font: .7rem var(--font-mono); color: var(--ink-soft) }
+  .card b { display: block; font-family: var(--font-display); font-size: 1.7rem; margin: 6px 0 4px;
+            color: var(--ink); overflow-wrap: anywhere }
+  .card.gold b { color: var(--accent) }
+  .ticker { overflow: hidden; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+            white-space: nowrap; font: .74rem var(--font-mono); color: var(--ink-soft); padding: 9px 0 }
+  .ticker div { display: inline-block; padding-left: 100%; animation: crawl 90s linear infinite }
+  .ticker i { font-style: normal; color: var(--primary); margin: 0 6px 0 22px }
+  @keyframes crawl { to { transform: translateX(-100%) } }
+  .log { list-style: none; margin: 18px 0 0; padding: 0; font: .78rem var(--font-mono) }
+  .log li { display: grid; grid-template-columns: 74px 70px 1fr auto; gap: 12px; padding: 9px 0;
+            border-bottom: 1px solid var(--rule); align-items: baseline }
+  .log time { color: var(--ink-soft) }
+  .log .role { color: var(--primary) }
+  .log .role.CHANGE { color: var(--accent) }
+  .log .what { color: var(--ink); min-width: 0; overflow-wrap: anywhere }
+  .log .what a { color: var(--ink) }
+  .log .cost { color: var(--ink-soft); white-space: nowrap }
+  .live .fine { font: .72rem var(--font-mono); color: var(--ink-soft); margin-top: 14px; line-height: 1.7 }
+  @media (max-width: 900px) { .cards { grid-template-columns: repeat(2, 1fr) }
+    .log li { grid-template-columns: auto 1fr; gap: 4px 10px }
+    .log .what, .log .cost { grid-column: 1 / -1 } .log .cost:empty { display: none } }
+  @media (prefers-reduced-motion: reduce) { .ticker div, .dot { animation: none } }
+'''
+
+LIVE_HTML = '''
+  <div class="wrap"><section class="live" id="live" aria-live="off">
+    <div class="pills">
+      <a class="pill" id="lv-orbio" href="https://www.orbio.so/launchpad/0xdebc1c4ea1689a7507568ecfeacb42599b493b60"
+         target="_blank" rel="noopener"><span class="dot"></span><b>Live on Orbio</b> paid by $MIGRA</a>
+      <span class="pill"><span class="dot idle" id="lv-dot"></span><b id="lv-phase">-</b> <span id="lv-next"></span></span>
+      <a class="pill" id="lv-token" href="https://www.orbio.so/launchpad/0xdebc1c4ea1689a7507568ecfeacb42599b493b60"
+         target="_blank" rel="noopener">$MIGRA <b>-</b></a>
+    </div>
+    <h2>Everything it did today, <em>and what it cost.</em></h2>
+    <p class="lede">Every morning it re-reads the government and school pages it holds. A page
+    that didn't move costs nothing. One that did gets read again, and $MIGRA's trading fees pay
+    for that. This is the log, as the job wrote it.</p>
+
+    <div class="cards">
+      <div class="card gold"><span>Orbio balance</span><b id="lv-balance">-</b><span>from $MIGRA fees</span></div>
+      <div class="card"><span>Spent today</span><b id="lv-spent">-</b><span>by the agent, on its own</span></div>
+      <div class="card"><span>Pages read today</span><b id="lv-pages">-</b><span id="lv-unchanged">-</span></div>
+      <div class="card"><span>Pages that moved</span><b id="lv-changes">-</b><span id="lv-rules">in the last 7 days</span></div>
+      <div class="card"><span>Runway</span><b id="lv-runway">-</b><span>at this week's pace</span></div>
+    </div>
+
+    <div class="ticker"><div id="lv-ticker">waiting for the first reading...</div></div>
+    <ol class="log" id="lv-log"></ol>
+    <p class="fine">Balance read from Orbio by the job after its last round, <span id="lv-asof">-</span>.
+    Your documents never go through Orbio, only public pages do.
+    <a href="/rounds">Every round, in full</a>.</p>
+  </section></div>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const money = (n) => n == null ? "-" : (n < 1 ? "$" + n.toFixed(4) : "$" + n.toFixed(2));
+  const ago = (iso) => { const s = (Date.now() - Date.parse(iso)) / 1000;
+    if (!isFinite(s)) return "";
+    return s < 90 ? "now" : s < 5400 ? Math.round(s / 60) + "m ago" : s < 129600 ? Math.round(s / 3600) + "h ago" : Math.round(s / 86400) + "d ago"; };
+  const until = (iso) => { const m = Math.max(0, Math.round((Date.parse(iso) - Date.now()) / 60000));
+    return m < 60 ? m + "m" : Math.floor(m / 60) + "h " + (m % 60) + "m"; };
+  async function poll() {
+    let s;
+    try { s = await (await fetch("/api/state", {cache: "no-store"})).json(); } catch (e) { return; }
+    const o = s.orbio || {}, st = s.stats || {}, t = s.token;
+    $("lv-phase").textContent = s.status.phase;
+    $("lv-dot").className = "dot" + (s.status.phase === "READING" ? "" : " idle");
+    $("lv-next").textContent = "next: " + s.status.next.what + " in " + until(s.status.next.at);
+    if (t) $("lv-token").innerHTML = "$MIGRA <b>$" + (t.market_cap_usd / 1000).toFixed(1) + "K</b> " + t.graduation_pct + "% to graduation";
+    $("lv-balance").textContent = money(o.available);
+    $("lv-spent").textContent = money(o.spent_today);
+    $("lv-pages").textContent = (st.pages_today ?? "-").toLocaleString();
+    $("lv-unchanged").textContent = (st.unchanged_today ?? 0) + " unchanged, $0";
+    $("lv-changes").textContent = (st.changes_week ?? "-").toLocaleString();
+    $("lv-rules").textContent = "this week, " + (st.rule_changes_week ?? 0) + " changed a rule";
+    $("lv-runway").textContent = o.runway_days == null ? "-" : o.runway_days + " days";
+    $("lv-asof").textContent = o.at ? ago(o.at) : "not yet";
+    const feed = s.feed || [];
+    if (feed.length) $("lv-ticker").innerHTML = feed.slice(0, 16).map((f) =>
+      "<i>" + esc(f.role) + "</i>" + esc(f.text) + (f.cost ? " · " + esc(f.cost) : "")).join("");
+    $("lv-log").innerHTML = feed.slice(0, 14).map((f) =>
+      '<li><time>' + esc(ago(f.at)) + '</time><span class="role ' + esc(f.role) + '">' + esc(f.role) +
+      '</span><span class="what">' + (f.url ? '<a href="' + esc(f.url) + '" rel="noopener" target="_blank">' + esc(f.text) + "</a>" : esc(f.text)) +
+      '</span><span class="cost">' + esc(f.cost) + "</span></li>").join("");
+  }
+  poll(); setInterval(poll, 20000);
+})();
+</script>
+'''
+
+
 def landing_html(live: int, sources: int, lanes_open: int,
                  places: list[tuple[str, str, str]],
                  openings: int = 0, waiting: int = 0) -> str:
@@ -306,7 +420,7 @@ def landing_html(live: int, sources: int, lanes_open: int,
 immigration rules, works out which countries fit you, and tells you when a rule changes, an
 intake opens, or a job you qualify for is posted.">
 <meta name="theme-color" content="#080B12">
-<style>{CSS}{FEED}{REFUSAL}</style></head>
+<style>{CSS}{FEED}{REFUSAL}{LIVE}</style></head>
 <body>
   <div class="wrap">
     <div class="top">
@@ -348,6 +462,7 @@ intake opens, or a job you qualify for is posted.">
     <div class="stat"><b>{lanes_open}</b><span>routes you can take today</span></div>
     {openings_stat}
   </div></div>
+  {LIVE_HTML}
 
   <div class="wrap">
     <section id="watch">

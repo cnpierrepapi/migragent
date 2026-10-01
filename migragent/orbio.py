@@ -55,7 +55,9 @@ COOLDOWN_SECONDS = 600
 FINISH = {"stop": "STOP", "length": "MAX_TOKENS", "content_filter": "SAFETY"}
 
 _off_until = 0.0
-served = {"orbio": 0, "fallback": 0}
+# Per process, which is per round: the worker runs one lane per task. The cost
+# is the gateway's own figure from each answer's usage block, not an estimate.
+served: dict[str, Any] = {"orbio": 0, "fallback": 0, "usd": 0.0}
 
 
 class NotPublic(ValueError):
@@ -119,6 +121,10 @@ def generate_json(*, model: str, parts: list[dict[str, Any]], temperature: float
                 log.warning("%s; using Vertex", answer.get("note"))
                 break
             served["orbio"] += 1
+            try:
+                served["usd"] += float((answer.get("usage") or {}).get("cost") or 0)
+            except (TypeError, ValueError):
+                pass
             return answer
         except urllib.error.HTTPError as exc:
             if exc.code in (401, 402, 403):
@@ -133,6 +139,24 @@ def generate_json(*, model: str, parts: list[dict[str, Any]], temperature: float
             time.sleep(random.uniform(0, 2.0 * (2 ** (attempt - 1))))
     served["fallback"] += 1
     return None
+
+
+def balance() -> dict[str, str] | None:
+    """The gateway balance as Orbio reports it, or None. Read by the worker only.
+
+    The web service shows this figure without holding the key: the worker
+    writes it to Firestore after each round, and the page reads it from there.
+    """
+    if not _key():
+        return None
+    request = urllib.request.Request("https://www.orbio.so/api/v1/key", headers={
+        "Authorization": f"Bearer {_key()}", "User-Agent": "migragent"})
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            b = json.load(response).get("balance") or {}
+        return {"available": str(b.get("available", "")), "used": str(b.get("used", ""))}
+    except (OSError, ValueError):
+        return None
 
 
 def _post(body: bytes) -> dict[str, Any]:

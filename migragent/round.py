@@ -146,6 +146,12 @@ class RoundResult:
     # a lane with no disagreements also looks like.
     second_read: str = "off"
 
+    # What Orbio carried this round, and what it cost, from the gateway's own
+    # usage figures. Fallbacks are calls Orbio could not take and Vertex did.
+    orbio_calls: int = 0
+    orbio_usd: float = 0.0
+    orbio_fallbacks: int = 0
+
     outcomes: list[SourceOutcome] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:

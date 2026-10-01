@@ -51,6 +51,7 @@ from .extract import Extractor
 from .fetcher import Fetcher
 from .registry import Registry
 from .researcher import Researcher
+from . import orbio
 from .round import ChangeWriter, Round, RunLog, lanes
 from .snapshots import SnapshotStore
 from .meaning import Embedder
@@ -403,7 +404,17 @@ def main() -> int:
     )
 
     result = round_.run(jurisdiction, lane, mode=MODE, max_depth=max_depth)
+    result.orbio_calls = orbio.served["orbio"]
+    result.orbio_usd = round(orbio.served["usd"], 6)
+    result.orbio_fallbacks = orbio.served["fallback"]
     doc_id = RunLog(db).record(result)
+
+    # The balance the front page shows. Written here so the web service never
+    # needs the key; the last task to finish leaves the freshest figure.
+    snapshot = orbio.balance()
+    if snapshot:
+        db.collection("agent_state").document("orbio").set(
+            {**snapshot, "at": result.finished_at or result.started_at})
 
     print(
         f"\n{jurisdiction} {lane} {MODE}: considered {result.considered}, "

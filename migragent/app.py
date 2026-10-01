@@ -520,6 +520,17 @@ def _coverage() -> tuple[dict, int, int]:
     return _cached("coverage", build)
 
 
+@app.get("/api/state")
+def live_state() -> Response:
+    """What the agent is doing, polled by the front page. See migragent/live.py."""
+    from . import live
+
+    _extracted, requirements, _sources = _coverage()
+    response = jsonify(live.state(_db(), requirements))
+    response.headers["Cache-Control"] = "public, max-age=15"
+    return response
+
+
 @app.get("/")
 def landing() -> Response:
     """What this is, for somebody who has never heard of it.
