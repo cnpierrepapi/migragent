@@ -214,6 +214,19 @@ def _business(csrf: str, guides: list[dict[str, Any]], affiliates: list[dict[str
   <table><thead><tr><th>When</th><th>Email</th><th>Name</th><th>Plan</th><th>Status</th><th>Reference</th></tr></thead>
   <tbody>{res_rows}</tbody></table>
 
+  <h2>Put a question to $MIGRA holders</h2>
+  <form class="box" method="post" action="/admin/proposal" style="margin-bottom:14px">
+    <input type="hidden" name="csrf" value="{_e(csrf)}">
+    <label>Title</label><input type="text" name="title" required maxlength="120" placeholder="Which country should the agent read next?">
+    <label>Question, one or two sentences</label><input type="text" name="question" maxlength="400">
+    <div class="row" style="grid-template-columns:3fr 1fr">
+      <div><label>Options, separated by commas</label><input type="text" name="options" required placeholder="Netherlands, Japan, Norway"></div>
+      <div><label>Days open</label><input type="text" name="days" value="7"></div>
+    </div>
+    <button type="submit">Open the vote</button>
+    <p class="hint">Holders vote at /migra/vote with a free wallet signature, weighted by $MIGRA held when it closes.</p>
+  </form>
+
   <h2>Affiliate links</h2>
   <form class="box" method="post" action="/admin/affiliate" style="margin-bottom:14px">
     <input type="hidden" name="csrf" value="{_e(csrf)}">

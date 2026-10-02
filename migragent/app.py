@@ -203,6 +203,16 @@ def article(slug: str) -> Response:
                     mimetype="text/html")
 
 
+@app.get("/search")
+def search_page() -> Response:
+    from .search import index, search
+    from .search_page import search_html
+
+    q = (request.args.get("q") or "").strip()[:120]
+    hits = search(index(_db()), q) if q else []
+    return Response(search_html(q, hits), mimetype="text/html")
+
+
 @app.get("/guides")
 def guides_index() -> Response:
     from .guides import published
@@ -505,6 +515,29 @@ def rounds() -> Response:
                     mimetype="text/html")
 
 
+@app.get("/migra/vote")
+def vote_page() -> Response:
+    from .governance import proposals, tally
+    from .vote_page import vote_html
+
+    db = _db()
+    items = [(p, _cached(f"tally-{p['id']}", lambda p=p: tally(db, p))) for p in proposals(db)]
+    return Response(vote_html(items), mimetype="text/html")
+
+
+@app.post("/migra/vote")
+def vote_cast() -> Response:
+    from .governance import cast
+
+    body = request.get_json(silent=True) or {}
+    why = cast(_db(), str(body.get("proposal", "")), str(body.get("option", "")),
+               str(body.get("wallet", "")), str(body.get("signature", "")))
+    if why:
+        return jsonify({"error": why}), 400
+    _CACHE.pop(f"tally-{body.get('proposal')}", None)
+    return jsonify({"ok": True})
+
+
 @app.get("/migra")
 def migra() -> Response:
     """$MIGRA: what the token does for the reporter. No checkout; nothing is sold here."""
@@ -804,6 +837,27 @@ def admin_source() -> Response:
                    language=JURISDICTIONS[code]["languages"][0], discovered_via="desk"))
     _CACHE.clear()
     return redirect("/admin?m=Added to the crawl list. It is read on the next round for that country.")
+
+
+@app.post("/admin/proposal")
+def admin_proposal() -> Response:
+    """Put a question to $MIGRA holders."""
+    _session_value, refused = _desk_guard()
+    if refused:
+        return refused
+    from .governance import create
+
+    title = (request.form.get("title") or "").strip()
+    question = (request.form.get("question") or "").strip()
+    options = [o.strip() for o in (request.form.get("options") or "").split(",") if o.strip()]
+    try:
+        days = int(request.form.get("days") or 7)
+    except ValueError:
+        days = 7
+    if not title or len(options) < 2:
+        return redirect("/admin?m=A vote needs a title and at least two options, separated by commas.")
+    pid = create(_db(), title, question, options, days)
+    return redirect(f"/admin?m=Vote {pid} is open at /migra/vote.")
 
 
 @app.post("/admin/affiliate")

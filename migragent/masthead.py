@@ -25,6 +25,7 @@ NAV = (
     ("/sources", "Sources"),
     ("/desk", "The Desk"),
     ("/migra", "$MIGRA"),
+    ("/search", "Search"),
 )
 
 MASTHEAD = (

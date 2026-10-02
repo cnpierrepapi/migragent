@@ -97,6 +97,12 @@ def migra_html() -> str:
   <p>The fees keep coming in as people trade, and the credit builds back up. When there's enough of it, the
   agent can switch back to spending it.</p>
 
+  <h2>What holding it does</h2>
+  <p>$MIGRA is a governance token, and a small one. Holders vote on what the agent covers next: which country it
+  reads, which sources it adds, which guides come first. A vote is a free signature from your wallet, weighted by the
+  $MIGRA you hold when the vote closes. The editor puts up the questions and acts on the answers.</p>
+  <p><a href="/migra/vote">See the open votes</a>.</p>
+
   <h2>The contract</h2>
   <div class="ca"><b>$MIGRA on Robinhood Chain</b>{TOKEN}</div>
   <p class="small">Deployed by {DEPLOYER}. That address is the agent's own wallet, and it's where the fees land.</p>

@@ -103,5 +103,19 @@ def sources_html(stats: dict[str, Any]) -> str:
   Pages it can't crawl can still reach the wire through the desk, and an article that came that way says so
   in its report.</p>
   <h2>Every page</h2>
+  <input type="search" id="src-filter" placeholder="Filter pages, e.g. skilled worker or canada.ca" aria-label="Filter pages"
+         style="width:100%;max-width:680px;padding:10px 12px;border:1px solid var(--ink);background:var(--paper-raised);color:var(--ink);font:.95rem var(--font-body);margin:4px 0 14px">
   {"".join(lists)}
+  <script>(() => {{
+    const f = document.getElementById("src-filter");
+    f.addEventListener("input", () => {{
+      const t = f.value.toLowerCase().trim();
+      document.querySelectorAll("details").forEach((d) => {{
+        let any = false;
+        d.querySelectorAll("li").forEach((li) => {{ const ok = !t || li.textContent.toLowerCase().includes(t);
+          li.style.display = ok ? "" : "none"; any = any || ok; }});
+        d.style.display = any ? "" : "none"; if (t) d.open = any;
+      }});
+    }});
+  }})();</script>
 </main></body></html>'''

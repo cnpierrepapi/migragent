@@ -15,6 +15,8 @@ from .masthead import MASTHEAD
 from .registry import JURISDICTIONS
 from .result_page import HEAD
 from .seo import SITE, breadcrumbs, meta
+from .search_page import BOX_STYLE
+from .search_page import box as search_box
 from .signup import STYLE as SIGNUP_STYLE
 
 
@@ -72,7 +74,7 @@ def _page(title: str, description: str, path: str, body: str, ld=None, kind: str
     return f'''<!doctype html>
 <html lang="en" data-theme="newsroom"><head>{HEAD}
 {meta(title=title, description=description, path=path, ld=ld, kind=kind)}
-<style>{STYLE}{SIGNUP_STYLE}</style></head>
+<style>{STYLE}{SIGNUP_STYLE}{BOX_STYLE}</style></head>
 <body>{MASTHEAD}<main>{body}</main></body></html>'''
 
 
@@ -88,7 +90,27 @@ def index_html(guides: list[dict[str, Any]], signup: str = "") -> str:
     body = f'''<div class="idx"><h1>Guides</h1>
   <p class="dek">Each guide explains one official immigration page: who it's for, what you need to show, what it
   costs. Every line links to the government's own sentence.</p>
+  {search_box(placeholder="Filter guides, e.g. Portugal work or student visa")}
+  <p class="count" id="g-count" style="font:.74rem var(--font-mono);color:var(--ink-soft)"></p>
   {blocks or "<p>The first guides are being written.</p>"}</div>
+  <script>(() => {{
+    // Filters the list as you type; Enter still runs the full search across the wire too.
+    const input = document.getElementById("site-search"), count = document.getElementById("g-count");
+    const items = [...document.querySelectorAll(".idx a.g")], heads = [...document.querySelectorAll(".idx h2")];
+    input.addEventListener("input", () => {{
+      const terms = input.value.toLowerCase().split(" ").filter(Boolean);
+      let shown = 0;
+      items.forEach((a) => {{
+        let h = a.previousElementSibling; while (h && h.tagName !== "H2") h = h.previousElementSibling;
+        const text = (a.textContent + " " + (h ? h.textContent : "")).toLowerCase();
+        const ok = terms.every((t) => text.includes(t)); a.style.display = ok ? "" : "none"; shown += ok;
+      }});
+      heads.forEach((h) => {{ let n = h.nextElementSibling, any = false;
+        while (n && n.tagName !== "H2") {{ if (n.style.display !== "none" && n.matches("a.g")) any = true; n = n.nextElementSibling; }}
+        h.style.display = any ? "" : "none"; }});
+      count.textContent = terms.length ? shown + " of " + items.length + " guides" : "";
+    }});
+  }})();</script>
   <div id="alerts" style="max-width:760px">{signup}</div>'''
     return _page("Immigration guides, cited line by line", "Plain-English guides to official visa and study "
                  "routes in 13 countries, built only from the government's own wording.", "/guides", body,

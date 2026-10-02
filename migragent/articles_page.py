@@ -15,6 +15,8 @@ from .masthead import MASTHEAD
 from .registry import JURISDICTIONS
 from .result_page import HEAD
 from .seo import breadcrumbs, meta, news_article
+from .search_page import BOX_STYLE
+from .search_page import box as search_box
 from .signup import STYLE as SIGNUP_STYLE
 
 
@@ -137,7 +139,7 @@ def _page(title: str, body: str, description: str = "", path: str = "/articles",
     return f'''<!doctype html>
 <html lang="en" data-theme="newsroom"><head>{HEAD}
 {meta(title=title, description=description, path=path, **seo)}
-<style>{STYLE}{SIGNUP_STYLE}</style></head>
+<style>{STYLE}{SIGNUP_STYLE}{BOX_STYLE}</style></head>
 <body>{MASTHEAD}<main>{body}</main></body></html>'''
 
 
@@ -166,6 +168,7 @@ def index_html(articles: list[dict[str, Any]], signup: str = "") -> str:
 <div class="wire-head"><h1>The wire</h1>
   <p>Every article is a rule change the agent caught on an official page.<br>
   Each one carries its report.</p></div>
+{search_box(placeholder="Search the wire and the guides, e.g. Canada school list")}
 {listing}
 <div id="alerts" style="max-width:760px">{signup}</div>'''
     return _page("The wire: immigration rule changes, as they happen", body,

@@ -88,8 +88,7 @@ def desk_html(*, live: bool, message: str = "", bad: bool = False) -> str:
               '<button type="submit">Join the waitlist</button>')
     note = ("You go to Paystack to pay, then come back here. The ₦5,000 comes off your first month, "
             "and if you change your mind before then, you get all of it back. Email us and it's done."
-            if live else
-            "Payments aren't switched on yet, so this takes nobody's money. Leave your email and you're first in line.")
+            if live else "")
     from .round import OFFERED
 
     countries = len(OFFERED)  # read every morning; not every country on file
@@ -124,7 +123,7 @@ def desk_html(*, live: bool, message: str = "", bad: bool = False) -> str:
     <label for="d-plan">Plan</label><select id="d-plan" name="plan">{options}</select>
     <div style="position:absolute;left:-9999px"><input type="text" name="website" tabindex="-1" autocomplete="off"></div>
     {button}
-    <p class="fine">{note}</p>
+    {f'<p class="fine">{note}</p>' if note else ""}
   </form>
   <p class="fine">Questions: admin@onenept.com. <a href="/data">What we keep</a>.</p>
 </main></body></html>'''
