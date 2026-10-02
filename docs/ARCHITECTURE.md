@@ -18,8 +18,8 @@ unchanged; where they mention a guide or a case, that part no longer runs.
 A Cloud Run service called `migragent` serves the wire: the front page, the articles, the log, the
 sources, and a private desk for the editor. It is Flask behind gunicorn, one container.
 
-A Cloud Run job called `migragent-ingest` does the reading. Eighteen tasks, one per country and
-lane, nine countries; the task index picks the lane. The modes that run:
+A Cloud Run job called `migragent-ingest` does the reading. Twenty-six tasks, one per country and
+lane, thirteen countries; the task index picks the lane. The modes that run:
 
 - `watch` re-reads pages we hold and works out what moved
 - `extract` reads pages nobody has read yet
@@ -28,15 +28,16 @@ lane, nine countries; the task index picks the lane. The modes that run:
 - `selftest` proves the watcher can add to the snapshot archive and cannot rewrite it
 - `robots` prints robots.txt as the job receives it, for when a block looks wrong
 
-`listings` and `digest` still exist in the code and no longer run: they matched job postings to cases
-and told cases what moved.
+`listings` reads government job boards. `digest` still exists in the code and no longer runs: it
+told cases what moved.
 
-Three Cloud Scheduler jobs start the work:
+Four Cloud Scheduler jobs start the work:
 
 | Time (UTC) | What runs |
 | --- | --- |
 | 03:17 | retention sweep, deleting the last of the old cases as they expire |
 | 04:40 | watch round |
+| 05:00 | job listings, from government job boards (Canada parsed in full; US, France, Germany, Portugal registered) |
 | 05:40 | articles, for the wire |
 
 Read the government pages first, then write it up. Write first and it reports on yesterday.

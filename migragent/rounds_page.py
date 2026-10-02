@@ -101,6 +101,7 @@ from .masthead import MASTHEAD
 SCHEDULE = (
     ("03:17", "retention sweep", "deletes every case past its window"),
     ("04:40", "watch round", "re-reads what we hold, and works out what moved"),
+    ("05:00", "job listings", "reads government job boards"),
     ("05:40", "articles", "write up each rule change for the wire, with its report"),
 )
 

@@ -68,8 +68,9 @@ ROUNDS = "rounds"
 # Portugal and Saudi Arabia had pages on file that nothing re-read, so nothing
 # about them could ever reach the wire. They go on the END of the list, because a
 # Cloud Run task finds its lane by index and the first ten must keep meaning what
-# they meant. The job runs 2 x len(OFFERED) tasks: 18 now.
-OFFERED = ["UK", "CA", "FR", "ES", "AE", "DE", "IT", "PT", "SA"]
+# they meant. Ireland, Sweden, Singapore and New Zealand joined the same day as
+# new countries. The job runs 2 x len(OFFERED) tasks: 26 now.
+OFFERED = ["UK", "CA", "FR", "ES", "AE", "DE", "IT", "PT", "SA", "IE", "SE", "SG", "NZ"]
 
 # A page that comes back this thin is usually a host that hides its content
 # behind scripts rather than a page that says nothing. Worth one browser try
@@ -255,8 +256,10 @@ class Round:
         # A minute later the same check from a laptop said Spain allows us. One
         # of those two answers is about the network the question was asked from,
         # and neither is a reason to retire a country forever.
+        # Job boards are read by the listings round. Diffing a search page here
+        # would report every new posting as a page that moved.
         sources = [s for s in self._registry.for_lane(jurisdiction, lane)
-                   if s.blocked is None or s.blocked == "robots_disallowed"]
+                   if (s.blocked is None or s.blocked == "robots_disallowed") and s.kind != "job_board"]
         if max_depth is not None:
             sources = [s for s in sources if (s.depth or 0) <= max_depth]
         if self._researcher is not None:

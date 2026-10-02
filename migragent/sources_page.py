@@ -71,7 +71,8 @@ def sources_html(stats: dict[str, Any]) -> str:
         items = "".join(
             f'<li><em>{_e(p.get("lane"))}</em><a href="{_e(p.get("url"))}" rel="noopener" target="_blank">'
             f'{_e(p.get("url"))}</a> <small>{"robots says no" if p.get("robots_allowed") is False else "read " + _e((p.get("last_read_at") or "never")[:10])}'
-            f'{" · added by the desk" if p.get("discovered_via") == "desk" else ""}</small></li>'
+            f'{" · added by the desk" if p.get("discovered_via") == "desk" else ""}'
+            f'{" · job board" if p.get("kind") == "job_board" else ""}</small></li>'
             for p in r["urls"])
         lists.append(f'<details><summary>{_e(r["name"])}<span>{r["pages"]:,} pages · '
                      f'{"read every morning" if r["daily"] else "on file, not in the daily round"}</span></summary>'

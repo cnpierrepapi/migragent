@@ -22,7 +22,10 @@ from .clock import now_iso as _now
 COLLECTION = "sources"
 
 Lane = Literal["work", "study"]
-Kind = Literal["government", "institution", "shortage_list"]
+# "job_board": a government job service's search page, added 2 October 2026.
+# Read by the listings round, never by the rule-change round: a search page
+# changes every hour because postings come and go, and that is not news.
+Kind = Literal["government", "institution", "shortage_list", "job_board"]
 
 # Where a requirement was actually read from. This rides along with every
 # extraction and is shown in the guide, per rule 8. The institution's own site
@@ -84,6 +87,15 @@ JURISDICTIONS = {
     "DE": {"name": "Germany", "languages": ["de", "en"]},
     "PT": {"name": "Portugal", "languages": ["pt", "en"]},
     "SA": {"name": "Saudi Arabia", "languages": ["ar", "en"]},
+    # Added 2 October 2026, when MIGRAGENT became a reporter and widened its beat.
+    # Each of these serves its official immigration pages to a crawler that names
+    # itself, and its robots.txt allows it; that was checked page by page before
+    # any row was written. Norway (403), the Netherlands and Japan (no answer)
+    # were checked the same day and left to the desk instead.
+    "IE": {"name": "Ireland", "languages": ["en"]},
+    "SE": {"name": "Sweden", "languages": ["en", "sv"]},
+    "SG": {"name": "Singapore", "languages": ["en"]},
+    "NZ": {"name": "New Zealand", "languages": ["en"]},
 }
 
 

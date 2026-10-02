@@ -14,6 +14,7 @@ URL was added here on the strength of looking plausible.
 
     python tools/seed_registry.py            write to Firestore
     python tools/seed_registry.py --dry-run  fetch and report, write nothing
+    python tools/seed_registry.py --only=IE,SE   just these countries
     python tools/seed_registry.py --scout    let the Scout agent check each lane's
                                              candidates and swap a navigation shell
                                              for the page behind it before writing
@@ -148,6 +149,32 @@ CANDIDATES = [
      "Higher education", "en"),
     ("SA", "work", "https://www.hrsd.gov.sa/en",
      "Ministry of Human Resources and Social Development", "en"),
+
+    # Added 2 October 2026. Every URL fetched with the product's own fetcher and
+    # robots check the same day, and each returned 200 to a crawler that names
+    # itself. Two pages per host where the site has them, for the walk (D26).
+    ("IE", "study", "https://www.irishimmigration.ie/coming-to-study-in-ireland/what-are-my-study-visa-options/",
+     "What are my study visa options", "en"),
+    ("IE", "study", "https://www.irishimmigration.ie/coming-to-study-in-ireland/study-in-ireland-travel-path/",
+     "Study in Ireland travel path", "en"),
+    ("IE", "work", "https://www.irishimmigration.ie/coming-to-work-in-ireland/",
+     "Coming to work in Ireland", "en"),
+    ("IE", "work", "https://www.irishimmigration.ie/coming-to-work-in-ireland/what-are-my-options-for-working-in-ireland/",
+     "What are my options for working in Ireland", "en"),
+    ("SE", "work", "https://www.migrationsverket.se/English/Private-individuals/Working-in-Sweden.html",
+     "Working in Sweden", "en"),
+    ("SE", "study", "https://www.migrationsverket.se/English/Private-individuals/Studying-and-researching-in-Sweden.html",
+     "Studying and researching in Sweden", "en"),
+    ("SG", "work", "https://www.mom.gov.sg/passes-and-permits/employment-pass", "Employment Pass", "en"),
+    ("SG", "work", "https://www.mom.gov.sg/passes-and-permits/s-pass", "S Pass", "en"),
+    ("SG", "study", "https://www.ica.gov.sg/reside/STP", "Student's Pass", "en"),
+    ("SG", "study", "https://www.ica.gov.sg/reside/STP/apply/ihl", "Student's Pass, institutes of higher learning", "en"),
+    ("NZ", "work", "https://www.immigration.govt.nz/new-zealand-visas/visas/visa/skilled-migrant-category-resident-visa",
+     "Skilled Migrant Category Resident Visa", "en"),
+    ("NZ", "work", "https://www.immigration.govt.nz/new-zealand-visas/visas/visa/accredited-employer-work-visa",
+     "Accredited Employer Work Visa", "en"),
+    ("NZ", "study", "https://www.immigration.govt.nz/study/", "Study in New Zealand", "en"),
+    ("NZ", "study", "https://www.immigration.govt.nz/study/study-visas/", "Study visas", "en"),
 ]
 
 
@@ -200,6 +227,10 @@ def main() -> int:
     built: list[Source] = []
 
     candidates = CANDIDATES
+    only = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--only=")), "")
+    if only:
+        wanted = {c.strip().upper() for c in only.split(",")}
+        candidates = [c for c in candidates if c[0] in wanted]
     if "--scout" in sys.argv:
         print("scouting each lane's candidates first\n")
         candidates = _scout_candidates(fetcher)
