@@ -14,6 +14,8 @@ from typing import Any
 from .masthead import MASTHEAD
 from .registry import JURISDICTIONS
 from .result_page import HEAD
+from .seo import breadcrumbs, meta, news_article
+from .signup import STYLE as SIGNUP_STYLE
 
 
 def _e(x: Any) -> str:
@@ -131,12 +133,11 @@ STYLE = '''
 '''
 
 
-def _page(title: str, body: str, description: str = "") -> str:
+def _page(title: str, body: str, description: str = "", path: str = "/articles", **seo) -> str:
     return f'''<!doctype html>
 <html lang="en" data-theme="newsroom"><head>{HEAD}
-<title>{_e(title)}</title>
-<meta name="description" content="{_e(description)}">
-<style>{STYLE}</style></head>
+{meta(title=title, description=description, path=path, **seo)}
+<style>{STYLE}{SIGNUP_STYLE}</style></head>
 <body>{MASTHEAD}<main>{body}</main></body></html>'''
 
 
@@ -147,7 +148,7 @@ def _groups_line(article: dict[str, Any], n: int = 3) -> str:
     return "; ".join(groups) + tail
 
 
-def index_html(articles: list[dict[str, Any]]) -> str:
+def index_html(articles: list[dict[str, Any]], signup: str = "") -> str:
     rows = []
     for a in articles:
         r = a.get("report") or {}
@@ -165,8 +166,9 @@ def index_html(articles: list[dict[str, Any]]) -> str:
 <div class="wire-head"><h1>The wire</h1>
   <p>Every article is a rule change the agent caught on an official page.<br>
   Each one carries its report.</p></div>
-{listing}'''
-    return _page("The wire, MIGRAGENT", body,
+{listing}
+<div id="alerts" style="max-width:760px">{signup}</div>'''
+    return _page("The wire: immigration rule changes, as they happen", body,
                  "Rule changes on official immigration pages, written up by an agent, each with its report.")
 
 
@@ -209,7 +211,7 @@ def _voice_line(v: dict[str, Any]) -> str:
     return ". ".join(parts) + "."
 
 
-def article_html(a: dict[str, Any]) -> str:
+def article_html(a: dict[str, Any], signup: str = "") -> str:
     r = a.get("report") or {}
     sources = r.get("sources") or []
     country = _country(a.get("jurisdiction", ""))
@@ -258,9 +260,7 @@ def article_html(a: dict[str, Any]) -> str:
     {_claims(a.get("dates") or [], sources, "Dates")}
     {_claims(a.get("what_to_do") or [], sources, "What the page tells you to do")}
     {gaps_block}
-    <div class="check"><p>Whether this touches you depends on your documents, not on a headline.
-    Upload what you have and MIGRAGENT will tell you which routes you qualify for, and watch them.</p>
-    <a class="cta" href="/start">Check where you qualify</a></div>
+    <div id="alerts">{signup}</div>
     <p class="disclaim">This reports what an official page says and when it said it. It is not legal advice.
     The page is the authority; follow the links.</p>
   </div>
@@ -293,4 +293,11 @@ def article_html(a: dict[str, Any]) -> str:
     <tr><td>House voice</td><td>{_e(_voice_line(r.get("voice") or {}))}</td></tr>
   </tbody></table>
 </section>'''
-    return _page(f"{a.get('headline')}, MIGRAGENT", body, a.get("dek", ""))
+    path = f"/articles/{a.get('slug')}"
+    published = a.get("published_at") or a.get("observed_on") or ""
+    ld = [news_article(headline=a.get("headline", ""), description=a.get("dek", ""), path=path,
+                       published=(a.get("observed_on") or published[:10]), modified=published,
+                       country=country, sources=[s["url"] for s in sources]),
+          breadcrumbs(("The wire", "/articles"), (a.get("headline", ""), path))]
+    return _page(a.get("headline", ""), body, a.get("dek", ""), path=path, kind="article",
+                 published=a.get("observed_on") or "", modified=published, ld=ld)

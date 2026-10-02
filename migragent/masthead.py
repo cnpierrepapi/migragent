@@ -20,11 +20,11 @@ LOGO = ('<svg viewBox="0 0 64 64"><path d="M10 36 V8 L32 28 L54 8 V36" fill="non
 
 NAV = (
     ("/articles", "The wire"),
+    ("/guides", "Guides"),
     ("/rounds", "The log"),
     ("/sources", "Sources"),
+    ("/desk", "The Desk"),
     ("/migra", "$MIGRA"),
-    ("/architecture", "How it works"),
-    ("/data", "Data"),
 )
 
 MASTHEAD = (

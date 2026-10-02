@@ -2,7 +2,9 @@
 
 An AI reporter. It reads official immigration pages every morning, works out what changed, and writes it up on the wire. You read it. That's the whole transaction.
 
-There are no accounts. Nothing to upload. No form asks for your name, your passport or your plans. Reading an article tells MIGRAGENT nothing about you that a newspaper's website wouldn't know.
+There are no accounts and nothing to upload. Reading an article tells MIGRAGENT nothing about you that a newspaper's website wouldn't know.
+
+Two forms exist, and you only fill them in if you want to. One signs you up for alerts. The other reserves a place on the Desk, the paid version for agents and advisers. Both are below.
 
 Until 2 October 2026 it also took people's cases: you could upload documents and get a guide. That part is gone. What's left of it is covered at the bottom of this page.
 
@@ -22,6 +24,20 @@ None of that is about you.
 The site sets no cookies for readers and runs no analytics. There are no ad trackers and no tracking pixels.
 
 Two ordinary things still happen, and they aren't ours to switch off. The site runs on Google Cloud Run, which logs each request, including the IP address it came from, the way any web host does. And the fonts load from Google Fonts, so your browser asks Google for them. If you'd rather not touch Google at all, this site isn't the place.
+
+## If you sign up for alerts
+
+We keep your email, what describes you (agent, adviser, student, and so on), the countries you picked, the page you signed up on, and when. That's it. It's used to send you rule changes for those countries, and nothing else. It isn't sold or shared.
+
+No alert has gone out yet. When they start, every one will have a link that deletes you from the list in one click. The link on the page right after you sign up does the same thing today.
+
+## If you reserve a place on the Desk
+
+We keep your email, the name you gave, the plan you picked, and the Paystack reference for your deposit. Your card never touches MIGRAGENT. Paystack takes the payment on its own page, and we ask Paystack afterwards whether it went through. The deposit is refunded in full if you ask, by email to admin@onenept.com.
+
+## Links to other companies
+
+Some guides carry a box for something you'd need next, like an English test or a way to move money. Those are affiliate links, and each box says so. Clicking one takes you to that company's site, under their privacy policy, and they may pay us a commission. We don't pass them anything about you.
 
 ## How the writing gets done
 
@@ -47,8 +63,13 @@ If your browser still has the case cookie, you can delete yours now with the but
 
 | Claim | Status |
 | --- | --- |
-| No accounts, no uploads, no forms that ask about you | true; the routes that took them were removed on 2 October 2026 |
-| No cookies for readers, no analytics | true in code; the only cookie is the editor's desk session |
+| No accounts, no uploads | true; the routes that took them were removed on 2 October 2026 |
+| The alerts signup keeps an email, a role and countries, and nothing else | true in code, `migragent/signup.py` |
+| One click deletes you from the alerts list | true; the link is shown right after signup and will be in every alert |
+| Card details never reach MIGRAGENT | true; Paystack's hosted checkout takes the payment |
+| A deposit is only marked paid after Paystack confirms it, for the right amount, in naira | true in code, `migragent/app.py` |
+| Affiliate links are labelled | true on every box |
+| No cookies for readers, no analytics | true in code; the only cookie is the editor's sign-in session |
 | Request logs with IP addresses are kept by Google Cloud | true; this is the host's standard logging, not ours to turn off |
 | Only public page text goes to Orbio | true; `tools/test_orbio_route.py` checks it |
 | Old cases are deleted on schedule, the last by 31 October 2026 | true; the sweep still runs, and `tools/test_retention.py` covers it |

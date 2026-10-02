@@ -13,6 +13,7 @@ from typing import Any
 
 from .masthead import MASTHEAD
 from .result_page import HEAD
+from .seo import meta, organization, website, breadcrumbs
 
 
 def _e(x: Any) -> str:
@@ -80,8 +81,7 @@ def sources_html(stats: dict[str, Any]) -> str:
 
     return f'''<!doctype html>
 <html lang="en" data-theme="newsroom"><head>{HEAD}
-<title>Sources, MIGRAGENT</title>
-<meta name="description" content="Every official immigration page MIGRAGENT reads, by country.">
+{meta(title="Where it reads: every official immigration page, by country", path="/sources", description=f"The {t['pages']:,} official government immigration pages MIGRAGENT reads in {t['countries']} countries, which it re-reads every morning, and what each has produced.", ld=[breadcrumbs(("The wire", "/"), ("Sources", "/sources"))])}
 <style>{STYLE}</style></head>
 <body>{MASTHEAD}<main>
   <h1>Where it reads</h1>

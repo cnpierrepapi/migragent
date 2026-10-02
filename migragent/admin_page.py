@@ -69,17 +69,17 @@ def _shell(title: str, body: str) -> str:
 <meta name="robots" content="noindex, nofollow">
 <title>{_e(title)}</title><style>{STYLE}</style></head>
 <body><main>
-  <div class="bar"><a class="name" href="/">{LOGO}MIGRAGENT</a><span class="tag">The desk</span></div>
+  <div class="bar"><a class="name" href="/">{LOGO}MIGRAGENT</a><span class="tag">Editor</span></div>
   {body}
 </main></body></html>'''
 
 
 def login_html(message: str = "", disabled: bool = False) -> str:
     if disabled:
-        return _shell("The desk", '<div class="login"><h1>The desk is not set up</h1>'
+        return _shell("Editor", '<div class="login"><h1>The editor is not set up</h1>'
                       '<p class="hint">No admin key is configured on this service, so nobody can sign in.</p></div>')
     msg = f'<p class="msg">{_e(message)}</p>' if message else ""
-    return _shell("The desk", f'''<div class="login"><h1>The desk</h1>{msg}
+    return _shell("Editor", f'''<div class="login"><h1>Editor</h1>{msg}
   <form class="box" method="post" action="/admin/login" autocomplete="off">
     <label for="key">Admin key</label><input id="key" type="password" name="key" required autofocus>
     <button type="submit">Sign in</button>
@@ -92,7 +92,9 @@ def _country_options() -> str:
 
 
 def desk_html(csrf: str, submissions: list[dict[str, Any]], articles: list[dict[str, Any]],
-              skips: list[dict[str, Any]], stats: dict[str, Any], message: str = "") -> str:
+              skips: list[dict[str, Any]], stats: dict[str, Any], message: str = "",
+              guides: list[dict[str, Any]] | None = None, affiliates: list[dict[str, Any]] | None = None,
+              signups: dict[str, int] | None = None, reservations: list[dict[str, Any]] | None = None) -> str:
     msg = f'<p class="msg">{_e(message)}</p>' if message else ""
     countries = _country_options()
     lanes = '<option value="work">Work</option><option value="study">Study</option>'
@@ -122,7 +124,7 @@ def desk_html(csrf: str, submissions: list[dict[str, Any]], articles: list[dict[
         f'<td>{_e(s.get("why"))}</td></tr>' for s in skips) or '<tr><td colspan="3">Nothing refused.</td></tr>'
 
     body = f'''
-  <h1>The desk</h1>
+  <h1>Editor</h1>
   <p class="hint">{t["pages"]:,} pages on file in {t["countries"]} countries, {t["daily"]} read every morning.
   {t["articles"]:,} articles on the wire. <a href="/sources">Every page</a></p>
   {msg}
@@ -172,4 +174,60 @@ def desk_html(csrf: str, submissions: list[dict[str, Any]], articles: list[dict[
   <table><thead><tr><th>When</th><th>Pages</th><th>Why</th></tr></thead><tbody>{skip_rows}</tbody></table>
 
   <form method="post" action="/admin/logout"><button class="ghost" type="submit" style="margin-top:30px">Sign out</button></form>'''
-    return _shell("The desk, MIGRAGENT", body)
+    body += _business(csrf, guides or [], affiliates or [], signups or {}, reservations or [])
+    return _shell("Editor, MIGRAGENT", body)
+
+
+def _business(csrf: str, guides: list[dict[str, Any]], affiliates: list[dict[str, Any]],
+              signups: dict[str, int], reservations: list[dict[str, Any]]) -> str:
+    """Guides, affiliate links, and the two numbers the business test rests on."""
+    from .guides import TOPICS
+    from .signup import ROLES
+
+    total = sum(signups.values())
+    roles = " · ".join(f"{_e(name)}: {signups.get(key, 0)}" for key, name in ROLES)
+    paid = sum(1 for r in reservations if r.get("status") == "paid")
+    res_rows = "".join(
+        f'<tr><td>{_e((r.get("at") or "")[:16].replace("T", " "))}</td><td>{_e(r.get("email"))}</td>'
+        f'<td>{_e(r.get("name"))}</td><td>{_e(r.get("plan"))}</td><td class="st-{_e(r.get("status"))}">{_e(r.get("status"))}</td>'
+        f'<td>{_e(r.get("reference"))}</td></tr>' for r in reservations) or '<tr><td colspan="6">None yet.</td></tr>'
+    topics = "".join(f'<option value="{k}">{_e(v)}</option>' for k, v in TOPICS.items())
+    aff_rows = "".join(
+        f'<tr><td>{_e(TOPICS.get(a.get("topic"), a.get("topic")))}</td><td><a href="{_e(a.get("url"))}" rel="noopener" '
+        f'target="_blank">{_e(a.get("name"))}</a></td><td>{_e(", ".join(a.get("countries") or []) or "all")}</td>'
+        f'<td><form method="post" action="/admin/affiliate/{_e(a.get("id"))}/remove"><input type="hidden" name="csrf" '
+        f'value="{_e(csrf)}"><button class="ghost" type="submit">Remove</button></form></td></tr>'
+        for a in affiliates) or '<tr><td colspan="4">No affiliate links yet. Guides show no boxes until you add one.</td></tr>'
+    guide_rows = "".join(
+        f'<tr><td>{_e(g.get("jurisdiction"))}</td><td class="h{" off" if g.get("hidden") else ""}">'
+        f'<a href="/guides/{_e(g.get("slug"))}">{_e(g.get("title"))}</a></td><td>{_e((g.get("updated_at") or "")[:10])}</td>'
+        f'<td>{_e(", ".join(g.get("topics") or []))}</td>'
+        f'<td><form method="post" action="/admin/guide/{_e(g.get("id"))}/{"show" if g.get("hidden") else "hide"}">'
+        f'<input type="hidden" name="csrf" value="{_e(csrf)}"><button class="ghost" type="submit">'
+        f'{"Put back" if g.get("hidden") else "Hide"}</button></form></td></tr>'
+        for g in guides) or '<tr><td colspan="5">No guides yet. They are written on Sundays, or when you run the guides job.</td></tr>'
+    return f'''
+  <h2>The business test</h2>
+  <p class="hint">Alerts signups: <b>{total}</b>. {roles}</p>
+  <p class="hint">Desk reservations: <b>{len(reservations)}</b>, of which <b>{paid}</b> paid the deposit.
+  Refunds are made in the Paystack dashboard.</p>
+  <table><thead><tr><th>When</th><th>Email</th><th>Name</th><th>Plan</th><th>Status</th><th>Reference</th></tr></thead>
+  <tbody>{res_rows}</tbody></table>
+
+  <h2>Affiliate links</h2>
+  <form class="box" method="post" action="/admin/affiliate" style="margin-bottom:14px">
+    <input type="hidden" name="csrf" value="{_e(csrf)}">
+    <div class="row">
+      <div><label>Topic</label><select name="topic">{topics}</select></div>
+      <div><label>Name shown</label><input type="text" name="name" required maxlength="80"></div>
+      <div><label>Countries (codes, blank for all)</label><input type="text" name="countries" placeholder="UK, CA"></div>
+    </div>
+    <label>Your affiliate URL</label><input type="url" name="url" required placeholder="https://">
+    <label>One line about it</label><input type="text" name="blurb" maxlength="160">
+    <button type="submit">Add link</button>
+    <p class="hint">Shown on guides that need this topic, labelled as an affiliate link.</p>
+  </form>
+  <table><thead><tr><th>Topic</th><th>Link</th><th>Countries</th><th></th></tr></thead><tbody>{aff_rows}</tbody></table>
+
+  <h2>Guides</h2>
+  <table><thead><tr><th>Country</th><th>Guide</th><th>Updated</th><th>Topics</th><th></th></tr></thead><tbody>{guide_rows}</tbody></table>'''

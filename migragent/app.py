@@ -149,6 +149,14 @@ def _source_stats() -> dict[str, Any]:
     return _cached("source_stats", build)
 
 
+def _signup_box(path: str, country: str = "") -> str:
+    """The alerts box, showing the outcome of a signup that just came back to this page."""
+    from .signup import box
+
+    return box(path, country=country, message=request.args.get("signup_error", ""),
+               leave_token=request.args.get("joined", ""))
+
+
 # --- the wire -------------------------------------------------------------------
 
 @app.get("/health")
@@ -171,7 +179,7 @@ def landing() -> Response:
     except Exception:  # noqa: BLE001
         # The front page must not fall over because the wire has a bad moment.
         filed = []
-    return Response(landing_html(stats=stats, articles=filed), mimetype="text/html")
+    return Response(landing_html(stats=stats, articles=filed, signup=_signup_box("/")), mimetype="text/html")
 
 
 @app.get("/articles")
@@ -180,7 +188,7 @@ def articles_index() -> Response:
     from .articles import recent
     from .articles_page import index_html
 
-    return Response(index_html(recent(_db(), limit=120)), mimetype="text/html")
+    return Response(index_html(recent(_db(), limit=120), signup=_signup_box("/articles")), mimetype="text/html")
 
 
 @app.get("/articles/<slug>")
@@ -191,7 +199,30 @@ def article(slug: str) -> Response:
     found = by_slug(_db(), slug)
     if not found or found.get("hidden"):
         return redirect("/articles")
-    return Response(article_html(found), mimetype="text/html")
+    return Response(article_html(found, signup=_signup_box(f"/articles/{slug}", found.get("jurisdiction", ""))),
+                    mimetype="text/html")
+
+
+@app.get("/guides")
+def guides_index() -> Response:
+    from .guides import published
+    from .guides_page import index_html
+
+    return Response(index_html(_cached("guides", lambda: published(_db())), signup=_signup_box("/guides")),
+                    mimetype="text/html")
+
+
+@app.get("/guides/<slug>")
+def guide(slug: str) -> Response:
+    from .guides import affiliates, by_slug
+    from .guides_page import guide_html
+
+    found = by_slug(_db(), slug)
+    if not found or found.get("hidden"):
+        return redirect("/guides")
+    return Response(guide_html(found, _cached("affiliates", lambda: affiliates(_db())),
+                               signup=_signup_box(f"/guides/{slug}", found.get("jurisdiction", ""))),
+                    mimetype="text/html")
 
 
 @app.get("/api/state")
@@ -202,6 +233,245 @@ def live_state() -> Response:
     response = jsonify(live.state(_db(), _source_stats()["totals"]["requirements"]))
     response.headers["Cache-Control"] = "public, max-age=15"
     return response
+
+
+@app.post("/alerts/signup")
+def alerts_signup() -> Response:
+    """Put a reader on the alerts list. See migragent/signup.py."""
+    from urllib.parse import quote
+
+    from .signup import save
+
+    back = request.form.get("path") or "/articles"
+    if not back.startswith("/") or back.startswith("//"):
+        back = "/articles"
+    ok, value = save(_db(), request.form, back)
+    if not ok and value == "bot":
+        return redirect(back)
+    sep = "&" if "?" in back else "?"
+    target = f"{back}{sep}{'joined=' + quote(value) if ok else 'signup_error=' + quote(value)}#alerts"
+    return redirect(target)
+
+
+@app.get("/alerts/leave")
+def alerts_leave() -> Response:
+    from .signup import leave
+
+    gone = leave(_db(), request.args.get("t", ""))
+    return Response(
+        f'<!doctype html><meta charset="utf-8"><meta name="robots" content="noindex">'
+        f'<title>MIGRAGENT</title><p style="font:1.1rem Georgia,serif;max-width:40em;margin:4em auto">'
+        f'{"Done. Your email is deleted from the alerts list." if gone else "That link has already been used, or it is not ours."}'
+        f' <a href="/">Back to the wire</a></p>', mimetype="text/html")
+
+
+# --- The Desk: reservations with a Paystack deposit ---------------------------------------
+#
+# See migragent/desk_page.py. The key is PAYSTACK_SECRET_KEY, from Secret Manager.
+# Nothing is marked paid on the browser's word: the server asks Paystack.
+
+PAYSTACK = "https://api.paystack.co"
+
+
+def _paystack_key() -> str:
+    return os.environ.get("PAYSTACK_SECRET_KEY", "").strip()
+
+
+def _paystack(method: str, path: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
+    import json
+    import urllib.request
+
+    req = urllib.request.Request(PAYSTACK + path, method=method,
+                                 data=json.dumps(body).encode() if body is not None else None,
+                                 headers={"Authorization": f"Bearer {_paystack_key()}",
+                                          "Content-Type": "application/json", "User-Agent": "migragent"})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return json.load(resp)
+
+
+def _mark_paid(reference: str, data: dict[str, Any]) -> bool:
+    """Paid only if Paystack says success, for the deposit amount, in naira."""
+    from .desk_page import DEPOSIT_KOBO, RESERVATIONS
+
+    ok = (data.get("status") == "success" and int(data.get("amount") or 0) == DEPOSIT_KOBO
+          and data.get("currency") == "NGN")
+    ref = _db().collection(RESERVATIONS).document(reference)
+    if ok and ref.get().exists:
+        ref.update({"status": "paid", "paid_at": data.get("paid_at") or "", "channel": data.get("channel") or ""})
+    return ok
+
+
+@app.get("/desk")
+def desk() -> Response:
+    from .desk_page import desk_html
+
+    m = request.args.get("m", "")
+    return Response(desk_html(live=bool(_paystack_key()), message=m, bad=bool(request.args.get("bad"))),
+                    mimetype="text/html")
+
+
+@app.post("/desk/reserve")
+def desk_reserve() -> Response:
+    import re
+    from datetime import datetime, timezone
+
+    from .desk_page import DEPOSIT_KOBO, PLANS, RESERVATIONS
+    from .seo import SITE
+
+    if (request.form.get("website") or "").strip():
+        return redirect("/desk")
+    email = (request.form.get("email") or "").strip().lower()
+    plan = request.form.get("plan", "")
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[a-z]{2,24}$", email, re.I) or plan not in {k for k, *_ in PLANS}:
+        return redirect("/desk?bad=1&m=Check the email address and pick a plan.")
+    reference = "desk-" + secrets.token_hex(8)
+    row = {"reference": reference, "email": email, "plan": plan,
+           "name": (request.form.get("name") or "").strip()[:120],
+           "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+           "status": "waitlist" if not _paystack_key() else "pending"}
+    _db().collection(RESERVATIONS).document(reference).set(row)
+    if not _paystack_key():
+        return redirect("/desk?m=You're on the waitlist. We'll email you when reservations open.")
+    try:
+        out = _paystack("POST", "/transaction/initialize", {
+            "email": email, "amount": DEPOSIT_KOBO, "currency": "NGN", "reference": reference,
+            "callback_url": f"{SITE}/desk/thanks", "metadata": {"plan": plan, "product": "migragent-desk"}})
+        url = (out.get("data") or {}).get("authorization_url")
+    except Exception:  # noqa: BLE001
+        url = None
+    if not url:
+        return redirect("/desk?bad=1&m=Paystack didn't answer. Nothing was charged; try again in a minute.")
+    return redirect(url)
+
+
+@app.get("/desk/thanks")
+def desk_thanks() -> Response:
+    from .desk_page import RESERVATIONS, thanks_html
+
+    reference = request.args.get("reference", "")
+    paid, plan = False, ""
+    if reference.startswith("desk-") and _paystack_key():
+        try:
+            data = _paystack("GET", f"/transaction/verify/{reference}").get("data") or {}
+            paid = _mark_paid(reference, data)
+        except Exception:  # noqa: BLE001
+            paid = False
+        snap = _db().collection(RESERVATIONS).document(reference).get()
+        plan = (snap.to_dict() or {}).get("plan", "") if snap.exists else ""
+    return Response(thanks_html(paid, plan), mimetype="text/html")
+
+
+@app.post("/paystack/webhook")
+def paystack_webhook() -> Response:
+    """Paystack's own word, signed with the secret key, for payments whose browser never came back."""
+    import json
+
+    key = _paystack_key()
+    raw = request.get_data()
+    sig = request.headers.get("x-paystack-signature", "")
+    if not key or not hmac.compare_digest(sig, hmac.new(key.encode(), raw, hashlib.sha512).hexdigest()):
+        return Response("", status=401)
+    event = json.loads(raw or b"{}")
+    data = event.get("data") or {}
+    if event.get("event") == "charge.success" and str(data.get("reference", "")).startswith("desk-"):
+        # Ask Paystack again rather than trusting the event body alone.
+        try:
+            _mark_paid(data["reference"], _paystack("GET", f"/transaction/verify/{data['reference']}").get("data") or {})
+        except Exception:  # noqa: BLE001
+            pass
+    return Response("", status=200)
+
+
+@app.get("/robots.txt")
+def robots_txt() -> Response:
+    from .seo import SITE
+
+    body = ("User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nDisallow: /tasks/\n"
+            "Disallow: /delete\n\n"
+            f"Sitemap: {SITE}/sitemap.xml\nSitemap: {SITE}/news-sitemap.xml\n")
+    return Response(body, mimetype="text/plain")
+
+
+def _xml(s: Any) -> str:
+    from xml.sax.saxutils import escape
+
+    return escape(str(s or ""))
+
+
+@app.get("/sitemap.xml")
+def sitemap() -> Response:
+    """Every public page and every article, with the date it last changed."""
+    from .articles import recent
+    from .seo import SITE
+
+    urls = [("/", "daily"), ("/articles", "daily"), ("/sources", "weekly"), ("/rounds", "daily"),
+            ("/migra", "weekly"), ("/architecture", "monthly"), ("/data", "monthly"),
+            ("/desk", "weekly"), ("/guides", "weekly")]
+    items = [f"<url><loc>{SITE}{p}</loc><changefreq>{f}</changefreq></url>" for p, f in urls]
+    for a in recent(_db(), limit=1000):
+        items.append(f"<url><loc>{SITE}/articles/{_xml(a.get('slug'))}</loc>"
+                     f"<lastmod>{_xml((a.get('published_at') or a.get('observed_on') or '')[:10])}</lastmod></url>")
+    try:
+        from .guides import published as published_guides
+
+        for g in published_guides(_db()):
+            items.append(f"<url><loc>{SITE}/guides/{_xml(g.get('slug'))}</loc>"
+                         f"<lastmod>{_xml((g.get('updated_at') or '')[:10])}</lastmod></url>")
+    except Exception:  # noqa: BLE001
+        pass
+    body = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + "".join(items) + "</urlset>")
+    return Response(body, mimetype="application/xml")
+
+
+@app.get("/news-sitemap.xml")
+def news_sitemap() -> Response:
+    """Google News: only articles written in the last two days, as Google asks."""
+    from datetime import datetime, timedelta, timezone
+
+    from .articles import recent
+    from .seo import SITE
+
+    since = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
+    items = []
+    for a in recent(_db(), limit=200):
+        if (a.get("published_at") or "") < since:
+            continue
+        items.append(
+            f"<url><loc>{SITE}/articles/{_xml(a.get('slug'))}</loc><news:news>"
+            "<news:publication><news:name>MIGRAGENT</news:name><news:language>en</news:language></news:publication>"
+            f"<news:publication_date>{_xml(a.get('published_at'))}</news:publication_date>"
+            f"<news:title>{_xml(a.get('headline'))}</news:title></news:news></url>")
+    body = ('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
+            'xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">' + "".join(items) + "</urlset>")
+    return Response(body, mimetype="application/xml")
+
+
+@app.get("/feed.xml")
+def feed() -> Response:
+    """The wire as RSS, newest change first."""
+    from email.utils import format_datetime
+    from datetime import datetime, timezone
+
+    from .articles import recent
+    from .seo import SITE
+
+    def rfc822(iso: str) -> str:
+        try:
+            dt = datetime.fromisoformat(iso)
+        except ValueError:
+            return ""
+        return format_datetime(dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc))
+
+    items = "".join(
+        f"<item><title>{_xml(a.get('headline'))}</title><link>{SITE}/articles/{_xml(a.get('slug'))}</link>"
+        f"<guid isPermaLink=\"true\">{SITE}/articles/{_xml(a.get('slug'))}</guid>"
+        f"<pubDate>{rfc822(a.get('published_at') or '')}</pubDate><description>{_xml(a.get('dek'))}</description></item>"
+        for a in recent(_db(), limit=50))
+    body = ('<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0"><channel><title>MIGRAGENT, the wire</title>'
+            f"<link>{SITE}/articles</link><description>Immigration rule changes, written up by an AI agent "
+            f"that reads the official pages every morning.</description><language>en</language>{items}</channel></rss>")
+    return Response(body, mimetype="application/rss+xml")
 
 
 @app.get("/sources")
@@ -401,8 +671,22 @@ def admin() -> Response:
     arts = [d.to_dict() for d in db.collection(ARTICLES)
             .order_by("observed_on", direction=firestore.Query.DESCENDING).limit(60).stream()]
     skips = [{**d.to_dict(), "id": d.id} for d in db.collection(SKIPPED).limit(30).stream()]
+    from .desk_page import RESERVATIONS
+    from .guides import AFFILIATES, GUIDES
+    from .signup import SUBSCRIBERS
+
+    signups: dict[str, int] = {}
+    for d in db.collection(SUBSCRIBERS).select(["role"]).stream():
+        role = (d.to_dict() or {}).get("role", "other")
+        signups[role] = signups.get(role, 0) + 1
+    reservations = [d.to_dict() for d in db.collection(RESERVATIONS)
+                    .order_by("at", direction=firestore.Query.DESCENDING).limit(50).stream()]
+    guides = sorted((d.to_dict() for d in db.collection(GUIDES).stream()),
+                    key=lambda g: (g.get("jurisdiction", ""), g.get("title", "")))
+    affs = [{**d.to_dict(), "id": d.id} for d in db.collection(AFFILIATES).stream()]
     resp = make_response(desk_html(csrf=_csrf(session), submissions=subs, articles=arts, skips=skips,
-                                   stats=_source_stats(), message=request.args.get("m", "")))
+                                   stats=_source_stats(), message=request.args.get("m", ""),
+                                   guides=guides, affiliates=affs, signups=signups, reservations=reservations))
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
@@ -520,6 +804,53 @@ def admin_source() -> Response:
                    language=JURISDICTIONS[code]["languages"][0], discovered_via="desk"))
     _CACHE.clear()
     return redirect("/admin?m=Added to the crawl list. It is read on the next round for that country.")
+
+
+@app.post("/admin/affiliate")
+def admin_affiliate() -> Response:
+    _session_value, refused = _desk_guard()
+    if refused:
+        return refused
+    from .guides import AFFILIATES, TOPICS
+
+    url = (request.form.get("url") or "").strip()
+    topic = request.form.get("topic", "")
+    name = (request.form.get("name") or "").strip()[:80]
+    if not url.startswith("https://") or topic not in TOPICS or not name:
+        return redirect("/admin?m=An affiliate link needs a topic, a name and an https URL.")
+    countries = [c.strip().upper() for c in (request.form.get("countries") or "").split(",")
+                 if c.strip().upper() in JURISDICTIONS]
+    _db().collection(AFFILIATES).document(secrets.token_hex(6)).set(
+        {"topic": topic, "name": name, "url": url, "blurb": (request.form.get("blurb") or "").strip()[:160],
+         "countries": countries, "active": True})
+    _CACHE.clear()
+    return redirect("/admin?m=Affiliate link added.")
+
+
+@app.post("/admin/affiliate/<aff_id>/remove")
+def admin_affiliate_remove(aff_id: str) -> Response:
+    _session_value, refused = _desk_guard()
+    if refused:
+        return refused
+    from .guides import AFFILIATES
+
+    _db().collection(AFFILIATES).document(aff_id).delete()
+    _CACHE.clear()
+    return redirect("/admin?m=Affiliate link removed.")
+
+
+@app.post("/admin/guide/<gid>/<action>")
+def admin_guide(gid: str, action: str) -> Response:
+    _session_value, refused = _desk_guard()
+    if refused:
+        return refused
+    if action not in ("hide", "show"):
+        return redirect("/admin")
+    from .guides import GUIDES
+
+    _db().collection(GUIDES).document(gid).update({"hidden": action == "hide"})
+    _CACHE.clear()
+    return redirect(f"/admin?m=Guide {'hidden' if action == 'hide' else 'back up'}.")
 
 
 @app.post("/admin/article/<aid>/<action>")

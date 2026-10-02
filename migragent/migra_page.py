@@ -12,6 +12,7 @@ from __future__ import annotations
 from .live import ORBIO_PAGE, TOKEN
 from .masthead import MASTHEAD
 from .result_page import HEAD
+from .seo import meta, organization, website, breadcrumbs
 
 DEPLOYER = "0x49CD0F898530eA9CbEC73e62efB359F2758478a1"
 FAKE = "0x9b7b5e41466b6aa1e21f1077ce5d1db69a2eff90"
@@ -69,8 +70,7 @@ SCRIPT = '''<script>
 def migra_html() -> str:
     return f'''<!doctype html>
 <html lang="en" data-theme="newsroom"><head>{HEAD}
-<title>$MIGRA, MIGRAGENT</title>
-<meta name="description" content="$MIGRA's trading fees pay for the AI that reads the rules and writes the wire.">
+{meta(title="$MIGRA pays for the reading", path="/migra", description="How $MIGRA's trading fees pay for the AI that reads official immigration rules and writes the wire. Contract, deployer and live figures.")}
 <style>{STYLE}</style></head>
 <body>{MASTHEAD}<main>
   <h1>$MIGRA pays for the reading</h1>

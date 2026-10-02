@@ -93,6 +93,7 @@ STYLE = '''
   .level b { color: var(--ink) }
 '''
 from .result_page import HEAD, LOGO
+from .seo import meta, organization, website, breadcrumbs
 from .masthead import MASTHEAD
 
 # What Cloud Scheduler starts, and when. Written here rather than read from the
@@ -254,7 +255,7 @@ def rounds_html(rounds: list[dict[str, Any]], changes: list[dict[str, Any]],
 
     return f'''<!doctype html>
 <html lang="en" data-theme="newsroom"><head>{HEAD}
-<title>What the reading job did</title>
+{meta(title="The log: what the agent read today", path="/rounds", description="Every morning's reading, as the job recorded it: pages fetched, pages that moved, requirements kept, and what it cost.")}
 <style>{STYLE}
   .lede {{ color: var(--ink-soft); line-height: 1.7; max-width: 66ch; margin: 0 0 30px }}
   .tiles {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
@@ -357,6 +358,6 @@ def rounds_html(rounds: list[dict[str, Any]], changes: list[dict[str, Any]],
   {read_sources} of {sources} registered pages have been read at least once. This page does not
   ask the Cloud Run API what happened, because the web service cannot become the watcher and is
   not getting a new role so a page can look busier. <a href="/architecture">How it is put
-  together</a> &middot; <a href="/coverage">Everything we have read</a> &middot;
+  together</a> &middot; <a href="/sources">Where it reads</a> &middot;
   <a href="/">Back to the start</a></p>
 </main></body></html>'''

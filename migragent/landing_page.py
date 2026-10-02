@@ -35,6 +35,8 @@ from typing import Any
 from .masthead import MASTHEAD
 from .registry import JURISDICTIONS
 from .result_page import HEAD
+from .seo import meta, organization, website, breadcrumbs
+from .signup import STYLE as SIGNUP_STYLE
 
 
 def _e(x: Any) -> str:
@@ -282,7 +284,7 @@ def lead_first(articles: list[dict[str, Any]], days: int = 3) -> list[dict[str, 
     return [lead] + [a for a in articles if a is not lead]
 
 
-def landing_html(stats: dict[str, Any], articles: list[dict[str, Any]] | None = None) -> str:
+def landing_html(stats: dict[str, Any], articles: list[dict[str, Any]] | None = None, signup: str = "") -> str:
     """The front page of the wire. `stats` is app._source_stats(): rows per country and totals."""
     articles = lead_first(articles or [])
     t = stats["totals"]
@@ -294,11 +296,9 @@ def landing_html(stats: dict[str, Any], articles: list[dict[str, Any]] | None = 
 
     return f'''<!doctype html>
 <html lang="en" data-theme="newsroom"><head>{HEAD}
-<title>MIGRAGENT, the immigration wire</title>
-<meta name="description" content="An AI agent reads official immigration pages every morning and writes
-up every rule change: what changed, exactly who it is for, and a report showing its working.">
+{meta(title="The immigration wire, written by an AI agent", path="/", description="An AI agent reads official immigration pages in 13 countries every morning and writes up every rule change: what changed, who it is for, and the proof.", ld=[organization(), website()])}
 <meta name="theme-color" content="#F6F3EC">
-<style>{CSS}</style></head>
+<style>{CSS}{SIGNUP_STYLE}</style></head>
 <body>
 {MASTHEAD}
 <div class="page">
@@ -332,6 +332,8 @@ up every rule change: what changed, exactly who it is for, and a report showing 
     <div class="row"><a class="cta" href="/articles">Read the wire</a>
       <a class="cta ghost" href="/rounds">The log</a></div>
   </section>
+
+  <div id="alerts" style="max-width:820px">{signup}</div>
 
   <section>
     <h2>How a line gets printed</h2>

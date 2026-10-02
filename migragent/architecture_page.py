@@ -24,6 +24,7 @@ from typing import Any
 
 from .data_page import STYLE, render
 from .result_page import HEAD, LOGO
+from .seo import meta, organization, website, breadcrumbs
 from .masthead import MASTHEAD
 
 MERMAID = re.compile(r"```mermaid.*?```", re.S)
@@ -139,7 +140,7 @@ def architecture_html(markdown: str, updated: str = "", **facts: Any) -> str:
         f"<p>{PLACEHOLDER}</p>", DIAGRAM)
     return f'''<!doctype html>
 <html lang="en" data-theme="newsroom"><head>{HEAD}
-<title>How MIGRAGENT is put together</title>
+{meta(title="How MIGRAGENT is put together", path="/architecture", description="How an AI reporter reads official immigration pages, checks every claim against the source, and publishes nothing it cannot quote.")}
 <style>{STYLE}{EXTRA}</style></head>
 <body>{MASTHEAD}<main>
 
@@ -160,7 +161,7 @@ def architecture_html(markdown: str, updated: str = "", **facts: Any) -> str:
   is described here and what the build is held to are the same file. Where a boundary
   is tested, the test is named and you can run it.
   <br><a href="/">MIGRAGENT</a> &middot;
-  <a href="/coverage">What we have read</a> &middot;
+  <a href="/sources">Where it reads</a> &middot;
   <a href="/rounds">What the reading job did</a> &middot;
   <a href="/data">What happens to your documents</a></p>
 </main></body></html>'''

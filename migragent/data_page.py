@@ -27,6 +27,7 @@ import re
 from typing import Any
 
 from .result_page import HEAD, LOGO
+from .seo import meta, organization, website, breadcrumbs
 from .masthead import MASTHEAD
 
 # The registered entity. A data protection notice that does not say who is
@@ -209,7 +210,7 @@ STYLE = '''
 def data_html(markdown: str, updated: str = "") -> str:
     return f'''<!doctype html>
 <html lang="en" data-theme="newsroom"><head>{HEAD}
-<title>Data, MIGRAGENT</title>
+{meta(title="Data: what MIGRAGENT keeps and what it never asks for", path="/data", description="No accounts, no uploads, no analytics. What MIGRAGENT stores, what happens when you visit, and how the last old case data is deleted.")}
 <style>{STYLE}</style></head>
 <body>{MASTHEAD}<main>
 

@@ -72,7 +72,7 @@ MODE = os.environ.get("MIGRAGENT_MODE", "extract")
 #
 # An unknown mode is now a refusal rather than the most expensive thing this
 # codebase can do by accident.
-MODES = ("extract", "watch", "listings", "digest", "articles", "selftest", "robots")
+MODES = ("extract", "watch", "listings", "digest", "articles", "guides", "selftest", "robots")
 
 # Who reads an entry page: the agent that chooses what to open next, or the flat
 # extractor that reads whatever the walk queued. Off unless asked for, so the
@@ -216,6 +216,43 @@ def robots_probe() -> int:
         print(f"  {state:<11} {url}", flush=True)
         print(f"              {why}", flush=True)
     return 0
+
+
+def write_guides() -> int:
+    """Rewrite any guide whose requirements changed. See migragent/guides.py.
+
+        MIGRAGENT_MODE=guides  python -m migragent.worker
+    """
+    import time
+
+    from .guides import GuideWriter, candidates
+
+    credentials = identity.credentials_for(identity.WATCHER, PROJECT)
+    db = firestore.Client(project=PROJECT, credentials=credentials)
+    limit = int(os.environ.get("MIGRAGENT_GUIDE_LIMIT", "40"))
+    writer = GuideWriter(db, PROJECT, MODEL, MODEL_LOCATION, credentials)
+    cands = candidates(db)[:limit]
+    print(f"{len(cands)} official pages with enough requirements for a guide", flush=True)
+    written = unchanged = skipped = failed = 0
+    for cand in cands:
+        try:
+            out = writer.write(cand)
+        except Exception as exc:  # noqa: BLE001
+            failed += 1
+            print(f"FAILED {cand['source_url']}: {type(exc).__name__}: {exc}"[:300], flush=True)
+            continue
+        if "written" in out:
+            written += 1
+            print(f"written: {out['written']}", flush=True)
+            time.sleep(3)
+        elif "unchanged" in out:
+            unchanged += 1
+        else:
+            skipped += 1
+            print(f"skipped: {out['skipped']}", flush=True)
+    print(f"guides: {written} written, {unchanged} unchanged, {skipped} skipped, {failed} failed; "
+          f"orbio carried {orbio.served['orbio']} calls for ${orbio.served['usd']:.4f}", flush=True)
+    return 1 if failed and not written else 0
 
 
 def write_articles() -> int:
@@ -403,6 +440,9 @@ def main() -> int:
 
     if MODE == "articles":
         return write_articles()
+
+    if MODE == "guides":
+        return write_guides()
 
     if MODE == "robots":
         return robots_probe()

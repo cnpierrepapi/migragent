@@ -22,7 +22,7 @@ sys.path.insert(0, ".")
 from migragent import model, orbio  # noqa: E402
 
 # The only modules allowed to mark a call public: they read public web pages.
-ALLOWED = {"extract.py", "changes.py", "lanes.py", "occupations.py", "schools.py", "articles.py"}
+ALLOWED = {"extract.py", "changes.py", "lanes.py", "occupations.py", "schools.py", "articles.py", "guides.py"}
 # Modules that handle a person's documents, CV or case. Never public.
 PERSONAL = {"cv.py", "documents.py", "drafts.py", "fit.py", "coverage.py", "form.py",
             "routes.py", "people.py", "verify.py", "agent_llm.py"}
@@ -42,7 +42,7 @@ def main() -> int:
     marked = {p.name for p in Path("migragent").rglob("*.py")
               if re.search(r"^\s*public=True", p.read_text(encoding="utf-8"), re.M)}
     check(marked <= ALLOWED, "only public-page readers mark calls public", sorted(marked))
-    check(marked == ALLOWED, "and all six of them do", sorted(ALLOWED - marked) or "all")
+    check(marked == ALLOWED, "and all seven of them do", sorted(ALLOWED - marked) or "all")
     check(not (marked & PERSONAL), "no module that touches a person is marked public")
 
     # --- refusing anything that is not text ------------------------------------------
