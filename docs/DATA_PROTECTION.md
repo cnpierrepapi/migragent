@@ -41,9 +41,9 @@ Some guides carry a box for something you'd need next, like an English test or a
 
 ## How the writing gets done
 
-The agent uses Gemini, Google's model, in two ways.
+The agent uses Gemini, Google's model. Since 2 October 2026 it runs through Vertex AI, inside the same Google Cloud project as everything else.
 
-Most mornings it goes through Orbio, an AI gateway paid for by $MIGRA's trading fees. Orbio passes the request on through OpenRouter to Google. When that balance runs out it goes to Vertex AI, inside the same Google Cloud project as everything else.
+Before that, and again whenever $MIGRA's credit is switched back on, it can go through Orbio, an AI gateway paid for by the token's trading fees. Orbio passes the request on through OpenRouter to Google.
 
 What travels down either road is the text of public government pages and the agent's notes on them. Nothing about a reader is ever in it, because the site holds nothing about a reader to send. `tools/test_orbio_route.py` fails if any code that ever handled personal data is pointed at Orbio.
 

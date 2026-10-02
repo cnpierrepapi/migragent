@@ -174,15 +174,15 @@ CSS = '''
 DESK = '''<div class="desk" id="live">
   <h3>The log <span id="lv-phase">-</span></h3>
   <div class="figs">
-    <div class="fig paid"><span>Orbio balance</span><b id="lv-balance">-</b><small>from $MIGRA fees</small></div>
-    <div class="fig"><span>Spent today</span><b id="lv-spent">-</b><small>by the agent</small></div>
+    <div class="fig paid"><span>$MIGRA AI credit</span><b id="lv-balance">-</b><small>on Orbio, not in use</small></div>
+    <div class="fig"><span>Rules changed</span><b id="lv-spent">-</b><small>this week</small></div>
     <div class="fig"><span>Pages read today</span><b id="lv-pages">-</b><small id="lv-unchanged">-</small></div>
     <div class="fig"><span>Pages that moved</span><b id="lv-changes">-</b><small id="lv-rules">this week</small></div>
-    <div class="fig"><span>Runway</span><b id="lv-runway">-</b><small>at this week's pace</small></div>
+    <div class="fig"><span>Requirements</span><b id="lv-runway">-</b><small>held, each quoted</small></div>
     <div class="fig"><span>$MIGRA</span><b id="lv-mcap">-</b><small id="lv-grad">market cap</small></div>
   </div>
   <ol class="log" id="lv-log"></ol>
-  <p class="fine">Every line is a row the reading job wrote. Balance read from Orbio <span id="lv-asof">-</span>.
+  <p class="fine">Every line is a row the reading job wrote. Credit last read from Orbio <span id="lv-asof">-</span>.
   Everything it reads is public. <a href="/rounds">Every round</a>.</p>
 </div>
 <script>
@@ -197,12 +197,12 @@ DESK = '''<div class="desk" id="live">
     const o = s.orbio || {}, st = s.stats || {}, t = s.token;
     $("lv-phase").textContent = s.status.phase === "READING" ? "reading now" : "idle";
     $("lv-balance").textContent = money(o.available);
-    $("lv-spent").textContent = money(o.spent_today);
+    $("lv-spent").textContent = (st.rule_changes_week ?? "-").toLocaleString();
     $("lv-pages").textContent = (st.pages_today ?? "-").toLocaleString();
     $("lv-unchanged").textContent = (st.unchanged_today ?? 0) + " unchanged, $0";
     $("lv-changes").textContent = (st.changes_week ?? "-").toLocaleString();
     $("lv-rules").textContent = (st.rule_changes_week ?? 0) + " changed a rule";
-    $("lv-runway").textContent = o.runway_days == null ? "-" : o.runway_days + " days";
+    $("lv-runway").textContent = (st.requirements ?? "-").toLocaleString();
     if (t) { $("lv-mcap").textContent = "$" + (t.market_cap_usd / 1000).toFixed(1) + "K";
              $("lv-grad").textContent = t.graduation_pct + "% to graduation"; }
     $("lv-asof").textContent = o.at ? ago(o.at) + " ago" : "after the next round";
@@ -357,12 +357,12 @@ def landing_html(stats: dict[str, Any], articles: list[dict[str, Any]] | None = 
   </section>
 
   <section>
-    <h2>Paid for by $MIGRA</h2>
+    <h2>Where $MIGRA fits</h2>
     <div class="two">
-      <div><b>The agent pays its own way</b><p>$MIGRA's trading fees become AI balance on Orbio, and that
-      balance pays for the morning reading and the writing. The log shows what it spent today.</p></div>
-      <div><b>And never stops</b><p>When the balance runs dry the agent falls back to Google Cloud and carries
-      on. The wire doesn't wait for the market. <a href="/migra">How $MIGRA works</a>.</p></div>
+      <div><b>The reading runs on Google Cloud</b><p>Every morning's reading and writing runs on Gemini, through
+      Google Cloud. The log shows what moved and when.</p></div>
+      <div><b>$MIGRA builds a balance</b><p>$MIGRA's trading fees collect as AI credit on Orbio. That credit paid
+      for the agent's first days, and it can again once it builds back up. <a href="/migra">How $MIGRA works</a>.</p></div>
     </div>
   </section>
 

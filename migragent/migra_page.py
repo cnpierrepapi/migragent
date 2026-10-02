@@ -58,8 +58,9 @@ SCRIPT = '''<script>
   fetch("/api/state").then((r) => r.json()).then((s) => {
     const o = s.orbio || {}, t = s.token;
     $("m-balance").textContent = money(o.available);
-    $("m-spent").textContent = money(o.spent_today);
-    $("m-runway").textContent = o.runway_days == null ? "-" : o.runway_days + " days";
+    const st = s.stats || {};
+    $("m-spent").textContent = (st.rule_changes_week ?? "-").toLocaleString();
+    $("m-runway").textContent = (st.requirements ?? "-").toLocaleString();
     if (t) { $("m-mcap").textContent = "$" + (t.market_cap_usd / 1000).toFixed(1) + "K";
              $("m-grad").textContent = t.graduation_pct + "% to graduation"; }
   }).catch(() => {});
@@ -70,16 +71,16 @@ SCRIPT = '''<script>
 def migra_html() -> str:
     return f'''<!doctype html>
 <html lang="en" data-theme="newsroom"><head>{HEAD}
-{meta(title="$MIGRA pays for the reading", path="/migra", description="How $MIGRA's trading fees pay for the AI that reads official immigration rules and writes the wire. Contract, deployer and live figures.")}
+{meta(title="$MIGRA and the reading", path="/migra", description="How $MIGRA's trading fees build AI credit for the agent that reads official immigration rules. Contract, deployer and live figures.")}
 <style>{STYLE}</style></head>
 <body>{MASTHEAD}<main>
-  <h1>$MIGRA pays for the reading</h1>
-  <p class="lede">The agent that writes this wire runs on AI it pays for itself. $MIGRA is how.</p>
+  <h1>$MIGRA and the reading</h1>
+  <p class="lede">$MIGRA's trading fees turn into AI credit the agent can spend. It paid for the agent's first days.</p>
 
   <div class="figs">
-    <div class="paid"><b id="m-balance">-</b><span>AI balance, from $MIGRA fees</span></div>
-    <div><b id="m-spent">-</b><span>spent by the agent today</span></div>
-    <div><b id="m-runway">-</b><span>runway at this week's pace</span></div>
+    <div class="paid"><b id="m-balance">-</b><span>AI credit on Orbio, from $MIGRA fees</span></div>
+    <div><b id="m-spent">-</b><span>rules changed this week</span></div>
+    <div><b id="m-runway">-</b><span>requirements held, each quoted</span></div>
     <div><b id="m-mcap">-</b><span id="m-grad">market cap</span></div>
   </div>
 
@@ -88,13 +89,13 @@ def migra_html() -> str:
     <li>$MIGRA launched on Orbio's agent launchpad, paired with $ORBIO.</li>
     <li>Every trade pays a creator fee. Orbio splits it: half is staked for the agent, 45% becomes AI balance
     it can spend, 5% goes to the launchpad.</li>
-    <li>Every morning the agent re-reads the official pages it holds. A page that didn't move costs nothing.
-    One that did is read again by Gemini, through Orbio, out of that balance.</li>
-    <li>When a page changes a rule, the agent writes it up for the wire, also paid from the balance.</li>
+    <li>That AI balance can pay for Gemini, the model that reads the pages and writes the wire.</li>
   </ol>
-  <p>So trading the token pays for the work the token is about. When the balance runs dry the agent falls back
-  to Google Cloud and carries on, so the wire never stops. It just stops being paid for by $MIGRA until more
-  fees come in.</p>
+  <p>For the agent's first days it did: the morning reading and the first articles ran on $MIGRA's credit. Then
+  the beat widened to 13 countries, the first full read of the new ones used the credit up, and the agent moved
+  to Google Cloud, where it runs now. The wire didn't stop for a day.</p>
+  <p>The fees keep coming in as people trade, and the credit builds back up. When there's enough of it, the
+  agent can switch back to spending it.</p>
 
   <h2>The contract</h2>
   <div class="ca"><b>$MIGRA on Robinhood Chain</b>{TOKEN}</div>
