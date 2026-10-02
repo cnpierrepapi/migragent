@@ -64,7 +64,8 @@ Return JSON only, in this shape:
   "who_not_for": [{"group": "...", "why": "...", "quote": "..."}],
   "dates": [{"what": "...", "date": "...", "quote": "..."}],
   "what_to_do": [{"text": "...", "quote": "..."}],
-  "not_said": ["..."]
+  "not_said": ["..."],
+  "kind": "rule | fee | deadline | list | process | admin"
 }
 
 Rules:
@@ -99,6 +100,10 @@ Rules:
   page does not use, and no selling words: comprehensive, streamlined, major, key,
   landmark, significant. A reader should be able to check every word of them
   against the quotes below.
+- "kind" says what changed. "rule": who qualifies or what they must show. "fee": what it
+  costs. "deadline": a date that matters. "list": an approved list (schools, occupations,
+  countries). "process": how or where to apply. "admin": only opening hours, phone lines,
+  contact details, page layout or site maintenance. An "admin" change is not news.
 - No advice beyond what the page itself says to do.
 
 DIFF SAMPLE:
@@ -240,7 +245,53 @@ def _words(text: str) -> set[str]:
     return {w for w in re.findall(r"[a-z0-9]+", (text or "").lower()) if w not in _STOP and len(w) > 2}
 
 
-def cluster(rows: list[dict[str, Any]], threshold: float = 0.6) -> list[list[dict[str, Any]]]:
+# Changes that only touch opening hours or contact details. Matched on the change
+# summary, so a page whose hours AND rules moved is not caught by this.
+_ADMIN_ONLY = re.compile(
+    r"\b(opening hours|office hours|hours of|horaires?|telephone|phone line|helpline|hotline|"
+    r"call cent(re|er)|contact details|email address|closed on|tuesday hours|reception hours)\b", re.I)
+_RULE_WORDS = re.compile(
+    r"\b(visa|permit|fee|salary|threshold|requirement|eligib|must|deadline|quota|list of|"
+    r"designated|exempt|document|evidence|applica)", re.I)
+
+
+def admin_only(group: list[dict[str, Any]]) -> bool:
+    """True when every change in the group is about hours or contact details and nothing else."""
+    summaries = [c.get("summary") or "" for c in group]
+    return bool(summaries) and all(_ADMIN_ONLY.search(t) and not _RULE_WORDS.search(_ADMIN_ONLY.sub("", t))
+                                   for t in summaries)
+
+
+# Words every story about a country shares, which say nothing about which story it is.
+_GENERIC = set("""canada france spain kingdom united uae emirates arab germany italy portugal saudi arabia
+ireland sweden singapore zealand visa visas permit permits measure update change list new government
+official extend temporary rule rules application applicant page route study work student students
+resident residence""".split())
+
+
+def _stem(w: str) -> str:
+    for suffix in ("ing", "ed", "es", "s"):
+        if len(w) > len(suffix) + 3 and w.endswith(suffix):
+            return w[: -len(suffix)]
+    return w
+
+
+def _stems(text: str) -> set[str]:
+    return {_stem(w) for w in _words(text)}
+
+
+def same_story(a: str, b: str, threshold: float = 0.35) -> bool:
+    """Two summaries of one piece of news, judged on overlap against the shorter one,
+    and only if they share a word that actually names the story (e.g. "ebola")."""
+    wa, wb = _stems(a), _stems(b)
+    if not wa or not wb:
+        return False
+    shared = wa & wb
+    distinctive = {w for w in shared if w not in _GENERIC and len(w) >= 4}
+    return bool(distinctive) and len(shared) / min(len(wa), len(wb)) >= threshold
+
+
+def cluster(rows: list[dict[str, Any]], threshold: float = 0.35) -> list[list[dict[str, Any]]]:
     """Same country, same day, same meaning: one article, however many pages carry it.
 
     One extension posted on four pages is one piece of news. Meaning is judged by
@@ -255,8 +306,8 @@ def cluster(rows: list[dict[str, Any]], threshold: float = 0.6) -> list[list[dic
             if gkey != key:
                 continue
             same_page = any(m.get("source_url") == r.get("source_url") for m in members)
-            union = gwords | words
-            if same_page or (union and len(gwords & words) / len(union) >= threshold):
+            text = " ".join(m.get("summary") or "" for m in members)
+            if same_page or same_story(text, r.get("summary") or "", threshold):
                 members.append(r)
                 gwords |= words
                 break
@@ -284,11 +335,25 @@ class Writer:
         rows = [{**d.to_dict(), "id": d.id} for d in self._db.collection("changes")
                 .where(filter=firestore.FieldFilter("after_read_at", ">=", since)).stream()]
         out = []
+        filed = [a for a in (d.to_dict() for d in self._db.collection(ARTICLES)
+                 .where(filter=firestore.FieldFilter("observed_on", ">=", since[:10])).stream()) if a]
         for group in cluster([r for r in rows if r.get("material")]):
             aid = article_id([c["id"] for c in group])
             if self._db.collection(ARTICLES).document(aid).get().exists:
                 continue
             if self._db.collection(SKIPPED).document(aid).get().exists:
+                continue
+            day = (group[-1].get("after_read_at") or "")[:10]
+            text = " ".join(c.get("summary") or "" for c in group)
+            twin = next((a for a in filed if a.get("observed_on") == day
+                         and a.get("jurisdiction") == group[-1].get("jurisdiction")
+                         and same_story(text, f'{a.get("headline", "")} {a.get("dek", "")}')), None)
+            if twin:
+                self._skip(aid, Report(change_ids=[c["id"] for c in group],
+                                       jurisdiction=group[-1].get("jurisdiction", ""),
+                                       lane=group[-1].get("lane", ""), sources=[], model=self._model,
+                                       generated_at=_now().isoformat(timespec="seconds")),
+                           f"same story as an article already filed that day: {twin.get('slug')}")
                 continue
             out.append(group)
         return out
@@ -339,6 +404,9 @@ class Writer:
         if not texts:
             return self._skip(aid, report, "no page snapshot could be read back; a page that was "
                                            "taken down leaves nothing to quote")
+        if admin_only(group):
+            # Before the model call, so it costs nothing.
+            return self._skip(aid, report, "only opening hours or contact details changed; not news")
         return self._compose(aid, report, sources, texts, "\n".join(diffs)[:8000])
 
     def write_desk(self, sub: dict[str, Any]) -> dict[str, Any]:
@@ -386,6 +454,8 @@ class Writer:
         report.quotes_checked, report.dropped = checked, dropped
         report.quotes_kept = checked - len(dropped)
         why = publishable(kept)
+        if not why and str(parsed.get("kind") or "").strip().lower() == "admin":
+            why = "the change only touches opening hours, contact details or the site itself; not news"
         if why:
             return self._skip(aid, report, why)
 

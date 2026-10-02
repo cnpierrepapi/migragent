@@ -12,7 +12,7 @@ import sys
 
 sys.path.insert(0, ".")
 
-from migragent.articles import article_id, check, cluster, publishable, slugify  # noqa: E402
+from migragent.articles import admin_only, article_id, check, cluster, publishable, same_story, slugify  # noqa: E402
 
 PAGE = """Skilled Worker visa
 From 22 July 2026 the general salary threshold is £41,700 a year.
@@ -82,6 +82,22 @@ def main() -> int:
            [len(g) for g in groups])
     news[1]["after_read_at"] = "2026-09-30T05:00:00"
     check_(len(cluster(news)) == 3, "the same words on a different day are a separate article")
+
+    hours = [{"summary": "The prefecture's Tuesday opening hours change on 8 September."},
+             {"summary": "Allo Service Public telephone hours are updated."}]
+    check_(admin_only(hours), "a change that only moves opening hours is not news")
+    check_(not admin_only([{"summary": "Opening hours change, and the visa fee rises to 99 euros."}]),
+           "hours plus a fee change is still news")
+    check_(not admin_only([{"summary": "The salary threshold rises to 41,700 pounds."}]), "a rule change is news")
+    ebola3 = [{"id": str(i), "jurisdiction": "CA", "after_read_at": "2026-08-29T05:00:00", "source_url": f"https://c/{i}",
+               "summary": t} for i, t in enumerate([
+                   "Canada extends temporary Ebola measures on the study permit route.",
+                   "Temporary Ebola travel measures are extended until September 2026.",
+                   "Canada extends temporary Ebola travel measures for international students."])]
+    check_(len(cluster(ebola3)) == 1, "the three Ebola notes of 29 August are one story", len(cluster(ebola3)))
+    check_(same_story("Canada extends Ebola measures for students",
+                      "Canada extends temporary Ebola measures until November 27 for study permit applicants"),
+           "a change matching a filed headline that day is the same story")
 
     check_(article_id(["b", "a"]) == article_id(["a", "b"]), "an article's id does not depend on change order")
     check_(slugify("UK raises the Skilled Worker salary threshold to £41,700!") ==
