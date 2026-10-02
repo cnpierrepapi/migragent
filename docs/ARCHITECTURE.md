@@ -1,7 +1,7 @@
 # How MIGRAGENT is put together
 
-One web service, one batch job, four alarm clocks, and a rule that nothing gets written down
-without a sentence from the page it came from.
+An AI reporter on the immigration beat. One web service, one batch job, three alarm clocks, and a
+rule that nothing gets printed without a sentence from the page it came from.
 
 That rule is the reason for most of the shape below. If a claim has to carry a quote, then the
 thing that fetched the page and the thing that decided what the page means cannot be the same
@@ -9,36 +9,40 @@ thing, and neither of them can be trusted to remember the URL. So the fetch keep
 date, the model gets the text and nothing else, and the two are put back together by code that
 checks the quote is really on the page before the row exists.
 
+Until 2 October 2026 it also took people's cases: uploads, guides, alerts, a CV builder. That was
+removed. The sections further down still describe how a requirement is read and checked, which is
+unchanged; where they mention a guide or a case, that part no longer runs.
+
 ## What is actually running
 
-A Cloud Run service called `migragent` serves every screen. It is Flask behind gunicorn, one
-container, and it does the work of a request inside the request. There is no queue and no worker
-pool, because a person waiting on their guide is watching a progress line, not a spinner, and
-server-sent events carry it.
+A Cloud Run service called `migragent` serves the wire: the front page, the articles, the log, the
+sources, and a private desk for the editor. It is Flask behind gunicorn, one container.
 
-A Cloud Run job called `migragent-ingest` does the reading. Ten tasks, five at a time, and the
-task index picks the lane. It is one program with seven modes:
+A Cloud Run job called `migragent-ingest` does the reading. Eighteen tasks, one per country and
+lane, nine countries; the task index picks the lane. The modes that run:
 
+- `watch` re-reads pages we hold and works out what moved
 - `extract` reads pages nobody has read yet
-- `watch` re-reads pages we have read and works out what moved
-- `listings` pulls new postings off government job boards
-- `digest` works out who needs telling, and tells them
-- `articles` writes up each rule change for the wire, with who it is for and a report; every claim must quote the page (`migragent/articles.py`)
+- `articles` writes up each rule change for the wire, with who it is for and a report; every claim
+  must quote the page, and the house voice is enforced in code (`migragent/articles.py`, `migragent/voice.py`)
 - `selftest` proves the watcher can add to the snapshot archive and cannot rewrite it
 - `robots` prints robots.txt as the job receives it, for when a block looks wrong
 
-Five Cloud Scheduler jobs start those, in this order and for this reason:
+`listings` and `digest` still exist in the code and no longer run: they matched job postings to cases
+and told cases what moved.
+
+Three Cloud Scheduler jobs start the work:
 
 | Time (UTC) | What runs |
 | --- | --- |
-| 03:17 | retention sweep, deleting what is past its window |
+| 03:17 | retention sweep, deleting the last of the old cases as they expire |
 | 04:40 | watch round |
-| 05:00 | job listings |
-| 05:20 | digest |
 | 05:40 | articles, for the wire |
 
-Read the government pages first, then ask the boards, then tell people, then write it up. Run the digest first and
-it reports on yesterday.
+Read the government pages first, then write it up. Write first and it reports on yesterday.
+
+The desk (`/admin`) files what the crawl cannot reach, through the same writer and the same checks,
+and can add a page to the crawl list. It signs in with a key from Secret Manager.
 
 ## The path one sentence takes
 

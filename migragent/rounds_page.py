@@ -26,18 +26,81 @@ import html
 from datetime import datetime, timezone
 from typing import Any
 
-from .flow_page import STYLE
+# The page style the old intake flow defined; kept here when that flow was removed.
+STYLE = '''
+  * { box-sizing: border-box }
+  body { margin: 0; padding: 44px 24px 96px }
+  main { max-width: 760px; margin: 0 auto }
+  a { color: var(--link) }
+  .brand { display: flex; align-items: center; gap: 11px; color: var(--primary);
+           margin-bottom: 26px }
+  .brand svg { width: 26px; height: 26px }
+  .brand span { font-family: var(--font-display); font-size: 1.18rem; color: var(--ink) }
+
+  .steps { display: flex; gap: 8px; align-items: center; font-family: var(--font-mono);
+           font-size: .68rem; letter-spacing: .08em; text-transform: uppercase;
+           color: var(--ink-soft); margin-bottom: 26px; flex-wrap: wrap }
+  .steps b { color: var(--ink); font-weight: 500 }
+  .steps .on { color: var(--accent) }
+  .steps i { font-style: normal; opacity: .4 }
+
+  h1 { font-family: var(--font-display); font-size: clamp(1.8rem, 4.4vw, 2.5rem);
+       margin: 0 0 12px; line-height: 1.08 }
+  .sub { color: var(--ink-soft); line-height: 1.65; margin: 0 0 30px; max-width: 60ch }
+
+  .picks { display: grid; gap: 11px; margin-bottom: 30px }
+  .pick { position: relative }
+  .pick input { position: absolute; opacity: 0; inset: 0; cursor: pointer }
+  .pick span.box { display: block; padding: 18px 20px; border: 1px solid var(--rule);
+                   border-radius: var(--radius); background: var(--paper-raised);
+                   cursor: pointer; transition: border-color var(--motion-fast) var(--ease) }
+  .pick input:checked + span.box { border-color: var(--primary); box-shadow: var(--ring) }
+  .pick b { display: block; font: 600 1.06rem var(--font-body); margin-bottom: 4px }
+  .pick em { font-style: normal; color: var(--ink-soft); font-size: .92rem; line-height: 1.5 }
+
+  .why { display: block; font-family: var(--font-mono); font-size: .71rem;
+         color: var(--ink-soft); margin-top: 9px; line-height: 1.65;
+         border-left: 2px solid var(--rule); padding-left: 11px }
+  .why q { quotes: none; color: var(--ink) }
+  .counts { font-family: var(--font-mono); font-size: .68rem; color: var(--ink-soft);
+            margin-top: 7px }
+
+  .primary { margin: 0 0 30px; padding: 17px 19px; border: 1px solid var(--rule);
+             border-radius: var(--radius); background: var(--paper-raised); display: none }
+  .primary.show { display: block }
+  .primary p { margin: 0 0 12px; font: 600 .97rem var(--font-body) }
+  .primary label { display: inline-flex; align-items: center; gap: 7px; margin-right: 18px;
+                   font-size: .95rem; cursor: pointer }
+
+  .drop { border: 1.5px dashed var(--rule); border-radius: var(--radius); padding: 30px 24px;
+          text-align: center; background: var(--paper-raised); cursor: pointer }
+  .drop:hover, .drop.over { border-color: var(--primary) }
+  .drop p { margin: 0; color: var(--ink-soft) }
+  #files { margin: 12px 0 0; padding: 0; list-style: none; font-family: var(--font-mono);
+           font-size: .74rem; color: var(--ink-soft) }
+  #files li { padding: 7px 0; border-bottom: 1px solid var(--rule) }
+
+  .go { padding: 15px 38px; border: 0; border-radius: var(--radius); background: var(--primary);
+        color: var(--paper); font: 600 1rem var(--font-body); cursor: pointer }
+  .go:disabled { opacity: .45; cursor: not-allowed }
+  .quiet { display: inline-block; margin-left: 14px; font-size: .92rem }
+  .note { border-left: 2px solid var(--primary); padding: 2px 0 2px 14px; margin: 0 0 26px;
+          color: var(--ink-soft); line-height: 1.7; font-size: .91rem }
+  .none { border: 1px dashed var(--rule); border-radius: var(--radius); padding: 26px;
+          color: var(--ink-soft); line-height: 1.7 }
+  .level { font-family: var(--font-mono); font-size: .74rem; color: var(--ink-soft);
+           margin: 0 0 24px; line-height: 1.7 }
+  .level b { color: var(--ink) }
+'''
 from .result_page import HEAD, LOGO
 from .masthead import MASTHEAD
 
 # What Cloud Scheduler starts, and when. Written here rather than read from the
 # scheduler API for the same reason as above: no new role for a label. These are
-# the five jobs in docs/ARCHITECTURE.md and they are checked against it.
+# the jobs in docs/ARCHITECTURE.md and they are checked against it.
 SCHEDULE = (
     ("03:17", "retention sweep", "deletes every case past its window"),
     ("04:40", "watch round", "re-reads what we hold, and works out what moved"),
-    ("05:00", "job listings", "new postings off government boards"),
-    ("05:20", "digest", "who does today's changes affect, and tell them"),
     ("05:40", "articles", "write up each rule change for the wire, with its report"),
 )
 
@@ -263,8 +326,8 @@ def rounds_html(rounds: list[dict[str, Any]], changes: list[dict[str, Any]],
 
   <section>
     <h2>What runs, and when</h2>
-    <p class="sub2">The order is the point. Read the government pages first, then ask the job
-    boards, then work out who needs telling. Run the digest first and it reports on yesterday.</p>
+    <p class="sub2">The order is the point. Read the government pages first, then write up what
+    changed. Write first and it reports on yesterday.</p>
     <div class="scroll"><table>
       <thead><tr><th>UTC</th><th>Job</th><th>What it is for</th></tr></thead>
       <tbody>{schedule}</tbody>

@@ -93,6 +93,8 @@ Rules:
   who is exempt, when it takes effect, whether current holders are affected) in
   "not_said". Never fill a gap with a guess.
 - "date" is written exactly as the page writes it.
+- Write everything in English, whatever language the page is in. Quotes stay in the
+  page's own language, copied exactly, because they are checked against the page.
 - "headline" and "dek" state only what your quoted claims state. No adjectives the
   page does not use, and no selling words: comprehensive, streamlined, major, key,
   landmark, significant. A reader should be able to check every word of them
@@ -105,6 +107,10 @@ DIFF SAMPLE:
 # The house voice goes in just before the material, so it is the last instruction
 # the model reads before writing. See migragent/voice.py.
 PROMPT = PROMPT.replace("\nDIFF SAMPLE:\n", VOICE_RULES + "\nDIFF SAMPLE:\n")
+
+# What stands in for the diff when the desk submits a filing by hand.
+DESK_DIFF = ("No diff: this is a filing submitted by the MIGRAGENT desk because the page could not be "
+             "crawled. Treat the whole PAGE TEXT as what is new, and write it up the same way.")
 
 REWRITE = """Rewrite this headline and dek so they follow the voice rules below. Keep every
 fact and add none: use only the facts listed. Return JSON only: {"headline": "...", "dek": "..."}
@@ -155,6 +161,9 @@ class Report:
     dropped: list[dict[str, str]] = field(default_factory=list)
     unreadable: list[str] = field(default_factory=list)
     voice: dict[str, Any] = field(default_factory=dict)
+    # "crawl" when the watch round found the change; "desk" when a person submitted it.
+    origin: str = "crawl"
+    desk: dict[str, Any] = field(default_factory=dict)
     generated_at: str = ""
 
 
@@ -330,6 +339,36 @@ class Writer:
         if not texts:
             return self._skip(aid, report, "no page snapshot could be read back; a page that was "
                                            "taken down leaves nothing to quote")
+        return self._compose(aid, report, sources, texts, "\n".join(diffs)[:8000])
+
+    def write_desk(self, sub: dict[str, Any]) -> dict[str, Any]:
+        """A filing the desk submitted by hand: a page that cannot be crawled, a PDF,
+        an announcement. Same quote check, same voice, same report, and the report
+        says plainly that a person submitted it rather than the crawl finding it.
+        """
+        text = (sub.get("text") or "").strip()
+        aid = f"desk-{sub['id']}"
+        observed = (sub.get("observed_on") or _now().date().isoformat())[:10]
+        source = Source(url=sub.get("url", ""), before_read_at="", after_read_at=observed,
+                        before_snapshot=None, after_snapshot=None, lines_added=0, lines_removed=0,
+                        change_summary=sub.get("title") or "Submitted by the desk", chars=len(text))
+        report = Report(change_ids=[], jurisdiction=sub.get("jurisdiction", ""), lane=sub.get("lane", ""),
+                        sources=[source], model=self._model,
+                        generated_at=_now().isoformat(timespec="seconds"))
+        report.origin = "desk"
+        report.desk = {"submission": sub["id"], "submitted_at": sub.get("submitted_at", ""),
+                       "how": sub.get("how", "pasted text"), "note": sub.get("note", "")}
+        if len(text) < 120:
+            return self._skip(aid, report, "the submitted text is too short to quote from")
+        return self._compose(aid, report, [source], [text], DESK_DIFF)
+
+    def _compose(self, aid: str, report: Report, sources: list[Source], texts: list[str],
+                 diff: str) -> dict[str, Any]:
+        """The shared core: one model call, the quote check, the voice, and the article."""
+        import time
+
+        from . import orbio
+        from .model import call_json
 
         budget = MAX_CHARS // len(texts)
         page_block = "\n\n".join(f"PAGE {i + 1} ({s.url}):\n{t[:budget]}"
@@ -339,7 +378,7 @@ class Writer:
         parsed = call_json(project=self._project, model=self._model, location=self._location,
                            credentials=self._credentials, max_output_tokens=8192,
                            public=True,  # official pages' own text and their diffs, nothing else
-                           parts=[{"text": PROMPT + "\n".join(diffs)[:8000] + "\n\nPAGE TEXT:\n" + page_block}])
+                           parts=[{"text": PROMPT + diff + "\n\nPAGE TEXT:\n" + page_block}])
         report.served_by = "orbio" if orbio.served["orbio"] > before["orbio"] else "vertex"
         report.cost_usd = round(orbio.served["usd"] - before["usd"], 6)
 
@@ -357,7 +396,7 @@ class Writer:
         doc = {"id": aid, "slug": f"{observed}-{slugify(headline)}", "headline": headline,
                "dek": dek, "published_at": report.generated_at,
                "observed_on": observed, "jurisdiction": report.jurisdiction, "lane": report.lane,
-               **kept, "report": asdict(report)}
+               "origin": report.origin, "hidden": False, **kept, "report": asdict(report)}
         self._db.collection(ARTICLES).document(aid).set(doc)
         return {"written": doc["slug"]}
 
@@ -426,8 +465,12 @@ class Writer:
 def recent(db, limit: int = 30) -> list[dict[str, Any]]:
     from google.cloud import firestore
 
-    return [d.to_dict() for d in db.collection(ARTICLES)
-            .order_by("published_at", direction=firestore.Query.DESCENDING).limit(limit).stream()]
+    # By the day the page changed, not the day the article was written, so an
+    # article backfilled today about a change in August files under August.
+    rows = [d.to_dict() for d in db.collection(ARTICLES)
+            .order_by("observed_on", direction=firestore.Query.DESCENDING).limit(limit + 20).stream()]
+    # Hidden by the desk: kept, with its report, but off the wire.
+    return [r for r in rows if not r.get("hidden")][:limit]
 
 
 def by_slug(db, slug: str) -> dict[str, Any] | None:

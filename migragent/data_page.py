@@ -209,7 +209,7 @@ STYLE = '''
 def data_html(markdown: str, updated: str = "") -> str:
     return f'''<!doctype html>
 <html lang="en" data-theme="newsroom"><head>{HEAD}
-<title>Data protection notice</title>
+<title>Data, MIGRAGENT</title>
 <style>{STYLE}</style></head>
 <body>{MASTHEAD}<main>
 
@@ -220,17 +220,25 @@ def data_html(markdown: str, updated: str = "") -> str:
       <dt>Service</dt><dd>MIGRAGENT, at migragent.onenept.com</dd>
       <dt>Contact</dt><dd><a href="mailto:{_e(CONTACT)}">{_e(CONTACT)}</a></dd>
       <dt>Last updated</dt><dd>{_e(updated or "see the repository history")}</dd>
-      <dt>Scope</dt><dd>Documents and personal data submitted to this service</dd>
+      <dt>Scope</dt><dd>Readers of the wire, the editor's desk, and what is left of the old case product</dd>
     </dl>
   </div>
 
   {render(markdown)}
+
+  <form method="post" action="/delete" class="del" style="margin:18px 0 0">
+    <button type="submit" style="padding:10px 18px;border:1px solid var(--warn);background:transparent;color:var(--warn);font:600 .88rem var(--font-body);border-radius:var(--radius);cursor:pointer">Delete my old case now</button>
+    <span id="del-msg" style="font:.8rem var(--font-mono);color:var(--ink-soft);margin-left:10px"></span>
+  </form>
+  <script>(() => {{ const p = new URLSearchParams(location.search).get("deleted");
+    if (p !== null) document.getElementById("del-msg").textContent = p === "1"
+      ? "Deleted. Everything that case held is gone." : "This browser holds no old case, so there was nothing to delete."; }})();</script>
 
   <p class="foot">This notice describes the behaviour of the software as built, and each
   claim in it is stated as true in code, tested, or not yet implemented. It is not a
   statement of compliance with any particular regime. Where a claim is tested, the test
   is named so it can be run.
   <br>{_e(CONTROLLER)} &middot; <a href="/">MIGRAGENT</a> &middot;
-  <a href="/coverage">What we have read</a> &middot;
+  <a href="/sources">Where it reads</a> &middot;
   <a href="/architecture">How it is built</a></p>
 </main></body></html>'''

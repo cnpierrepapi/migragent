@@ -54,7 +54,7 @@ Mode = str  # "extract" or "watch"
 CHANGES = "changes"
 ROUNDS = "rounds"
 
-# The five jurisdictions this product offers, in a fixed order.
+# The jurisdictions read every morning, in a fixed order.
 #
 # US and Australia are not here, and the reason is narrower than "they disallow
 # us", which is what was first recorded and is not true of either. US
@@ -64,7 +64,12 @@ ROUNDS = "rounds"
 # not given permission, so we stop, and the registry records which of the two it
 # was. See D24. Their rows stay, marked blocked, because a source that
 # disappears from a count is how a count starts lying.
-OFFERED = ["UK", "CA", "FR", "ES", "AE"]
+# Widened on 2 October 2026, when MIGRAGENT became a reporter: Germany, Italy,
+# Portugal and Saudi Arabia had pages on file that nothing re-read, so nothing
+# about them could ever reach the wire. They go on the END of the list, because a
+# Cloud Run task finds its lane by index and the first ten must keep meaning what
+# they meant. The job runs 2 x len(OFFERED) tasks: 18 now.
+OFFERED = ["UK", "CA", "FR", "ES", "AE", "DE", "IT", "PT", "SA"]
 
 # A page that comes back this thin is usually a host that hides its content
 # behind scripts rather than a page that says nothing. Worth one browser try

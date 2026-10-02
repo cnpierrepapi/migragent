@@ -8,11 +8,11 @@ the tab. October 2026 made that visible. The agent reads official immigration
 pages every morning and writes up every rule change as an article, with who it
 is for and a report that shows its working. So the front page is a front page.
 
-The lead is the newest article the agent filed, with who it is for. Down the
-side is the desk: what the agent did today, what it cost, and how long its
-$MIGRA-funded balance lasts. Below the fold is the product, for anybody who
-wants the agent reading on their behalf, and every call to action still goes to
-`/start`, which does the work.
+The lead is the strongest recent article, with who it is for. Down the side is
+the log: what the agent did today, what it cost, and how long its
+$MIGRA-funded balance lasts. Below the fold is how it reports, where it reads,
+and what pays for it. Since 2 October 2026 there is no case product: it is a
+reporter, and nothing on this page asks anybody for anything.
 
 NOTHING HERE IS A MOCK-UP
 -------------------------
@@ -170,7 +170,7 @@ CSS = '''
 '''
 
 DESK = '''<div class="desk" id="live">
-  <h3>The desk <span id="lv-phase">-</span></h3>
+  <h3>The log <span id="lv-phase">-</span></h3>
   <div class="figs">
     <div class="fig paid"><span>Orbio balance</span><b id="lv-balance">-</b><small>from $MIGRA fees</small></div>
     <div class="fig"><span>Spent today</span><b id="lv-spent">-</b><small>by the agent</small></div>
@@ -181,7 +181,7 @@ DESK = '''<div class="desk" id="live">
   </div>
   <ol class="log" id="lv-log"></ol>
   <p class="fine">Every line is a row the reading job wrote. Balance read from Orbio <span id="lv-asof">-</span>.
-  Only public pages go through Orbio, never your documents. <a href="/rounds">Every round</a>.</p>
+  Everything it reads is public. <a href="/rounds">Every round</a>.</p>
 </div>
 <script>
 (() => {
@@ -282,27 +282,20 @@ def lead_first(articles: list[dict[str, Any]], days: int = 3) -> list[dict[str, 
     return [lead] + [a for a in articles if a is not lead]
 
 
-def landing_html(live: int, sources: int, lanes_open: int,
-                 places: list[tuple[str, str, str]],
-                 openings: int = 0, waiting: int = 0,
-                 articles: list[dict[str, Any]] | None = None) -> str:
-    """`places` is (name, what it is open for, note), so the page never invents coverage.
-
-    `openings` is how many postings have actually been ingested; where it is zero
-    the figure is replaced rather than printing a nought.
-    """
+def landing_html(stats: dict[str, Any], articles: list[dict[str, Any]] | None = None) -> str:
+    """The front page of the wire. `stats` is app._source_stats(): rows per country and totals."""
     articles = lead_first(articles or [])
-    place_cards = "".join(f'<div class="place"><b>{_e(name)}</b><span>{_e(opens)}</span>'
-                          f'<span>{_e(note)}</span></div>' for name, opens, note in places)
-    later = (f'<p class="later">{waiting} more countries are being read. A country appears here when we '
-             f'can take you all the way through, not when we have started.</p>' if waiting else "")
-    openings_fig = (f'<div><b>{openings:,}</b><span>live job postings matched against cases</span></div>'
-                    if openings else '<div><b>Daily</b><span>re-read, so nothing goes stale</span></div>')
+    t = stats["totals"]
+    reads = "".join(
+        f'<div class="place"><b>{_e(r["name"])}</b><span>{r["pages"]:,} official pages'
+        f'{" · read every morning" if r["daily"] else " · on file"}</span>'
+        f'<span>{r["rules"]:,} rule changes caught · {r["articles"]:,} articles</span></div>'
+        for r in stats["rows"] if r["pages"])
 
     return f'''<!doctype html>
 <html lang="en" data-theme="newsroom"><head>{HEAD}
 <title>MIGRAGENT, the immigration wire</title>
-<meta name="description" content="An agent reads the official immigration pages every morning and writes
+<meta name="description" content="An AI agent reads official immigration pages every morning and writes
 up every rule change: what changed, exactly who it is for, and a report showing its working.">
 <meta name="theme-color" content="#F6F3EC">
 <style>{CSS}</style></head>
@@ -316,73 +309,64 @@ up every rule change: what changed, exactly who it is for, and a report showing 
   </div>
 
   <div class="band">
-    <div><b>{live:,}</b><span>requirements read from official pages</span></div>
-    <div><b>{sources:,}</b><span>government pages under watch</span></div>
-    <div><b>{lanes_open}</b><span>routes you can take today</span></div>
-    {openings_fig}
+    <div><b>{t["pages"]:,}</b><span>official pages on file</span></div>
+    <div><b>{t["daily"]}</b><span>countries read every morning</span></div>
+    <div><b>{t["rules"]:,}</b><span>rule changes caught</span></div>
+    <div><b>{t["articles"]:,}</b><span>articles filed</span></div>
   </div>
 
-  <section id="qualify">
-    <p class="kicker"><b>For you</b> · the agent on your side</p>
-    <h2>The wire is for everyone. Your case is just yours.</h2>
-    <p class="lede">An article can tell you that a rule moved. Whether it moves for you depends on
-    your passport, your grades, your job and your money. So give the agent what you have. It reads the
-    rules against that, then keeps reading after you close the tab.</p>
+  <section>
+    <p class="kicker"><b>How it reports</b> · an agent, on a beat</p>
+    <h2>Rules move without warning. It reads them first.</h2>
+    <p class="lede">Immigration rules change on a Tuesday afternoon with no announcement: a salary floor, a
+    fee, a list of approved schools. MIGRAGENT is an AI reporter on that beat. Every morning it goes back to the
+    official pages it holds, notices what moved, and writes it up.</p>
     <div class="cols">
-      <div><em>One</em><b>Say what you want</b><p>Study or work. Then drop in whatever paperwork you
-      have. A phone photo is fine. None at all is fine too.</p></div>
-      <div><em>Two</em><b>It works out your route</b><p>Which countries fit, and the steps for each in
-      order: documents, money, waiting times. Every line carries the sentence it came from.</p></div>
-      <div><em>Three</em><b>It keeps watching</b><p>When a rule that touches you changes, an intake
-      opens, or a job you qualify for is posted, you hear about it that day.</p></div>
+      <div><em>It reads</em><b>Official pages only</b><p>Government sites, straight from the source. No blogs,
+      no forums, no other reporters. <a href="/sources">Every page it reads</a>.</p></div>
+      <div><em>It notices</em><b>What actually changed</b><p>A page that didn't move costs nothing and says
+      nothing. When one does move, the agent works out whether the rules changed or just the wording.</p></div>
+      <div><em>It writes</em><b>Who it's for, exactly</b><p>The route, the occupation, the salary floor, the
+      level of study. Every condition the page sets, each with the sentence it came from.</p></div>
     </div>
-    <div class="row"><a class="cta" href="/start">Check where you qualify</a>
-      <a class="cta ghost" href="/articles">Read the wire</a></div>
-    <p class="under">No account. Your documents are read, then thrown away.</p>
+    <div class="row"><a class="cta" href="/articles">Read the wire</a>
+      <a class="cta ghost" href="/rounds">The log</a></div>
   </section>
 
   <section>
     <h2>How a line gets printed</h2>
-    <p class="lede">The agent can propose anything. It can only print what an official page says. Every
-    claim in every article and every guide has to carry a quote, and the quote is looked up on the page
-    in code before anything goes out. A claim whose quote isn't there gets dropped, and the article's
-    report lists it with the reason.</p>
+    <p class="lede">The agent can propose anything. It can only print what an official page says. Every claim in
+    every article has to carry a quote, and the quote is looked up on the page in code before anything goes out.
+    A claim whose quote isn't there gets dropped, and the article's report lists it with the reason.</p>
     <div class="print">
       <p><code>kept</code> Care workers must be sponsored by a registered care home. The quote is on the page.</p>
-      <p><code class="out">dropped</code> A line about which nationalities get priority. The page never
-      says it, so it never reaches you.</p>
+      <p><code class="out">dropped</code> A line about which nationalities get priority. The page never says it,
+      so it never reaches you.</p>
       <p>That second kind is why the reports exist. Open any article and scroll to the bottom.</p>
     </div>
   </section>
 
   <section>
-    <h2>Both reasons for going</h2>
-    <div class="two">
-      <div><b>To study</b><p>What the visa needs, the money you have to show, and the schools the
-      government's own register says can take you. Plus a note when the next intake opens.</p></div>
-      <div><b>To work</b><p>The route, the salary floor, the sponsorship rules. Then real job postings in
-      the occupations that country says it can't fill, matched against what you can prove you can do.</p></div>
-    </div>
+    <h2>Where it reads</h2>
+    <p class="lede">{t["pages"]:,} official pages in {t["countries"]} countries. Some sites tell crawlers to keep
+    out, and the agent does; what it can't crawl, the desk files by hand, and those articles say so.</p>
+    <div class="places">{reads}</div>
+    <p style="margin-top:18px"><a class="cta ghost" href="/sources">Every page, by country</a></p>
   </section>
 
   <section>
-    <h2>Where you can go today</h2>
-    <p class="lede">A country is open here when we can take you all the way through it. We'd rather open
-    two properly than list ten we can't finish.</p>
-    <div class="places">{place_cards}</div>
-    {later}
-    <p style="margin-top:18px"><a class="cta ghost" href="/coverage">Everything we have read</a></p>
+    <h2>Paid for by $MIGRA</h2>
+    <div class="two">
+      <div><b>The agent pays its own way</b><p>$MIGRA's trading fees become AI balance on Orbio, and that
+      balance pays for the morning reading and the writing. The log shows what it spent today.</p></div>
+      <div><b>And never stops</b><p>When the balance runs dry the agent falls back to Google Cloud and carries
+      on. The wire doesn't wait for the market. <a href="/migra">How $MIGRA works</a>.</p></div>
+    </div>
   </section>
 
-  <div class="end">
-    <h2>Find out what it would take.</h2>
-    <p class="lede" style="margin:0 auto 20px">Two taps and an upload. You can stop there.</p>
-    <a class="cta" href="/start">Check where you qualify</a>
-  </div>
-
-  <footer>MIGRAGENT reads official government pages and cites them. It is not a law firm and does not
-  give immigration advice. <a href="/data">What happens to your documents</a> ·
-  <a href="/architecture">How it is built</a> · <a href="/rounds">The desk</a> ·
-  <a href="/articles">The wire</a> · <a href="/subscribe">$MIGRA</a></footer>
+  <footer>MIGRAGENT is an AI agent that reads official government pages and reports what changed. It is not a
+  law firm and does not give immigration advice; the official page is always the authority.
+  <a href="/sources">Sources</a> · <a href="/rounds">The log</a> · <a href="/architecture">How it works</a> ·
+  <a href="/data">Data</a> · <a href="/migra">$MIGRA</a></footer>
 </div>
 </body></html>'''

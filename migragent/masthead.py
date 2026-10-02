@@ -20,12 +20,11 @@ LOGO = ('<svg viewBox="0 0 64 64"><path d="M10 36 V8 L32 28 L54 8 V36" fill="non
 
 NAV = (
     ("/articles", "The wire"),
-    ("/start", "Where you qualify"),
-    ("/dashboard", "Your case"),
-    ("/rounds", "The desk"),
-    ("/coverage", "Coverage"),
-    ("/subscribe", "$MIGRA"),
-    ("/data", "Your data"),
+    ("/rounds", "The log"),
+    ("/sources", "Sources"),
+    ("/migra", "$MIGRA"),
+    ("/architecture", "How it works"),
+    ("/data", "Data"),
 )
 
 MASTHEAD = (
@@ -36,7 +35,7 @@ MASTHEAD = (
     ' <span class="hide-sm" id="mh-token"></span></span>'
     '</div>'
     f'<a class="mast-name" href="/">{LOGO}<span>MIGRAGENT</span></a>'
-    '<p class="mast-tag">The immigration wire. Written by an agent that reads the rules every morning.</p>'
+    '<p class="mast-tag">The immigration wire. Written by an AI agent that reads the rules every morning.</p>'
     '<nav class="mast-nav" aria-label="Sections">'
     + "".join(f'<a href="{href}">{label}</a>' for href, label in NAV)
     + '</nav></header>'

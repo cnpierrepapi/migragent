@@ -1,211 +1,56 @@
-# What happens to the documents you upload
+## What MIGRAGENT is now
 
-People upload passports here. This document describes what the code does, not what we intend it to
-do, and anything below that is not true yet says so.
+An AI reporter. It reads official immigration pages every morning, works out what changed, and writes it up on the wire. You read it. That's the whole transaction.
 
-## Who is responsible
+There are no accounts. Nothing to upload. No form asks for your name, your passport or your plans. Reading an article tells MIGRAGENT nothing about you that a newspaper's website wouldn't know.
 
-The controller of personal data submitted to MIGRAGENT is **Onenept Studios Inc.**, a Delaware
-C corporation, reachable at admin@onenept.com. MIGRAGENT is operated by Onenept Studios Inc. and
-runs on Google Cloud Platform in the United States.
+Until 2 October 2026 it also took people's cases: you could upload documents and get a guide. That part is gone. What's left of it is covered at the bottom of this page.
 
-## What this notice covers, and what it does not
+## What it keeps
 
-It covers every document and every field a person submits to this service, and the records the
-service creates about them. It does not cover the government websites this service reads, which
-publish their own terms, or any third party a person chooses to contact through a link we provide.
+Public things, mostly.
 
-## The lawful basis, stated plainly
+- The official pages it reads, stored exactly as they arrived, so every article can be checked against the version it was written from. These are government pages. Nothing personal is in them.
+- What it read from those pages: requirements, each with the sentence it came from.
+- What changed between two reads of a page, and the articles written about it, each with its report.
+- A log of every morning's reading: pages fetched, what moved, what it cost.
 
-Processing is carried out to deliver the service a person has asked for. Documents are submitted
-voluntarily and the service works without them: a person may take a guide with nothing uploaded at
-all. Consent is given by uploading and is withdrawn by deleting, and the delete path is described
-below and reports what it removed.
+None of that is about you.
 
-No personal data is sold, and none is shared with a third party for advertising or profiling.
+## What happens when you visit
 
----
+The site sets no cookies for readers and runs no analytics. There are no ad trackers and no tracking pixels.
 
-## The short version
+Two ordinary things still happen, and they aren't ours to switch off. The site runs on Google Cloud Run, which logs each request, including the IP address it came from, the way any web host does. And the fonts load from Google Fonts, so your browser asks Google for them. If you'd rather not touch Google at all, this site isn't the place.
 
-**The file is not kept.** It is held in memory long enough to be read, and then it is gone. What
-persists is the fields that were read from it, not the document.
+## How the writing gets done
 
-Nobody needs a copy of your passport in a bucket to tell you that it expires before your course
-ends. They need the expiry date. So that is what is stored.
+The agent uses Gemini, Google's model, in two ways.
 
----
+Most mornings it goes through Orbio, an AI gateway paid for by $MIGRA's trading fees. Orbio passes the request on through OpenRouter to Google. When that balance runs out it goes to Vertex AI, inside the same Google Cloud project as everything else.
 
-## What is stored, exactly
+What travels down either road is the text of public government pages and the agent's notes on them. Nothing about a reader is ever in it, because the site holds nothing about a reader to send. `tools/test_orbio_route.py` fails if any code that ever handled personal data is pointed at Orbio.
 
-For each document you upload:
+## The desk
 
-- the kind of document it was taken to be, for example `passport`
-- the filename you uploaded it under
-- the moment it was read
-- the fields read from it, each with the quote from the document that supports it
-- whether each field was verified against a text layer, or could not be
-- anything the model claimed that was dropped for having no findable quote
+One person, the editor, can sign in to a private desk to file things the crawl can't reach: a PDF, a page behind a login, an announcement. What gets filed there is official information, kept with the article it became. The desk signs in with a key held in Google Secret Manager, on a cookie that only the editor's browser ever gets.
 
-**What is never stored:** the file itself, the bytes, an image, a thumbnail, or any copy in Cloud
-Storage. The snapshot bucket holds government pages and nothing a person uploaded.
+## If you used the old case product
 
----
+You were told your data would be kept for 30 days after you last touched your case, then deleted. That still happens. The sweep that deletes old cases keeps running, and the last of them goes by 31 October 2026.
 
-## Why fields and not files
+On 2 October there were five cases left, holding only a choice of study or work. No documents, CVs, profiles, alerts or wallet links remained, and $MIGRA payments never went live, so no payment records exist.
 
-A stored passport scan is a liability that grows every day it exists and helps nobody after the
-first minute. A stored expiry date does the same job for the person and is worth nothing to anybody
-else.
+If your browser still has the case cookie, you can delete yours now with the button below. If it doesn't, the sweep gets to it anyway.
 
-This is also the reason the reader is asked for quotes. Storing the sentence a field came from means
-a person can see why we think their passport expires in 2029, without us keeping the page it says
-so on.
+## What is true, and how you'd know
 
----
-
-## Retention
-
-**A case is deleted 30 days after it was last touched.** Not archived, not anonymised, deleted.
-
-Thirty days is chosen to cover the realistic gap between starting an application and coming back to
-finish it, and not longer. There is no business reason to hold somebody's document fields for a year
-and no honest way to describe doing so as being for their benefit.
-
-**The countdown restarts when you use it.** A case you are actively working on is not deleted out
-from under you.
-
----
-
-## The one thing that is kept: a profile picture
-
-Everything above is about documents, and for documents the promise is unchanged: read in memory,
-fields survive, file does not.
-
-A profile picture is different, and pretending otherwise would be the dishonest option. Its whole
-purpose is to be kept and shown back to you. So:
-
-- **It is resized to 256 pixels square in your own browser before it is sent.** The original file is
-  never uploaded. The full resolution photograph does not reach this server, does not appear in a
-  request log, and never has to be trusted to a deletion path.
-- **What is stored is that thumbnail**, in your case's own row, as a data URI. No bucket, no second
-  storage identity, no signed URLs for what is a thumbnail.
-- **It is checked before it is stored.** The prefix, the media type, the decoded size and the file's
-  own magic number all have to agree. The browser's good behaviour is a convenience, not a control:
-  anybody can post to that endpoint.
-- **SVG is refused**, because it can carry script and this is the one field rendered back to
-  whoever looks at the page.
-- **It is deleted with the case**, on the same path as everything else, and `tools/test_delete.py`
-  counts it before and after like every other collection.
-
-A name and an optional contact address are stored the same way and go the same way. None of it is
-verified, none of it is required, and nothing is sent anywhere.
-
-So the precise version of the promise, which is what the pages now say:
-
-> Documents you upload are never kept. A profile picture is, because it exists to be shown to you,
-> and it is deleted with everything else.
-
----
-
-## The watch
-
-Turning the watch on stores one more row: which country and which route this case is about, when
-the watch started, and when it last ran. It is off unless you turn it on, and off again the moment
-you turn it off.
-
-What it produces are alerts, and each one holds a headline, the date the thing was observed, and a
-link to the official page it was read from. **An alert says what somebody is applying for, and
-where.** That makes them among the more sensitive rows here, not less, and they are deleted with
-the case like everything else.
-
-Nothing is sent anywhere. There is no mail sender in this project and none is pretended: alerts are
-written to a collection and read on `/alerts` while you are signed in to your own case. If a sender
-is ever added, the address it needs will be asked for at that point, and this section will say so.
-
----
-
-## Deleting it yourself
-
-There is a delete path and it deletes. It removes the case, the document fields, the coverage
-result, the guide built from it, the CV claims, the fit scores, the board, the watch and every
-alert, and it reports what it removed so the person can see the numbers rather than a
-reassurance.
-
-**A delete that leaves an orphan somewhere is a broken delete**, so the test for it counts the rows
-before and after in every collection a case touches, and it fails if anything survives.
-
----
-
-## Encryption
-
-Everything in Firestore and Cloud Storage is encrypted at rest by Google, with Google managed keys,
-and in transit over TLS. No customer managed key is configured, and this document does not claim one
-is.
-
-The uploaded file travels over TLS to Cloud Run, is read in memory, and is never written to disk by
-this application.
-
----
-
-## Who inside the system can see what
-
-- `migragent-web` writes case data and document fields, and cannot start a crawl round. It holds no
-  permission to call a model in its own name. It does borrow the researcher's permission to have
-  your document read while your request is running, so the sentence that matters to you is the one
-  below rather than the one about roles.
-- **Your document is read by a model, and that means its contents go to Google.** The text or image
-  is sent to Vertex AI Gemini, and a photograph may also go to Cloud Vision for its text layer. Both
-  are Google Cloud services inside the same project as the rest of this application. They are used to
-  read the document you submitted and for nothing else. What comes back is the fields, and the
-  document itself is still not stored anywhere.
-- **Public pages are read through Orbio, and nothing about you goes with them.** The daily job that
-  reads government and school websites sends that page text to Gemini through Orbio, and $MIGRA's
-  trading fees pay for it. It is public text from a public site. Your documents, your CV and your case
-  stay on Vertex, and `tools/test_orbio_route.py` fails if code that handles them is ever pointed at
-  Orbio.
-- `migragent-researcher` reads government pages, calls the model, and cannot write anything down.
-  **It can read the database, and that includes cases.** Firestore grants read access to a database
-  rather than to a collection, so there is no role that says "the registry but not the cases". The
-  product never asks it for one and nothing but the code stops it. This notice previously said it
-  could not read the case collections, which was not true, and D39 in `docs/DEFECTS.md` records how
-  that got written and what fixing it properly would take.
-- The snapshot bucket contains government pages only. The researcher can add to it and cannot read,
-  overwrite, delete or list what is there, which was measured and is in `tools/test_isolation.py`.
-
----
-
-## What this is not
-
-It is not a claim of compliance with any particular regime. It is a description of what the code
-does. If somebody needs a GDPR representative, a DPA or a records of processing document, those are
-real pieces of work and none of them exists yet.
-
----
-
-## Status of each claim above
-
-| Claim | State |
+| Claim | Status |
 | --- | --- |
-| The file is never written to disk or a bucket | true in code |
-| Only fields are stored | true in code |
-| 30 day retention with a restarting countdown | true; the sweeper runs and is tested |
-| Delete removes everything and reports counts | built, and tested by counting rows |
-| The watch is off until you turn it on | true in code; there is no default-on path |
-| Alerts go when the case goes | true; `tools/test_delete.py` counts them before and after |
-| Nothing is emailed, and nothing about you goes to a vendor outside Google Cloud | true; no sender exists. Public page text goes to Orbio, nothing personal does, and `tools/test_orbio_route.py` checks it |
-| Paying in $MIGRA links your wallet address to your case | true; deleting the case removes the link. The payment record stays, because it's money you already paid |
-| Your document's contents are read by a model | true; sent to Vertex AI Gemini, and to Cloud Vision for a photograph's text layer, both in this project |
-| The researcher cannot read the case collections | **false, and corrected above.** It holds database-wide read. D39 |
-| Documents are never kept | true in code, unchanged |
-| A profile picture is kept, resized in the browser first | true in code |
-| The picture is deleted with the case | true; counted before and after in the delete test |
-| Encrypted at rest and in transit, Google managed keys | true, by default, nothing configured |
-
-**The sweeper now exists**, and `tools/test_retention.py` proves it in the direction that matters.
-Any sweeper deletes expired cases; the test also writes a case that has NOT expired and fails if the
-sweep touches it, because a sweeper that takes everything would pass the easy half of that test.
-
-It runs on a schedule through Cloud Scheduler against an authenticated endpoint. Between runs, a
-case past its date still exists, so the honest wording is that a case is deleted within a day of its
-expiry rather than at the instant of it.
+| No accounts, no uploads, no forms that ask about you | true; the routes that took them were removed on 2 October 2026 |
+| No cookies for readers, no analytics | true in code; the only cookie is the editor's desk session |
+| Request logs with IP addresses are kept by Google Cloud | true; this is the host's standard logging, not ours to turn off |
+| Only public page text goes to Orbio | true; `tools/test_orbio_route.py` checks it |
+| Old cases are deleted on schedule, the last by 31 October 2026 | true; the sweep still runs, and `tools/test_retention.py` covers it |
+| An old case can be deleted now with the button below | true, for a browser that still holds its cookie |
+| Every article can be checked against the page it came from | true for anyone with the link, which shows today's page; the stored copies are kept privately |

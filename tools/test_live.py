@@ -79,7 +79,7 @@ def main() -> int:
     n = next_run(NOW)
     check(n["what"] == "retention sweep" and n["at"].startswith("2026-10-02T03:17"),
           "after the last job, the next run is tomorrow's first", n)
-    check(next_run(datetime(2026, 10, 1, 4, 50, tzinfo=timezone.utc))["what"] == "job listings",
+    check(next_run(datetime(2026, 10, 1, 4, 50, tzinfo=timezone.utc))["what"] == "articles",
           "between jobs, the next one is the next in the table")
 
     width = max(len(n) for _, n, _ in results)
