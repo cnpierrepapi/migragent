@@ -117,7 +117,9 @@ class Extraction:
 
 
 PROMPT = """You are reading one page from an official government website about \
-immigration, study or work permits.
+immigration, study or work permits, or living in the country as a migrant (renewing \
+status, settling, citizenship, family, healthcare, tax and social security numbers, \
+work rights, driving licences, housing, schooling, integration).
 
 List only the requirements this page ITSELF states. A requirement is something \
 an applicant must do, have, pay, or prove.

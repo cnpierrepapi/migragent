@@ -1,0 +1,769 @@
+{
+ "UK": {
+  "hubs": [
+   "https://www.gov.uk/browse/visas-immigration/settle-in-the-uk",
+   "https://www.gov.uk/browse/visas-immigration",
+   "https://www.gov.uk/browse/working",
+   "https://www.gov.uk/browse/housing-local-services"
+  ],
+  "topics": {
+   "renew": [],
+   "settle": [
+    [
+     "https://www.gov.uk/indefinite-leave-to-remain",
+     "Check if you can get indefinite leave to remain"
+    ],
+    [
+     "https://www.gov.uk/settled-status-eu-citizens-families",
+     "Apply to the EU Settlement Scheme (settled and pre-settled status)"
+    ],
+    [
+     "https://www.gov.uk/browse/visas-immigration/settle-in-the-uk",
+     "Live permanently in the UK"
+    ]
+   ],
+   "citizenship": [
+    [
+     "https://www.gov.uk/browse/citizenship",
+     "Citizenship and living in the UK"
+    ],
+    [
+     "https://www.gov.uk/british-citizenship",
+     "Check if you can become a British citizen"
+    ],
+    [
+     "https://www.gov.uk/english-language",
+     "Prove your knowledge of English for citizenship and settling"
+    ]
+   ],
+   "family": [
+    [
+     "https://www.gov.uk/browse/visas-immigration/family-visas",
+     "Family in the UK"
+    ]
+   ],
+   "healthcare": [],
+   "taxid": [],
+   "work_rights": [
+    [
+     "https://www.gov.uk/browse/working/contract-working-hours",
+     "Your contract and working hours"
+    ],
+    [
+     "https://www.gov.uk/browse/working/tax-minimum-wage",
+     "Your pay, tax and the National Minimum Wage"
+    ],
+    [
+     "https://www.gov.uk/browse/working/rights-trade-unions",
+     "Your rights at work and trade unions"
+    ]
+   ],
+   "driving": [
+    [
+     "https://www.gov.uk/browse/driving",
+     "Driving and transport"
+    ]
+   ],
+   "housing": [
+    [
+     "https://www.gov.uk/browse/childcare-parenting",
+     "Childcare and parenting"
+    ],
+    [
+     "https://www.gov.uk/browse/housing-local-services",
+     "Housing and local services"
+    ],
+    [
+     "https://www.gov.uk/browse/housing-local-services/council-housing-association",
+     "Council housing and housing associations"
+    ],
+    [
+     "https://www.gov.uk/browse/housing-local-services/renting-property",
+     "Renting a property"
+    ],
+    [
+     "https://www.gov.uk/browse/housing-local-services/buying-owning-property",
+     "Buying and owning a property"
+    ],
+    [
+     "https://www.gov.uk/browse/housing-local-services/council-tax",
+     "Council Tax"
+    ]
+   ],
+   "schooling": [],
+   "integration": [],
+   "complaints": [
+    [
+     "https://www.gov.uk/browse/visas-immigration/immigration-appeals",
+     "Immigration appeals and status problems"
+    ]
+   ]
+  }
+ },
+ "CA": {
+  "hubs": [
+   "https://www.canada.ca/en/immigration-refugees-citizenship/services/new-immigrants.html",
+   "https://www.canada.ca/en/immigration-refugees-citizenship/services/new-immigrants/new-life-canada.html"
+  ],
+  "topics": {
+   "renew": [],
+   "settle": [
+    [
+     "https://www.canada.ca/content/canadasite/en/immigration-refugees-citizenship/services/settle-canada/pre-arrival-services.html",
+     "Pre-arrival services"
+    ],
+    [
+     "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/pre-arrival-services.html",
+     "Pre-arrival services"
+    ],
+    [
+     "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/choose-city.html",
+     "Choose a city"
+    ],
+    [
+     "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/prepare-financially.html",
+     "Prepare financially"
+    ],
+    [
+     "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/provinces-territories.html",
+     "Learn about Canadian provinces and territories"
+    ],
+    [
+     "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/border-crossing.html",
+     "Prepare to cross the border to settle in Canada"
+    ]
+   ],
+   "citizenship": [
+    [
+     "https://www.canada.ca/en/services/immigration-citizenship.html",
+     "Immigration and citizenship"
+    ],
+    [
+     "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/ircc-accounts.html",
+     "IRCC sign in  IRCC sign in"
+    ],
+    [
+     "https://www.canada.ca/content/canadasite/en/immigration-refugees-citizenship/services/settle-canada/pre-arrival-services.html",
+     "Pre-arrival services"
+    ],
+    [
+     "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/pre-arrival-services.html",
+     "Pre-arrival services"
+    ],
+    [
+     "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/choose-city.html",
+     "Choose a city"
+    ],
+    [
+     "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/prepare-financially.html",
+     "Prepare financially"
+    ]
+   ],
+   "family": [],
+   "healthcare": [
+    [
+     "https://www.canada.ca/en/services/health.html",
+     "Health"
+    ],
+    [
+     "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/health-care.html",
+     "Health care"
+    ]
+   ],
+   "taxid": [
+    [
+     "https://www.canada.ca/en/employment-social-development/services/sin.html",
+     "Get a social insurance number"
+    ]
+   ],
+   "work_rights": [],
+   "driving": [
+    [
+     "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/driving.html",
+     "Driving in Canada"
+    ]
+   ],
+   "housing": [
+    [
+     "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/housing.html",
+     "Housing"
+    ]
+   ],
+   "schooling": [],
+   "integration": [
+    [
+     "https://www.canada.ca/en/immigration-refugees-citizenship/corporate/publications-manuals/publication-welcome-canada-what-you-should-know.html",
+     "Multilingual resources for newcomers"
+    ]
+   ],
+   "complaints": []
+  }
+ },
+ "FR": {
+  "hubs": [
+   "https://www.service-public.gouv.fr/particuliers/vosdroits/N110",
+   "https://www.service-public.gouv.fr/particuliers/vosdroits/N19811"
+  ],
+  "topics": {
+   "renew": [],
+   "settle": [],
+   "citizenship": [
+    [
+     "https://www.service-public.gouv.fr/particuliers/vosdroits/N111",
+     "Nationalité française"
+    ]
+   ],
+   "family": [],
+   "healthcare": [
+    [
+     "https://www.service-public.gouv.fr/particuliers/vosdroits/N19811",
+     "Social - Santé"
+    ],
+    [
+     "https://www.service-public.gouv.fr/particuliers/vosdroits/N31348",
+     "Assurance maladie d’un étranger en France"
+    ],
+    [
+     "https://www.service-public.gouv.fr/particuliers/vosdroits/N20286",
+     "Mutuelle - Complémentaire santé"
+    ],
+    [
+     "https://www.service-public.gouv.fr/particuliers/vosdroits/N423",
+     "Assurance maladie et santé d&#39;un Français à l&#39;étranger"
+    ],
+    [
+     "https://www.service-public.gouv.fr/particuliers/vosdroits/N31526",
+     "Santé de l&#39;enfant"
+    ]
+   ],
+   "taxid": [
+    [
+     "https://www.service-public.gouv.fr/particuliers/vosdroits/N561",
+     "Litiges avec la Sécurité sociale"
+    ]
+   ],
+   "work_rights": [],
+   "driving": [],
+   "housing": [
+    [
+     "https://www.service-public.gouv.fr/particuliers/vosdroits/F15913",
+     "J'achète un logement"
+    ],
+    [
+     "https://www.service-public.gouv.fr/particuliers/vosdroits/N19808",
+     "Logement"
+    ]
+   ],
+   "schooling": [
+    [
+     "https://www.service-public.gouv.fr/particuliers/vosdroits/N57",
+     "École et handicap"
+    ]
+   ],
+   "integration": [],
+   "complaints": []
+  }
+ },
+ "ES": {
+  "hubs": [],
+  "topics": {
+   "renew": [],
+   "settle": [],
+   "citizenship": [],
+   "family": [],
+   "healthcare": [],
+   "taxid": [],
+   "work_rights": [],
+   "driving": [],
+   "housing": [],
+   "schooling": [],
+   "integration": [],
+   "complaints": []
+  }
+ },
+ "AE": {
+  "hubs": [
+   "https://u.ae/en/information-and-services",
+   "https://u.ae/en/information-and-services/visa-and-emirates-id"
+  ],
+  "topics": {
+   "renew": [
+    [
+     "https://u.ae/en/information-and-services/environment-and-energy",
+     "Environment and energy   Ecosystems, climate change, renewable, nuclear energy, sustainability and more"
+    ]
+   ],
+   "settle": [
+    [
+     "https://u.ae/en/information-and-services/justice-safety-and-the-law/Law/litigation-procedures/alternative-methods-to-settle-disputes-",
+     "Alternative methods to settle commercial disputes"
+    ]
+   ],
+   "citizenship": [
+    [
+     "https://u.ae/en/information-and-services/Passport-and-travel/The-UAE-Passport/emirati-nationality",
+     "Emirati nationality"
+    ]
+   ],
+   "family": [
+    [
+     "https://u.ae/en/Year-of-family",
+     "Year of Family"
+    ],
+    [
+     "https://u.ae/en/information-and-services/visa-and-emirates-id/Types-of-visas/Residence-visa/residence-visa-for-family-members",
+     "Residence visa for families of employees"
+    ],
+    [
+     "https://u.ae/en/information-and-services/education/school-education-k-12/government-schools-in-partnership-with-the-private-sector",
+     "Government schools in partnership with the private sector"
+    ],
+    [
+     "https://u.ae/en/information-and-services/business/Managing-and-growing-your-business/ppp/public-private-partnership",
+     "Public Private Partnership (PPP)"
+    ],
+    [
+     "https://u.ae/en/information-and-services/justice-safety-and-the-law/Safety/Family-safety",
+     "Family safety"
+    ],
+    [
+     "https://u.ae/en/information-and-services/social-affairs/social-welfare/Family-support-programmes",
+     "Family support programmes"
+    ]
+   ],
+   "healthcare": [
+    [
+     "https://u.ae/en/information-and-services/jobs/Workplace-regulations/health-and-safety-at-workplace",
+     "Health and safety at workplace"
+    ],
+    [
+     "https://u.ae/en/information-and-services/health-and-fitness/Healthcare-access-and-insurance/getting-a-health-insurance",
+     "Getting a health insurance"
+    ],
+    [
+     "https://u.ae/en/information-and-services/visa-and-emirates-id/Types-of-visas/patient-and-companion-entry-permits",
+     "Medical visa"
+    ],
+    [
+     "https://u.ae/en/information-and-services/education/health-and-safety-in-schools",
+     "Health and safety of children"
+    ],
+    [
+     "https://u.ae/en/information-and-services/education/school-education-k-12/Healthy-nutrition-in-schools",
+     "Nutrition in schools"
+    ],
+    [
+     "https://u.ae/en/information-and-services/health-and-fitness/Healthcare-access-and-insurance/patients-rights-and-responsibilities",
+     "Patients&#x2019; rights and responsibilities"
+    ]
+   ],
+   "taxid": [],
+   "work_rights": [
+    [
+     "https://u.ae/en/information-and-services/jobs/Sector-of-employment/working-in-uae-government-sector/working-hours-in-the-public-sector",
+     "Working hours in the public sector"
+    ],
+    [
+     "https://u.ae/en/information-and-services/jobs/Sector-of-employment/employment-in-the-private-sector/working-hours",
+     "Working hours and overtime"
+    ]
+   ],
+   "driving": [
+    [
+     "https://u.ae/en/information-and-services/transportation/Driving-and-licensing/get-a-driving-licence",
+     "Getting a driving licence"
+    ],
+    [
+     "https://u.ae/en/information-and-services/transportation/Driving-and-licensing/registering-vehicles",
+     "Registering vehicles"
+    ],
+    [
+     "https://u.ae/en/information-and-services/transportation/Driving-and-licensing/public-parking",
+     "Public parking"
+    ],
+    [
+     "https://u.ae/en/information-and-services/finance-and-investment/taxation/Tax-incentives-for-innovation-driven-businesses",
+     "Tax incentives for innovation-driven businesses"
+    ],
+    [
+     "https://u.ae/en/information-and-services/Passport-and-travel/Travelling/driving-abroad",
+     "Driving abroad"
+    ]
+   ],
+   "housing": [
+    [
+     "https://u.ae/en/information-and-services/jobs/Sector-of-employment/employment-in-the-private-sector/labour-accommodation",
+     "Labour accommodation"
+    ],
+    [
+     "https://u.ae/en/information-and-services/visiting-and-exploring-the-uae/Arrival-and-accommodation/how-to-get-to-the-uae",
+     "How to get to the UAE?"
+    ],
+    [
+     "https://u.ae/en/information-and-services/visiting-and-exploring-the-uae/Arrival-and-accommodation/mobile-and-internet-services",
+     "Mobile and internet services"
+    ],
+    [
+     "https://u.ae/en/information-and-services/visiting-and-exploring-the-uae/Arrival-and-accommodation/where-to-stay-in-the-uae",
+     "Where to stay in the UAE?"
+    ],
+    [
+     "https://u.ae/en/information-and-services/transportation/Technology-in-transportation/Smart-renting",
+     "Smart renting"
+    ],
+    [
+     "https://u.ae/en/information-and-services/housing/housing-authorities-and-programmes",
+     "Housing authorities and programmes"
+    ]
+   ],
+   "schooling": [
+    [
+     "https://u.ae/en/information-and-services/jobs/training-and-development/future-skills/the-emirates-youth-professional-school",
+     "The Emirates Youth Professional School"
+    ],
+    [
+     "https://u.ae/en/information-and-services/education/health-and-safety-in-schools",
+     "Health and safety of children"
+    ],
+    [
+     "https://u.ae/en/information-and-services/education/school-education-k-12/regulatory-authorities-of-k-12-education",
+     "Regulatory authorities of K-12 education"
+    ],
+    [
+     "https://u.ae/en/information-and-services/education/school-education-k-12/government-schools-in-partnership-with-the-private-sector",
+     "Government schools in partnership with the private sector"
+    ],
+    [
+     "https://u.ae/en/information-and-services/education/school-education-k-12/Healthy-nutrition-in-schools",
+     "Nutrition in schools"
+    ],
+    [
+     "https://u.ae/en/information-and-services/education/school-education-k-12/code-of-conduct-for-professionals-in-the-education-sector",
+     "Code of conduct for professionals in the education sector"
+    ]
+   ],
+   "integration": [],
+   "complaints": [
+    [
+     "https://u.ae/en/information-and-services/justice-safety-and-the-law/Law/anti-discrimination-laws-and-policies",
+     "Anti-discrimination laws and policies"
+    ],
+    [
+     "https://u.ae/en/information-and-services/finance-and-investment/Services-and-resources/raising-complaints-against-financial-institutions-and-insurance-companies",
+     "Raising complaints against financial institutions and insurance companies"
+    ]
+   ]
+  }
+ },
+ "DE": {
+  "hubs": [
+   "https://www.bamf.de/EN/Themen/Integration/integration-node.html",
+   "https://www.bamf.de/EN/Themen/MigrationAufenthalt/migrationaufenthalt-node.html"
+  ],
+  "topics": {
+   "renew": [],
+   "settle": [],
+   "citizenship": [],
+   "family": [],
+   "healthcare": [],
+   "taxid": [],
+   "work_rights": [],
+   "driving": [],
+   "housing": [],
+   "schooling": [],
+   "integration": [],
+   "complaints": []
+  }
+ },
+ "IT": {
+  "hubs": [
+   "https://integrazionemigranti.gov.it/en-gb/",
+   "https://integrazionemigranti.gov.it/it-it/"
+  ],
+  "topics": {
+   "renew": [
+    [
+     "https://integrazionemigranti.gov.it/en-gb/Ricerca-news/Dettaglio-news/id/3781/Inps-income-support-will-be-extended-to-people-awaiting-the-renewal-of-their-residence-permit",
+     "Inps: income support will be extended to people awaiting the renewal of their residence permit   Foreign citizens who ha"
+    ]
+   ],
+   "settle": [],
+   "citizenship": [],
+   "family": [],
+   "healthcare": [],
+   "taxid": [],
+   "work_rights": [],
+   "driving": [],
+   "housing": [],
+   "schooling": [
+    [
+     "https://integrazionemigranti.gov.it/it-it/Ricerca-news/Dettaglio-news/id/4943/Scuola-pubblicato-il-DL-1702026-su-integrazione-studenti-stranieri",
+     "Scuola, pubblicato il DL 170/2026 su integrazione studenti stranieri   Tetto del 30% i classe per i nuovi arrivati, cors"
+    ],
+    [
+     "https://integrazionemigranti.gov.it/it-it/Ricerca-news/Dettaglio-news/id/4939/-DL-Scuola-cosi-il-tetto-del-30-di-alunni-stranieri-per-classe",
+     "DL Scuola, così il tetto del 30% di alunni stranieri per classe"
+    ],
+    [
+     "https://integrazionemigranti.gov.it/it-it/Ricerca-news/Dettaglio-news/id/4930/Scuola-Mattarella-Aperta-a-tutti-leva-di-integrazione",
+     "Scuola, Mattarella: \"Aperta a tutti, leva di integrazione\""
+    ]
+   ],
+   "integration": [
+    [
+     "https://integrazionemigranti.gov.it/en-gb/Ricerca-news/Dettaglio-news/id/3654/Free-online-Italian-language-courses-for-university-students-with-international-or-special-protection",
+     "Free online Italian language courses for university students with international or special protection.   Deadline for ap"
+    ]
+   ],
+   "complaints": []
+  }
+ },
+ "PT": {
+  "hubs": [
+   "https://aima.gov.pt/pt"
+  ],
+  "topics": {
+   "renew": [],
+   "settle": [],
+   "citizenship": [],
+   "family": [],
+   "healthcare": [],
+   "taxid": [],
+   "work_rights": [],
+   "driving": [],
+   "housing": [],
+   "schooling": [],
+   "integration": [
+    [
+     "https://aima.gov.pt/pt/lingua-portuguesa",
+     "Língua Portuguesa"
+    ]
+   ],
+   "complaints": []
+  }
+ },
+ "SA": {
+  "hubs": [],
+  "topics": {
+   "renew": [],
+   "settle": [],
+   "citizenship": [],
+   "family": [],
+   "healthcare": [],
+   "taxid": [],
+   "work_rights": [],
+   "driving": [],
+   "housing": [],
+   "schooling": [],
+   "integration": [],
+   "complaints": []
+  }
+ },
+ "IE": {
+  "hubs": [
+   "https://www.irishimmigration.ie/"
+  ],
+  "topics": {
+   "renew": [
+    [
+     "https://www.irishimmigration.ie/minister-brophy-announces-interim-notice-to-employers-regarding-renewal-of-registration/",
+     "July 13 2026:  Minister Brophy announces interim Notice to Employers regarding renewal of registration"
+    ],
+    [
+     "https://www.irishimmigration.ie/information-on-online-renewal-timelines/",
+     "June 30 2026:  Information on online renewal timelines"
+    ]
+   ],
+   "settle": [
+    [
+     "https://www.irishimmigration.ie/regularisation-of-long-term-undocumented-migrant-scheme/",
+     ""
+    ]
+   ],
+   "citizenship": [
+    [
+     "https://www.irishimmigration.ie/how-to-become-a-citizen/",
+     "Becoming a citizen"
+    ],
+    [
+     "https://www.irishimmigration.ie/naturalisation-residency-calculator/",
+     "Residency Calculator"
+    ],
+    [
+     "https://www.irishimmigration.ie/upcoming-citizenship-ceremony-thursday-17th-and-friday-18th-of-september-2026/",
+     "August 17 2026:  Upcoming Citizenship Ceremony – Thursday 17th and Friday 18th of September 2026"
+    ]
+   ],
+   "family": [
+    [
+     "https://www.irishimmigration.ie/coming-to-join-family-in-ireland/",
+     "Join Family"
+    ],
+    [
+     "https://www.irishimmigration.ie/coming-to-join-family-in-ireland/applying-for-a-travel-document/",
+     ""
+    ]
+   ],
+   "healthcare": [],
+   "taxid": [],
+   "work_rights": [],
+   "driving": [],
+   "housing": [],
+   "schooling": [],
+   "integration": [],
+   "complaints": []
+  }
+ },
+ "SE": {
+  "hubs": [
+   "https://www.migrationsverket.se/English/Private-individuals.html"
+  ],
+  "topics": {
+   "renew": [
+    [
+     "https://www.migrationsverket.se/en/you-want-to-extend.html",
+     "You want to extend    You have a permit in Sweden and want to apply for an extension."
+    ],
+    [
+     "https://www.migrationsverket.se/en/you-want-to-extend/live-with-someone/young-adults-aged-18-21.html",
+     "Read about the new protection process"
+    ]
+   ],
+   "settle": [],
+   "citizenship": [
+    [
+     "https://www.migrationsverket.se/en/you-want-to-apply/swedish-citizenship.html",
+     "Read more about Swedish citizenship"
+    ]
+   ],
+   "family": [
+    [
+     "https://www.migrationsverket.se/en/news-archive/news/2026-10-01-new-rules-for-young-adults-and-people-who-want-to-move-to-a-family-member-in-sweden.html",
+     "New rules for young adults and people who want to move to a family member in Sweden"
+    ]
+   ],
+   "healthcare": [],
+   "taxid": [],
+   "work_rights": [],
+   "driving": [],
+   "housing": [],
+   "schooling": [],
+   "integration": [],
+   "complaints": []
+  }
+ },
+ "SG": {
+  "hubs": [
+   "https://www.ica.gov.sg/reside",
+   "https://www.mom.gov.sg/passes-and-permits"
+  ],
+  "topics": {
+   "renew": [
+    [
+     "https://www.ica.gov.sg/reside/PR/apply-REP",
+     "Apply for/Renew Re-Entry Permit"
+    ]
+   ],
+   "settle": [
+    [
+     "https://www.ica.gov.sg/reside/PR/apply",
+     "Becoming a Permanent Resident"
+    ],
+    [
+     "https://www.ica.gov.sg/PR/see-more/entry-permit-and-re-entry-permit-conditions-for-singapore-permanent-residents",
+     "Entry Permit and Re-Entry Permit Conditions for Singapore Permanent Residents"
+    ],
+    [
+     "https://www.ica.gov.sg/reside/pre-marriage-long-term-visit-pass-assessment",
+     "Pre-Marriage Long-Term Visit Pass Assessment"
+    ],
+    [
+     "https://www.ica.gov.sg/reside/LTVP/apply",
+     "Becoming a Long-Term Visit Pass Holder"
+    ],
+    [
+     "https://www.ica.gov.sg/reside/reside-appeals",
+     "Appeal for Singapore Citizenship/ Permanent Residence/ Long-Term Visit Pass Application"
+    ],
+    [
+     "https://www.mom.gov.sg/passes-and-permits/long-term-visit-pass",
+     "Long-Term Visit Pass"
+    ]
+   ],
+   "citizenship": [
+    [
+     "https://www.ica.gov.sg/reside/citizenship/apply",
+     "Becoming a Singapore Citizen"
+    ],
+    [
+     "https://www.ica.gov.sg/reside/citizenship/minor-oath-taking",
+     "Oath-taking for Minors"
+    ],
+    [
+     "https://www.ica.gov.sg/reside/citizenship/roe",
+     "Right of Entry (ROE)"
+    ],
+    [
+     "https://www.ica.gov.sg/reside/citizenship/confirmation",
+     "Confirmation of Citizenship Status"
+    ],
+    [
+     "https://www.ica.gov.sg/reside/reside-appeals",
+     "Appeal for Singapore Citizenship/ Permanent Residence/ Long-Term Visit Pass Application"
+    ]
+   ],
+   "family": [
+    [
+     "https://www.mom.gov.sg/passes-and-permits/dependants-pass",
+     "Dependant's Pass"
+    ],
+    [
+     "https://www.mom.gov.sg/passes-and-permits/loc-for-dependants-pass-business-owners",
+     "Letter of Consent for Dependant’s Pass holders who are business owners"
+    ]
+   ],
+   "healthcare": [
+    [
+     "https://www.mom.gov.sg/workplace-safety-and-health",
+     "Workplace safety and health"
+    ]
+   ],
+   "taxid": [],
+   "work_rights": [],
+   "driving": [],
+   "housing": [],
+   "schooling": [],
+   "integration": [],
+   "complaints": [
+    [
+     "https://www.ica.gov.sg/reside/reside-appeals",
+     "Appeal for Singapore Citizenship/ Permanent Residence/ Long-Term Visit Pass Application"
+    ]
+   ]
+  }
+ },
+ "NZ": {
+  "hubs": [
+   "https://www.immigration.govt.nz/new-zealand-visas"
+  ],
+  "topics": {
+   "renew": [],
+   "settle": [],
+   "citizenship": [
+    [
+     "https://www.immigration.govt.nz/live/where-to-apply-for-new-zealand-citizenship-and-a-passport/",
+     "Where to apply for New Zealand citizenship and a passport"
+    ]
+   ],
+   "family": [],
+   "healthcare": [],
+   "taxid": [],
+   "work_rights": [],
+   "driving": [],
+   "housing": [],
+   "schooling": [],
+   "integration": [],
+   "complaints": []
+  }
+ }
+}

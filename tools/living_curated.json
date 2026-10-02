@@ -1,0 +1,717 @@
+{
+ "UK": [
+  [
+   "renew",
+   "https://www.gov.uk/skilled-worker-visa/extend-your-visa",
+   "Extend a Skilled Worker visa",
+   "ok",
+   "200 9,968 chars"
+  ],
+  [
+   "settle",
+   "https://www.gov.uk/indefinite-leave-to-remain",
+   "Indefinite leave to remain",
+   "ok",
+   "200 6,124 chars"
+  ],
+  [
+   "settle",
+   "https://www.gov.uk/settled-status-eu-citizens-families",
+   "EU Settlement Scheme",
+   "ok",
+   "200 7,904 chars"
+  ],
+  [
+   "citizenship",
+   "https://www.gov.uk/british-citizenship",
+   "Become a British citizen",
+   "ok",
+   "200 7,170 chars"
+  ],
+  [
+   "family",
+   "https://www.gov.uk/uk-family-visa",
+   "Family visas",
+   "ok",
+   "200 7,682 chars"
+  ],
+  [
+   "healthcare",
+   "https://www.gov.uk/healthcare-immigration-application",
+   "Immigration health surcharge",
+   "ok",
+   "200 4,266 chars"
+  ],
+  [
+   "healthcare",
+   "https://www.nhs.uk/nhs-services/gps/how-to-register-with-a-gp-surgery/",
+   "Register with a GP",
+   "ok",
+   "200 7,264 chars"
+  ],
+  [
+   "taxid",
+   "https://www.gov.uk/apply-national-insurance-number",
+   "Apply for a National Insurance number",
+   "ok",
+   "200 8,168 chars"
+  ],
+  [
+   "work_rights",
+   "https://www.gov.uk/national-minimum-wage-rates",
+   "National Minimum Wage rates",
+   "ok",
+   "200 7,849 chars"
+  ],
+  [
+   "work_rights",
+   "https://www.gov.uk/holiday-entitlement-rights",
+   "Holiday entitlement",
+   "ok",
+   "200 6,471 chars"
+  ],
+  [
+   "driving",
+   "https://www.gov.uk/exchange-foreign-driving-licence",
+   "Exchange a foreign driving licence",
+   "ok",
+   "200 3,366 chars"
+  ],
+  [
+   "housing",
+   "https://www.gov.uk/private-renting",
+   "Private renting",
+   "ok",
+   "200 5,819 chars"
+  ],
+  [
+   "schooling",
+   "https://www.gov.uk/apply-for-primary-school-place",
+   "Apply for a primary school place",
+   "ok",
+   "200 3,619 chars"
+  ],
+  [
+   "integration",
+   "https://www.gov.uk/life-in-the-uk-test",
+   "Life in the UK test",
+   "ok",
+   "200 6,643 chars"
+  ],
+  [
+   "complaints",
+   "https://www.gov.uk/discrimination-your-rights",
+   "Discrimination: your rights",
+   "ok",
+   "200 4,939 chars"
+  ],
+  [
+   "benefits",
+   "https://www.gov.uk/government/publications/public-funds--2/public-funds",
+   "Public funds",
+   "ok",
+   "200 7,477 chars"
+  ]
+ ],
+ "CA": [
+  [
+   "renew",
+   "https://www.canada.ca/en/immigration-refugees-citizenship/services/new-immigrants/pr-card/apply-renew-replace.html",
+   "Renew or replace a PR card",
+   "ok",
+   "200 2,938 chars"
+  ],
+  [
+   "renew",
+   "https://www.canada.ca/en/immigration-refugees-citizenship/services/work-canada/permit/temporary/extend.html",
+   "Extend a work permit",
+   "ok",
+   "200 2,716 chars"
+  ],
+  [
+   "settle",
+   "https://www.canada.ca/en/immigration-refugees-citizenship/services/permanent-residents.html",
+   "Permanent residents",
+   "ok",
+   "200 2,819 chars"
+  ],
+  [
+   "citizenship",
+   "https://www.canada.ca/en/immigration-refugees-citizenship/services/canadian-citizenship/become-canadian-citizen/eligibility.html",
+   "Citizenship eligibility",
+   "ok",
+   "200 15,675 chars"
+  ],
+  [
+   "family",
+   "https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/family-sponsorship.html",
+   "Family sponsorship",
+   "ok",
+   "200 2,650 chars"
+  ],
+  [
+   "healthcare",
+   "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/health-care.html",
+   "Health care",
+   "ok",
+   "200 12,376 chars"
+  ],
+  [
+   "taxid",
+   "https://www.canada.ca/en/employment-social-development/services/sin.html",
+   "Social Insurance Number",
+   "ok",
+   "200 4,107 chars"
+  ],
+  [
+   "driving",
+   "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/driving.html",
+   "Driving in Canada",
+   "ok",
+   "200 7,709 chars"
+  ],
+  [
+   "housing",
+   "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/housing.html",
+   "Housing",
+   "ok",
+   "200 2,302 chars"
+  ],
+  [
+   "schooling",
+   "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/education.html",
+   "Education",
+   "ok",
+   "200 3,088 chars"
+  ],
+  [
+   "complaints",
+   "https://www.chrc-ccdp.gc.ca/en/complaints",
+   "Canadian Human Rights Commission: complaints",
+   "ok",
+   "200 2,137 chars"
+  ],
+  [
+   "work_rights",
+   "https://www.canada.ca/en/services/jobs/workplace/federal-labour-standards.html",
+   "Federal labour standards",
+   "ok",
+   "200 2,903 chars"
+  ],
+  [
+   "integration",
+   "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/language-skills.html",
+   "Learn English or French",
+   "ok",
+   "200 6,233 chars"
+  ],
+  [
+   "benefits",
+   "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/money.html",
+   "How money works in Canada",
+   "ok",
+   "200 4,145 chars"
+  ],
+  [
+   "complaints",
+   "https://www.canada.ca/en/immigration-refugees-citizenship/services/settle-canada/human-rights.html",
+   "Human rights",
+   "ok",
+   "200 3,741 chars"
+  ]
+ ],
+ "FR": [
+  [
+   "renew",
+   "https://www.service-public.gouv.fr/particuliers/vosdroits/F35799",
+   "Carte de séjour pluriannuelle générale",
+   "ok",
+   "200 22,277 chars"
+  ],
+  [
+   "renew",
+   "https://www.service-public.gouv.fr/particuliers/vosdroits/F2209",
+   "Carte de séjour vie privée et familiale",
+   "ok",
+   "200 184,952 chars"
+  ],
+  [
+   "settle",
+   "https://www.service-public.gouv.fr/particuliers/vosdroits/F2208",
+   "Carte de résident",
+   "ok",
+   "200 115,713 chars"
+  ],
+  [
+   "settle",
+   "https://www.service-public.gouv.fr/particuliers/vosdroits/F11201",
+   "Carte de résident permanent",
+   "ok",
+   "200 17,319 chars"
+  ],
+  [
+   "settle",
+   "https://www.service-public.gouv.fr/particuliers/vosdroits/F17359",
+   "Carte de résident longue durée UE",
+   "ok",
+   "200 30,937 chars"
+  ],
+  [
+   "citizenship",
+   "https://www.service-public.gouv.fr/particuliers/vosdroits/F2213",
+   "Naturalisation",
+   "ok",
+   "200 63,437 chars"
+  ],
+  [
+   "citizenship",
+   "https://www.service-public.gouv.fr/particuliers/vosdroits/F11926",
+   "Niveau de français pour la nationalité",
+   "ok",
+   "200 17,352 chars"
+  ],
+  [
+   "family",
+   "https://www.service-public.gouv.fr/particuliers/vosdroits/F11166",
+   "Regroupement familial",
+   "ok",
+   "200 62,502 chars"
+  ],
+  [
+   "healthcare",
+   "https://www.service-public.gouv.fr/particuliers/vosdroits/N31348",
+   "Assurance maladie d'un étranger",
+   "ok",
+   "200 2,892 chars"
+  ],
+  [
+   "work_rights",
+   "https://www.service-public.gouv.fr/particuliers/vosdroits/F2300",
+   "Salaire minimum (Smic)",
+   "ok",
+   "200 15,376 chars"
+  ],
+  [
+   "driving",
+   "https://www.service-public.gouv.fr/particuliers/vosdroits/N19126",
+   "Conduire en France avec un permis étranger",
+   "ok",
+   "200 4,658 chars"
+  ],
+  [
+   "housing",
+   "https://www.service-public.gouv.fr/particuliers/vosdroits/N19808",
+   "Logement",
+   "ok",
+   "200 4,012 chars"
+  ],
+  [
+   "schooling",
+   "https://www.service-public.gouv.fr/particuliers/vosdroits/N31347",
+   "Scolarité d'un enfant arrivant de l'étranger",
+   "ok",
+   "200 3,431 chars"
+  ],
+  [
+   "integration",
+   "https://www.service-public.gouv.fr/particuliers/vosdroits/F17048",
+   "Contrat d'intégration républicaine",
+   "ok",
+   "200 23,554 chars"
+  ],
+  [
+   "complaints",
+   "https://www.defenseurdesdroits.fr/",
+   "Défenseur des droits",
+   "ok",
+   "200 11,010 chars"
+  ]
+ ],
+ "AE": [
+  [
+   "renew",
+   "https://u.ae/en/information-and-services/visa-and-emirates-id/residence-visas/renewing-residence-visa",
+   "Renewing a residence visa",
+   "unreachable",
+   "404 0 chars"
+  ],
+  [
+   "settle",
+   "https://u.ae/en/information-and-services/visa-and-emirates-id/residence-visas/golden-visa",
+   "Golden visa",
+   "ok",
+   "200 4,613 chars"
+  ],
+  [
+   "citizenship",
+   "https://u.ae/en/information-and-services/Passport-and-travel/The-UAE-Passport/emirati-nationality",
+   "Emirati nationality",
+   "ok",
+   "200 4,690 chars"
+  ],
+  [
+   "family",
+   "https://u.ae/en/information-and-services/visa-and-emirates-id/Types-of-visas/Residence-visa/residence-visa-for-families-of-employees",
+   "Residence visa for families",
+   "unreachable",
+   "404 0 chars"
+  ],
+  [
+   "healthcare",
+   "https://u.ae/en/information-and-services/health-and-fitness/Healthcare-access-and-insurance/getting-a-health-insurance",
+   "Getting health insurance",
+   "ok",
+   "200 9,328 chars"
+  ],
+  [
+   "taxid",
+   "https://u.ae/en/information-and-services/visa-and-emirates-id/emirates-id",
+   "Emirates ID",
+   "ok",
+   "200 7,828 chars"
+  ],
+  [
+   "work_rights",
+   "https://u.ae/en/information-and-services/jobs/Sector-of-employment/employment-in-the-private-sector/working-hours",
+   "Working hours and overtime",
+   "ok",
+   "200 4,314 chars"
+  ],
+  [
+   "work_rights",
+   "https://u.ae/en/information-and-services/jobs/employment-in-the-private-sector/end-of-service-benefits",
+   "End of service benefits",
+   "unreachable",
+   "404 0 chars"
+  ],
+  [
+   "driving",
+   "https://u.ae/en/information-and-services/transportation/Driving-and-licensing/get-a-driving-licence",
+   "Getting a driving licence",
+   "ok",
+   "200 4,700 chars"
+  ],
+  [
+   "housing",
+   "https://u.ae/en/information-and-services/housing-and-properties/renting-a-property",
+   "Renting a property",
+   "unreachable",
+   "404 0 chars"
+  ],
+  [
+   "schooling",
+   "https://u.ae/en/information-and-services/education/school-education-k-12/joining-k-12-education",
+   "Joining K-12 education",
+   "unreachable",
+   "404 0 chars"
+  ],
+  [
+   "complaints",
+   "https://u.ae/en/information-and-services/justice-safety-and-the-law/Law/anti-discrimination-laws-and-policies",
+   "Anti-discrimination laws",
+   "ok",
+   "200 6,477 chars"
+  ]
+ ],
+ "DE": [
+  [
+   "settle",
+   "https://www.bamf.de/EN/Themen/MigrationAufenthalt/ZuwandererDrittstaaten/Niederlassungserlaubnis/niederlassungserlaubnis-node.html",
+   "Settlement permit",
+   "unreachable",
+   "404 0 chars"
+  ],
+  [
+   "citizenship",
+   "https://www.bamf.de/EN/Themen/Integration/ZugewanderteTeilnehmende/Einbuergerung/einbuergerung-node.html",
+   "Naturalisation",
+   "ok",
+   "200 10,885 chars"
+  ],
+  [
+   "family",
+   "https://www.bamf.de/EN/Themen/MigrationAufenthalt/ZuwandererDrittstaaten/Familie/familie-node.html",
+   "Family reunification",
+   "ok",
+   "200 3,351 chars"
+  ],
+  [
+   "integration",
+   "https://www.bamf.de/EN/Themen/Integration/ZugewanderteTeilnehmende/Integrationskurse/integrationskurse-node.html",
+   "Integration courses",
+   "ok",
+   "200 3,067 chars"
+  ],
+  [
+   "complaints",
+   "https://www.antidiskriminierungsstelle.de/EN/homepage/homepage-node.html",
+   "Federal Anti-Discrimination Agency",
+   "ok",
+   "200 5,838 chars"
+  ],
+  [
+   "healthcare",
+   "https://www.bundesgesundheitsministerium.de/en/health/health-insurance",
+   "Health insurance",
+   "unreachable",
+   "404 0 chars"
+  ],
+  [
+   "work_rights",
+   "https://www.bmas.de/EN/Labour/Minimum-Wage/minimum-wage.html",
+   "Minimum wage",
+   "ok",
+   "200 5,531 chars"
+  ]
+ ],
+ "IT": [
+  [
+   "renew",
+   "https://www.poliziadistato.it/articolo/1088",
+   "Permesso di soggiorno, rinnovo",
+   "ok",
+   "200 6,162 chars"
+  ],
+  [
+   "citizenship",
+   "https://www.interno.gov.it/it/temi/cittadinanza-e-altri-diritti-civili/cittadinanza",
+   "Cittadinanza",
+   "robots",
+   "the host would not serve its robots.txt (HTTP 403), so we do not crawl it"
+  ],
+  [
+   "integration",
+   "https://integrazionemigranti.gov.it/en-gb/Ricerca-news/Dettaglio-news/id/3654/Free-online-Italian-language-courses-for-foreigners",
+   "Italian courses",
+   "ok",
+   "200 2,218 chars"
+  ],
+  [
+   "family",
+   "https://integrazionemigranti.gov.it/it-it/Altre-info/Ricongiungimento-familiare",
+   "Ricongiungimento familiare",
+   "ok",
+   "200 864 chars"
+  ]
+ ],
+ "PT": [
+  [
+   "renew",
+   "https://aima.gov.pt/pt/renovar-autorizacao-de-residencia",
+   "Renovar autorização de residência",
+   "unreachable",
+   "404 0 chars"
+  ],
+  [
+   "settle",
+   "https://aima.gov.pt/pt/autorizacao-de-residencia-permanente",
+   "Autorização de residência permanente",
+   "unreachable",
+   "404 0 chars"
+  ],
+  [
+   "family",
+   "https://aima.gov.pt/pt/reagrupamento-familiar",
+   "Reagrupamento familiar",
+   "unreachable",
+   "404 0 chars"
+  ],
+  [
+   "integration",
+   "https://aima.gov.pt/pt/lingua-portuguesa",
+   "Língua portuguesa",
+   "ok",
+   "200 1,883 chars"
+  ],
+  [
+   "citizenship",
+   "https://justica.gov.pt/Servicos/Pedir-nacionalidade-portuguesa",
+   "Pedir nacionalidade portuguesa",
+   "ok",
+   "200 49,885 chars"
+  ]
+ ],
+ "IE": [
+  [
+   "renew",
+   "https://www.irishimmigration.ie/registering-your-immigration-permission/how-to-renew-your-current-permission/",
+   "Renew your permission",
+   "ok",
+   "200 2,740 chars"
+  ],
+  [
+   "settle",
+   "https://www.irishimmigration.ie/my-situation-has-changed-since-i-arrived-in-ireland/long-term-residence/",
+   "Long term residence",
+   "unreachable",
+   "404 0 chars"
+  ],
+  [
+   "citizenship",
+   "https://www.irishimmigration.ie/how-to-become-a-citizen/",
+   "Becoming a citizen",
+   "ok",
+   "200 5,606 chars"
+  ],
+  [
+   "family",
+   "https://www.irishimmigration.ie/coming-to-join-family-in-ireland/",
+   "Join family",
+   "ok",
+   "200 5,086 chars"
+  ],
+  [
+   "work_rights",
+   "https://www.workplacerelations.ie/en/what_you_should_know/pay-and-wages/minimum-wage/",
+   "National minimum wage",
+   "unreachable",
+   "404 0 chars"
+  ],
+  [
+   "taxid",
+   "https://www.gov.ie/en/service/12e6ee-get-a-personal-public-service-pps-number/",
+   "Get a PPS number",
+   "robots",
+   "the host would not serve its robots.txt (HTTP 403), so we do not crawl it"
+  ],
+  [
+   "complaints",
+   "https://www.ihrec.ie/your-rights/",
+   "Irish Human Rights and Equality Commission",
+   "ok",
+   "200 9,379 chars"
+  ]
+ ],
+ "SE": [
+  [
+   "renew",
+   "https://www.migrationsverket.se/en/you-want-to-extend.html",
+   "Extend your permit",
+   "ok",
+   "200 2,470 chars"
+  ],
+  [
+   "citizenship",
+   "https://www.migrationsverket.se/en/you-want-to-apply/swedish-citizenship.html",
+   "Swedish citizenship",
+   "ok",
+   "200 3,441 chars"
+  ],
+  [
+   "taxid",
+   "https://www.skatteverket.se/servicelankar/otherlanguages/inenglishengelska/individualsandemployees/livinginsweden/personalidentitynumberandcoordinationnumber.4.2cf1b5cd163796a5c8b4295.html",
+   "Personal identity number",
+   "ok",
+   "200 6,593 chars"
+  ],
+  [
+   "healthcare",
+   "https://www.forsakringskassan.se/english",
+   "Forsakringskassan",
+   "ok",
+   "200 3,915 chars"
+  ],
+  [
+   "integration",
+   "https://www.informationsverige.se/en.html",
+   "Information Sverige",
+   "unreachable",
+   "404 0 chars"
+  ]
+ ],
+ "SG": [
+  [
+   "renew",
+   "https://www.ica.gov.sg/reside/PR/apply-REP",
+   "Re-Entry Permit",
+   "ok",
+   "200 5,942 chars"
+  ],
+  [
+   "settle",
+   "https://www.ica.gov.sg/reside/PR/apply",
+   "Becoming a Permanent Resident",
+   "ok",
+   "200 9,034 chars"
+  ],
+  [
+   "citizenship",
+   "https://www.ica.gov.sg/reside/citizenship/apply",
+   "Becoming a Singapore Citizen",
+   "ok",
+   "200 10,332 chars"
+  ],
+  [
+   "family",
+   "https://www.mom.gov.sg/passes-and-permits/dependants-pass",
+   "Dependants Pass",
+   "ok",
+   "200 2,817 chars"
+  ],
+  [
+   "work_rights",
+   "https://www.mom.gov.sg/employment-practices/employment-act",
+   "Employment Act",
+   "ok",
+   "200 2,190 chars"
+  ],
+  [
+   "complaints",
+   "https://www.ica.gov.sg/reside/reside-appeals",
+   "Appeals",
+   "ok",
+   "200 2,931 chars"
+  ],
+  [
+   "driving",
+   "https://www.police.gov.sg/e-Services/Traffic/Driving-Licence/Convert-Foreign-Driving-Licence",
+   "Convert a foreign driving licence",
+   "unreachable",
+   "404 0 chars"
+  ]
+ ],
+ "NZ": [
+  [
+   "citizenship",
+   "https://www.immigration.govt.nz/live/where-to-apply-for-new-zealand-citizenship-and-a-passport/",
+   "Citizenship",
+   "ok",
+   "200 8,401 chars"
+  ],
+  [
+   "settle",
+   "https://www.immigration.govt.nz/new-zealand-visas/visas/visa/permanent-resident-visa",
+   "Permanent resident visa",
+   "ok",
+   "200 18,131 chars"
+  ],
+  [
+   "work_rights",
+   "https://www.employment.govt.nz/pay-and-hours/pay-and-wages/minimum-wage/",
+   "Minimum wage",
+   "ok",
+   "200 12,846 chars"
+  ],
+  [
+   "taxid",
+   "https://www.ird.govt.nz/managing-my-tax/ird-numbers",
+   "IRD numbers",
+   "ok",
+   "200 2,845 chars"
+  ],
+  [
+   "housing",
+   "https://www.tenancy.govt.nz/",
+   "Tenancy services",
+   "ok",
+   "200 12,226 chars"
+  ],
+  [
+   "complaints",
+   "https://www.hrc.co.nz/",
+   "Human Rights Commission",
+   "fetched",
+   "200 44 chars"
+  ]
+ ]
+}

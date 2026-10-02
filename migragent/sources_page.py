@@ -60,7 +60,7 @@ def sources_html(stats: dict[str, Any]) -> str:
     table = "".join(
         f'<tr><td class="name">{_e(r["name"])}</td>'
         f'<td class="{"yes" if r["daily"] else "no"}">{"every morning" if r["daily"] else "on file"}</td>'
-        f'<td>{r["pages"]:,}</td><td>{r["study"]:,} / {r["work"]:,}</td>'
+        f'<td>{r["pages"]:,}</td><td>{r["study"]:,} / {r["work"]:,} / {r.get("living", 0):,}</td>'
         f'<td>{r["requirements"]:,}</td><td>{r["rules"]:,}</td><td>{r["articles"]:,}</td>'
         f'<td>{_e((r["last_read"] or "never")[:10])}</td>'
         f'<td>{r["blocked"] or ""}</td></tr>' for r in rows if r["pages"] or r["daily"])
@@ -96,7 +96,7 @@ def sources_html(stats: dict[str, Any]) -> str:
     <div><b>{t["articles"]:,}</b><span>articles filed</span></div>
   </div>
   <div class="wrap-table"><table>
-    <thead><tr><th>Country</th><th>Read</th><th>Pages</th><th>Study / work</th><th>Requirements</th>
+    <thead><tr><th>Country</th><th>Read</th><th>Pages</th><th>Study / work / living</th><th>Requirements</th>
       <th>Rule changes</th><th>Articles</th><th>Last read</th><th>Blocked</th></tr></thead>
     <tbody>{table}</tbody></table></div>
   <p class="note">"Blocked" means the government's robots.txt asks crawlers to stay out, so the agent does.

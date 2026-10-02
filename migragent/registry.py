@@ -21,7 +21,10 @@ from .clock import now_iso as _now
 
 COLLECTION = "sources"
 
-Lane = Literal["work", "study"]
+# "living", added 2 October 2026: pages for people already in the country (renewals,
+# settlement, citizenship, family, healthcare, tax and social security numbers,
+# work rights, driving licences, housing, schooling, integration, complaints).
+Lane = Literal["work", "study", "living"]
 # "job_board": a government job service's search page, added 2 October 2026.
 # Read by the listings round, never by the rule-change round: a search page
 # changes every hour because postings come and go, and that is not news.

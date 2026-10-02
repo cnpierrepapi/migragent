@@ -458,7 +458,8 @@ class Round:
         # A classifier that is off, or that fell over on this page, does not
         # block extraction: a second opinion being unavailable is not evidence
         # against the first one, which is the same rule the second reader keeps.
-        if (self._lane_classifier is not None and mode == "extract"
+        # The classifier only knows study and work, so a living page is never put to it.
+        if (self._lane_classifier is not None and mode == "extract" and lane in ("study", "work")
                 and source.kind == "government" and (source.depth or 0) >= 1):
             verdict = self._lane_classifier.classify(
                 page.final_url or source.url, page_text(page))
@@ -811,4 +812,8 @@ def lanes(offered: list[str] | None = None) -> list[tuple[str, str]]:
     task three would read Spain one day and France the next, which would make
     every per lane number in the run log meaningless.
     """
-    return [(j, lane) for j in (offered or OFFERED) for lane in ("study", "work")]
+    # Living lanes go after every study and work lane, so the first 26 task indexes
+    # keep meaning what they meant before the living lane existed.
+    countries = offered or OFFERED
+    return ([(j, lane) for j in countries for lane in ("study", "work")]
+            + [(j, "living") for j in countries])

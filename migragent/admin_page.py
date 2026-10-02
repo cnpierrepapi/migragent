@@ -97,7 +97,8 @@ def desk_html(csrf: str, submissions: list[dict[str, Any]], articles: list[dict[
               signups: dict[str, int] | None = None, reservations: list[dict[str, Any]] | None = None) -> str:
     msg = f'<p class="msg">{_e(message)}</p>' if message else ""
     countries = _country_options()
-    lanes = '<option value="work">Work</option><option value="study">Study</option>'
+    lanes = ('<option value="work">Work</option><option value="study">Study</option>'
+             '<option value="living">Living there</option>')
     t = stats["totals"]
 
     sub_rows = "".join(

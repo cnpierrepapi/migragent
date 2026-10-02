@@ -128,6 +128,7 @@ def _source_stats() -> dict[str, Any]:
                 "code": code, "name": meta["name"], "daily": code in OFFERED,
                 "pages": len(ps), "study": sum(p.get("lane") == "study" for p in ps),
                 "work": sum(p.get("lane") == "work" for p in ps),
+                "living": sum(p.get("lane") == "living" for p in ps),
                 "blocked": sum(p.get("robots_allowed") is False for p in ps),
                 "requirements": reqs.get((code, "study"), 0) + reqs.get((code, "work"), 0),
                 "changes": changes.get(code, 0), "rules": rules.get(code, 0),
@@ -785,7 +786,7 @@ def admin_filing() -> Response:
     url = (request.form.get("url") or "").strip()
     code = request.form.get("jurisdiction", "")
     lane = request.form.get("lane", "")
-    if not url.startswith("https://") or code not in JURISDICTIONS or lane not in ("study", "work"):
+    if not url.startswith("https://") or code not in JURISDICTIONS or lane not in ("study", "work", "living"):
         return redirect("/admin?m=A filing needs an https source URL, a country and a lane.")
 
     pasted = (request.form.get("text") or "").strip()
@@ -827,7 +828,7 @@ def admin_source() -> Response:
     url = (request.form.get("url") or "").strip()
     code = request.form.get("jurisdiction", "")
     lane = request.form.get("lane", "")
-    if not url.startswith("https://") or code not in JURISDICTIONS or lane not in ("study", "work"):
+    if not url.startswith("https://") or code not in JURISDICTIONS or lane not in ("study", "work", "living"):
         return redirect("/admin?m=A page needs an https URL, a country and a lane.")
     reg = Registry(_db())
     if reg.by_url(code, lane, url):
