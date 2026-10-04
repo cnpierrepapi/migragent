@@ -456,3 +456,23 @@ hears about.
 Delivery is in-app and says so. There's no mail sender in this project. `Alerts.pending()` hands
 out exactly what an email or a push would need, and nothing consumes it yet. A notification channel
 that half exists is worse than one that doesn't, because people plan around it.
+
+## 13. Missing intermediates ship with the code
+
+Portugal went dark and it looked like a block. Every AIMA page came back "robots.txt could not be
+reached" from Cloud Run, every morning from at least 2 October, while the same pages loaded fine
+on a laptop. The obvious guess was that AIMA turns away Google's US addresses. A probe job in
+europe-west1 got the same error, so that guess was wrong.
+
+The real error was TLS: "unable to get local issuer certificate". AIMA sends its own certificate
+and stops. The Sectigo intermediate that links it to a root never gets sent. Windows notices and
+fetches it from the address printed in the certificate, which is why the laptop never saw a
+problem. OpenSSL in the job doesn't do that.
+
+So the intermediate lives in `migragent/certs` and the fetcher adds it to the context it already
+had. Nothing gets looser. The chain still has to end at a root the system trusts, and the folder
+refuses roots by test (`tools/test_tls.py`). Verification stays on. Turning it off for one host
+would have been one line, and it's the line this project has refused since D9.
+
+The probe found something else on the way: seg-social.es really does answer by region, 403 from
+us-central1 and 200 from europe-west1. That one is a block, and it's still open.

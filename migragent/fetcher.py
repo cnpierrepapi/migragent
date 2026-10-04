@@ -13,6 +13,7 @@ plausible sentence.
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 import ssl
 import time
@@ -68,9 +69,31 @@ def _tls_context() -> ssl.SSLContext:
     try:
         import truststore
 
-        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     except Exception:  # noqa: BLE001
-        return ssl.create_default_context()
+        ctx = ssl.create_default_context()
+    _add_intermediates(ctx)
+    return ctx
+
+
+# Some hosts send their own certificate and leave out the intermediate that
+# links it to a root. Windows fetches the missing one from the address in the
+# certificate, so the page loads on a laptop. OpenSSL in the job does not, and
+# the host fails as "unable to get local issuer certificate". Portugal's AIMA
+# did this to every read from at least 2 October: every Portuguese page dark,
+# and the Portugal study task failing every morning.
+#
+# So the missing intermediates ship with the code, in migragent/certs. They are
+# not roots and they do not loosen anything: a chain still has to end at a root
+# the system already trusts. Each file is named after its subject; add one only
+# after `openssl s_client -showcerts` shows a host sending a bare leaf.
+CERTS = os.path.join(os.path.dirname(__file__), "certs")
+
+
+def _add_intermediates(ctx: ssl.SSLContext) -> None:
+    for name in sorted(os.listdir(CERTS)) if os.path.isdir(CERTS) else []:
+        if name.endswith(".pem"):
+            ctx.load_verify_locations(cafile=os.path.join(CERTS, name))
 
 
 TLS = _tls_context()
