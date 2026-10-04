@@ -86,8 +86,9 @@ def sources_html(stats: dict[str, Any]) -> str:
 <body>{MASTHEAD}<main>
   <h1>Where it reads</h1>
   <p class="lede">Every article on the wire comes from one of these pages. They are official government
-  sites, read straight from the source. The agent goes back to the ones in the daily round every morning
-  and writes up anything that changes a rule.</p>
+  sites, read straight from the source. Study and work are about getting in. Living is everything after:
+  renewing, settling, family, healthcare, a tax number, a licence swap. The agent goes back to the ones in
+  the daily round every morning and writes up anything that changes a rule.</p>
   <div class="totals">
     <div><b>{t["pages"]:,}</b><span>official pages on file</span></div>
     <div><b>{t["countries"]}</b><span>countries</span></div>

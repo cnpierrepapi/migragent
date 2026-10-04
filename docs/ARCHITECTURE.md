@@ -18,8 +18,10 @@ unchanged; where they mention a guide or a case, that part no longer runs.
 A Cloud Run service called `migragent` serves the wire: the front page, the articles, the log, the
 sources, and a private desk for the editor. It is Flask behind gunicorn, one container.
 
-A Cloud Run job called `migragent-ingest` does the reading. Twenty-six tasks, one per country and
-lane, thirteen countries; the task index picks the lane. The modes that run:
+A Cloud Run job called `migragent-ingest` does the reading. Thirty-nine tasks, one per country and
+lane, thirteen countries; the task index picks the lane. `lanes()` in `migragent/round.py` lists study
+and work for every country first, then living for every country. Living went on the end so tasks 0 to
+25 still mean what they meant before it existed. The modes that run:
 
 - `watch` re-reads pages we hold and works out what moved
 - `extract` reads pages nobody has read yet
@@ -41,6 +43,25 @@ Four Cloud Scheduler jobs start the work:
 | 05:40 | articles, for the wire |
 
 Read the government pages first, then write it up. Write first and it reports on yesterday.
+
+## The living lane
+
+Study and work cover getting into a country. Living covers being there: renewals, permanent
+residence, citizenship, family, healthcare, tax and social security numbers, work rights, driving
+licence swaps, housing, schools, integration, complaints. Added 4 October 2026 with 107 pages across
+all thirteen countries.
+
+The pages came from each country's own hub, listed with `tools/harvest_living.py`, picked by hand
+into `tools/living_curated.json`, checked by `tools/verify_urls.py` (robots first, then a fetch that
+has to return real text) and written by `tools/seed_living.py`. A site that won't serve robots.txt
+counts as a no. That is why Italy has no citizenship page: interno.gov.it answers 403.
+
+The lane check never sees a living page. It only knows study and work, and it would throw a
+renewal page out of both.
+
+One thing to remember when a lane is new. `watch` only diffs pages it has read before, so it never
+reads a page for the first time. A new lane needs one run in `extract` mode, and after that the
+morning watch keeps it.
 
 The desk (`/admin`) files what the crawl cannot reach, through the same writer and the same checks,
 and can add a page to the crawl list. It signs in with a key from Secret Manager.

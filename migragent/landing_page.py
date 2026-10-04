@@ -350,8 +350,10 @@ def landing_html(stats: dict[str, Any], articles: list[dict[str, Any]] | None = 
 
   <section>
     <h2>Where it reads</h2>
-    <p class="lede">{t["pages"]:,} official pages in {t["countries"]} countries. Some sites tell crawlers to keep
-    out, and the agent does; what it can't crawl, the desk files by hand, and those articles say so.</p>
+    <p class="lede">{t["pages"]:,} official pages in {t["countries"]} countries. The visa and student routes, and then
+    the part after you land: renewing, settling, citizenship, family, healthcare, a tax number, work rights,
+    swapping a driving licence. Some sites tell crawlers to keep out, and the agent does. What it can't crawl,
+    the desk files by hand, and those articles say so.</p>
     <div class="places">{reads}</div>
     <p style="margin-top:18px"><a class="cta ghost" href="/sources">Every page, by country</a></p>
   </section>
