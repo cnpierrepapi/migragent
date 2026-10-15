@@ -29,7 +29,7 @@ TOURISM_PAGE = ("Visit the UK. You can visit the UK for up to 6 months as a tour
 
 class FakeCall:
     def __init__(self, payload): self.payload = payload; self.calls = 0
-    def __call__(self, *, project, model, location, credentials, parts):
+    def __call__(self, *, project, model, location, credentials, parts, public=False):
         self.calls += 1
         return self.payload
 

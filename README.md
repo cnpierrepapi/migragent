@@ -1,136 +1,133 @@
 # MIGRAGENT
 
-An agent that reads the official immigration rules every day and tells you what you need to study
-or work in another country. The steps, the documents, the money, and what changed since last time.
+An AI reporter on the immigration beat. Every morning it reads the official immigration pages of
+thirteen countries, works out what changed, and files it to the wire. Every claim in a story is a
+sentence lifted word for word from the government's own page, and a claim it can't find on the page
+gets cut before anyone reads it.
 
-Live at https://migragent.onenept.com. How it is built: https://migragent.onenept.com/architecture.
+Live at https://migragent.onenept.com. How it's built: https://migragent.onenept.com/architecture.
 
-Nothing it says reaches you without a sentence from a government's own page behind it, and the date
-that page was read. Anything it can't show you a sentence for gets thrown away before you see it.
+## What you get
 
-## What it does
+The wire. A UK eVisa that now takes up to 24 hours to show up. France raising the age limit for
+South Korean working holiday visas to 35. New Zealand's employer work visa going from five and a
+half weeks to five. Each story says who it's for and links the page it came from, and the report
+under it says how many claims were found on the page and how many got dropped.
 
-You are not asked to pick a country. That is backwards. Somebody who doesn't already know Canada is
-short of welders can't choose Canada for being short of welders, and asking them to choose makes
-them do the research this exists to do for them.
+Guides, 104 of them, one per official page with real substance. Who it's for, what you have to
+show, what it costs, and every line points back to the government's sentence.
 
-So the order is flipped.
+Sources. Every page it reads, by country, with when it was last read and what it found. Study and
+work are about getting in. Living is everything after: renewing, settling, family, healthcare, a
+tax number, swapping a licence.
 
-1. Say what you want. Study, work, or both.
-2. Upload what you have. A CV, or transcripts. Photos are fine, most people photograph their
-   documents, and the text gets read off the picture.
-3. The countries come out of your own documents. A work country shows up only when its published
-   shortage list matches something your CV says. A study country shows up only when a school on its
-   official register teaches your level and subject.
+The Desk, for the people whose job is knowing the rules. Study-abroad agents and immigration
+advisers get an alert the morning a rule moves in a country they sell.
 
-Then it keeps working after you close the tab. When a rule moves, an intake opens, or a job in a
-shortage occupation you qualify for gets posted, you hear about it.
-
-## What is in it, on 24 August 2026
+## What it holds, on 15 October 2026
 
 | | |
 | --- | --- |
-| Live requirements read off official pages | 2,291 across 17 country and lane pairs |
-| Government pages in the registry | 1,229, of which 4 are blocked |
-| Institutions from official registers | 2,065 |
-| Courses read from school websites | 3,990 |
-| Job postings matched against CVs | 2,490 |
-| Changes caught and recorded | 31 |
+| Official pages on file | 1,355 |
+| Countries | 15, of which 13 are read every morning |
+| Requirements held, each with its quote | about 2,900 |
+| Rule changes caught | 147 |
+| Articles filed | 39 |
+| Guides | 104 |
 
-Study works for Canada and the United Kingdom. Work works for Canada. Several more countries have a
-visa guide with no school or job data behind it yet, and `docs/SOURCES.md` says which, along with
-what was checked and what refused us.
+The live numbers are on `/sources`. The two countries on file but not read are the United States
+and Australia, where robots.txt asks crawlers to stay out, so it does.
 
 ## The rules it holds itself to
 
-Each one is enforced somewhere in the code, and most got learned by getting it wrong first.
-`docs/DEFECTS.md` has forty of those, written up as failures rather than features.
+Each one is enforced in code, and most were learned by getting it wrong first. `docs/DEFECTS.md`
+has those written up as failures, not features.
 
-Every claim carries a quote. A requirement, a course, a fee and an occupation each store a
-word-for-word span from the page, checked against that page's own text before the row is allowed to
-exist. Of 3,686 extracted courses, 29 were dropped for a quote that wasn't really there.
+Every claim carries a quote. A requirement stores a word-for-word span from its page, checked
+against that page's text before the row is allowed to exist. A quote that's on the page but
+stitched together from two real fragments gets refused too.
 
-The robots gate is not negotiable. A site that disallows us doesn't get read. A site that won't
-serve its robots.txt doesn't get read either, which cost us HESA and the UK's job board. A browser
-renders JavaScript, it never gets past a policy or a bot check.
+The robots gate isn't negotiable. A site that disallows us doesn't get read, and a site that won't
+serve its robots.txt doesn't either. That's why Italy has no citizenship page: interno.gov.it
+answers 403.
 
-Nothing is invented to fill a gap. A course with no published fee shows with no fee, and a question
-pointed at the school's own contact page. Fees exist for 146 of 3,990 courses, because that's the
-truth about what universities publish.
+Nothing gets invented to fill a gap. If a page doesn't say what something costs, the story doesn't
+either.
 
-Internal scores never reach a screen. The rubric that decides which country to serve first is an
-opinion, not a measurement, and printing it would dress an editorial call up as a finding.
+The house voice is checked in code, not just asked for in a prompt. `migragent/voice.py` fixes
+dashes, rejects the usual AI vocabulary, and gets one rewrite for a headline before the story is
+dropped. A dropped story is listed with the reason.
 
-The file is never kept. Documents get read in memory and the fields survive, not the document. The
-one exception is a profile picture, which exists to be shown back to you, gets resized to 256px in
-your own browser before it is sent, and is deleted with everything else.
-
-## How it is built
+## How it's built
 
 `docs/ARCHITECTURE.md` is the long version, and `/architecture` on the live site renders that same
 file so the description and the build can't drift apart.
 
-One Cloud Run service for every screen. One Cloud Run job that does the reading, in six modes,
-started by four Cloud Scheduler jobs at 03:17, 04:40, 05:00 and 05:20 UTC. Read the government
-pages, then ask the boards, then tell people.
+One Cloud Run service serves the wire. One Cloud Run job does the reading: thirty-nine tasks, one
+per country and lane, thirteen countries, three lanes (study, work, living). Four Cloud Scheduler
+jobs start it.
 
-There are four ADK agents, and an agent here means the model decides across several steps what to
-do next. The Researcher picks which pages to open when the structural walk runs out of structure.
-The Scout tells a real entry page from a page of links. The Extractor records requirements and
-retries the ones the quote check refuses instead of dropping them. The Coverage Matcher works out
-which of your documents cover which requirements, which is the readiness score. Everything else
-that touches the model is a single call with a code check on the answer, so it is a call and not
-an agent. Decision 12 in `docs/DECISIONS.md` has the split and why it is drawn there.
+| Time (UTC) | What runs |
+| --- | --- |
+| 03:17 | retention sweep, deleting the last of the old cases as they expire |
+| 04:40 | watch round: re-read every page, diff it, record what moved |
+| 05:00 | job listings from government job boards |
+| 05:40 | articles: write up each rule change for the wire |
+
+Read first, then write. The other way round and it reports on yesterday.
+
+Three ADK agents do the parts where the model has to decide what to do next. The Researcher picks
+which page to open when the structural walk runs out of structure. The Scout tells a real entry
+page from a page of links. The Extractor records requirements and goes back for a real sentence
+when the quote check refuses one, instead of dropping it. Everything else that touches the model
+is a single call with a code check on the answer. Decision 12 in `docs/DECISIONS.md` has where
+that line is drawn and why.
 
 ```mermaid
 flowchart LR
-    GOV["Government pages<br/>robots.txt asked first"]
-    REG["Registers and school sites"]
-    BOARD["Government job boards"]
+    GOV["Official immigration pages<br/>robots.txt asked first"]
+    DESK["The desk<br/>what the crawl can't reach"]
 
-    subgraph job["Cloud Run job: migragent-ingest, as migragent-watcher"]
-        SCOUT["Scout agent<br/>real entry or a shell"]
-        AGENT["Researcher agent<br/>picks the next page where structure runs out"]
+    subgraph job["Cloud Run job: migragent-ingest"]
+        SCOUT["Scout agent<br/>real entry page or a shell"]
+        AGENT["Researcher agent<br/>picks the next page"]
         FETCH["Fetch, then two gates<br/>bytes changed, then the text really changed"]
         EXTRACT["Extractor agent<br/>records, retries a refused quote"]
         QUOTE["Quote check<br/>not on the page, not a row"]
-        DIGEST["Digest<br/>who does this actually affect"]
+        WRITE["Articles<br/>every claim quoted, voice checked"]
     end
 
     subgraph store["Firestore and Cloud Storage"]
-        ROWS[(requirements, sources, courses,<br/>occupations, listings, cases)]
+        ROWS[(requirements, sources,<br/>changes, articles)]
         SNAP[(snapshot archive, append only)]
     end
 
-    subgraph web["Cloud Run service: migragent, as migragent-web"]
-        FLOW["What you want, what you have"]
-        ELIG["Countries out of your documents"]
-        OUT["Guide, courses, work, alerts"]
+    subgraph web["Cloud Run service: migragent"]
+        WIRE["The wire, guides, sources"]
     end
 
     GOV --> SCOUT --> FETCH
-    REG --> FETCH
-    BOARD --> FETCH
     AGENT --> FETCH --> EXTRACT --> QUOTE --> ROWS
     FETCH --> SNAP
-    ROWS --> DIGEST
-    ROWS --> ELIG
-    FLOW --> ELIG --> OUT
-    DIGEST --> OUT
+    ROWS --> WRITE --> ROWS
+    DESK --> QUOTE
+    ROWS --> WIRE
 ```
 
-Four identities, and the boundary between them is measured, not asserted. `migragent-web` serves
-requests and can't start a crawl. `migragent-researcher` reads pages and calls the model, and can't
-write anything down. `migragent-writer` writes. `migragent-watcher` is the only thing that can read
-the snapshot archive back, and nothing anywhere can become it, which is why its own test runs
-inside the job. `tools/test_isolation.py` is where those claims get checked.
+Four identities, and the line between them is measured, not asserted. `migragent-web` serves
+requests and can't start a crawl. `migragent-researcher` reads pages and calls the model, and
+can't write anything down. `migragent-writer` writes. `migragent-watcher` is the only thing that
+can read the snapshot archive back. `tools/test_isolation.py` is where that gets checked.
 
-What that doesn't cover is in D39: Firestore grants read at the database, not at the collection, so
-the researcher can read a case it has no business in. The product never asks it to. Nothing but the
-code's own habits stops it, and the doc says so rather than describing a wall that's only a habit.
+The desk (`/admin`) files what the crawl can't reach, through the same writer and the same quote
+check, and a story that came that way says so in its report.
 
-Scheduled daily: retention sweep at 03:17, watch round at 04:40, job listings at 05:00, digest at
-05:20. Run the digest first and it reports on yesterday.
+## $MIGRA
+
+$MIGRA launched on Orbio's agent launchpad on Robinhood Chain. Its trading fees turn into AI credit
+the agent can spend, and for its first days that credit paid for the morning reading and the first
+articles. The reading runs on Vertex now. `/migra` has the live numbers, and holders vote on what
+the agent covers next at `/migra/vote`.
 
 ## Running it yourself
 
@@ -160,125 +157,86 @@ Serve it:
 python -m migragent.app              # http://localhost:8080
 ```
 
-An empty project shows you an empty product, so seed something to read and then read it:
+An empty project shows you an empty wire, so seed something and read it:
 
 ```bash
 python -m tools.seed_registry                                 # the entry pages, per country and lane
 python -m tools.run_round UK study --mode extract --limit 5   # fetch, extract, check every quote, store
-python tools/build_guide.py UK study                          # an HTML guide and a PDF, into out/
 ```
 
-One thing to change before any of that: `tools/grant_roles.sh` and most files under `tools/` carry
-this deployment's project id as a constant near the top. The service reads `GOOGLE_CLOUD_PROJECT`
-from the environment, the tools don't, and that's a known rough edge rather than a hidden one.
+`tools/grant_roles.sh` and most files under `tools/` carry this deployment's project id as a
+constant near the top. The service reads `GOOGLE_CLOUD_PROJECT` from the environment and the tools
+don't. Known rough edge, not a hidden one.
 
-The batch side is one program with six modes, run as a Cloud Run job in production and as a script
+The batch side is one program with modes, run as a Cloud Run job in production and as a script
 anywhere:
 
 ```bash
-MIGRAGENT_MODE=extract  python -m migragent.worker   # read pages nobody has read
 MIGRAGENT_MODE=watch    python -m migragent.worker   # re-read, diff, record what moved
+MIGRAGENT_MODE=extract  python -m migragent.worker   # read pages nobody has read yet
+MIGRAGENT_MODE=articles python -m migragent.worker   # write up each change for the wire
 MIGRAGENT_MODE=listings python -m migragent.worker   # new jobs off government boards
-MIGRAGENT_MODE=digest   python -m migragent.worker   # work out who needs telling
 MIGRAGENT_MODE=selftest python -m migragent.worker   # the watcher's own boundary
 MIGRAGENT_MODE=robots   python -m migragent.worker   # print robots.txt as the job receives it
 ```
 
-An unknown mode exits rather than falling through to the most expensive branch available. That
-sentence is there because of D38, where an old image met a new mode and started crawling a country.
+An unknown mode exits instead of falling through to the most expensive branch. That sentence is
+here because of D38, where an old image met a new mode and started crawling a country.
 
-The agent layer is off by default and each piece has its own switch: `--agent` on `run_round`,
-`--agent-extract`, `--lane-check`, `MIGRAGENT_AGENT_SCOUT` on `seed_registry`,
-`MIGRAGENT_AGENT_COVERAGE` on the web service. Each one ships behind a flag and turns on lane by
-lane, after the round has run clean twice.
+`watch` only diffs pages it has read before, so it never reads a page for the first time. A new
+lane or a newly seeded page needs one `extract` run, and after that the morning watch keeps it.
 
-## Reproducible testing
+## The tests
 
-Sixteen suites. Fifteen of them need nothing but Python: no Google Cloud project, no credentials,
-no network. Every model is scripted and every client is trapped, so a suite that tries to reach
-Vertex fails rather than quietly costing you money. From a clean clone:
+Scripts, not a framework, and each one proves something the product says out loud. Most need
+nothing but Python: no cloud project, no credentials, no network. Every model is scripted and every
+client is trapped, so a test that tries to reach Vertex fails instead of quietly costing money.
 
 ```bash
-git clone https://github.com/cnpierrepapi/migragent && cd migragent
-python -m venv .venv
-. .venv/bin/activate                 # .venv/Scripts/activate on Windows
-pip install -r requirements.txt
-
-for t in tools/test_*.py; do
-  case "$t" in */test_isolation.py|*/test_work.py|*/test_live_work.py) continue;; esac
-  echo "== $t"
-  python "$t" || exit 1
-done
-```
-
-That prints a line per check and stops on the first failure. On 31 August 2026 it is 15 suites
-green on Python 3.12.10. The two worth actually reading the output of are `test_verify` and
-`test_meaning`, because between them they are the whole argument: a quote that is not on the page
-gets refused, and so does a quote that is on the page but has been stitched together out of two
-real fragments.
-
-Three are skipped in that loop because they need something real. `test_isolation` is below.
-`test_work` and `test_live_work` call the model and fetch live government job boards, so they cost
-money and they fail when a board is having a bad afternoon, which is not a reason to fail a build.
-
-The sixteenth is `tools/test_isolation.py` and it cannot be faked. It proves the researcher
-identity can read the registry and cannot write a row, that the writer can write so the denial
-above means something, and that the web identity cannot mint a watcher token. It needs a real
-project with the four service accounts from the section above, and a pass is not "nothing crashed":
-
-```bash
-export GOOGLE_CLOUD_PROJECT=your-project-id
-python tools/test_isolation.py
+python -m tools.test_occupations      # a quote that isn't on the page is refused
+python -m tools.test_extractor_agent  # the Extractor retries a refused quote, never invents one
+python -m tools.test_scout_agent      # the Scout keeps only pages that state a requirement
+python -m tools.test_agent            # the ADK researcher never opens its own model client
+python -m tools.test_lane_check       # a page's lane is read off the page, not inherited
+python -m tools.test_articles         # a story only prints claims found on its page
+python -m tools.test_voice            # the house voice holds, or the story is dropped
+python -m tools.test_guides           # every guide line cites a requirement
+python -m tools.test_governance       # votes are weighted by balance at close
+python -m tools.test_tls              # pages with a broken TLS chain still get read
+python tools/test_isolation.py        # the identity boundaries hold (needs a real project)
 ```
 
 If you want to watch an agent work without spending anything, run
-`python tools/test_extractor_agent.py`. It scripts a model that returns a true sounding requirement
+`python -m tools.test_extractor_agent`. It scripts a model that returns a true-sounding requirement
 the page never states, and you can watch it get turned down and the agent go back for a real
 sentence.
 
-## The tests, and what each one is for
-
-They are scripts, not a framework, and each proves a claim the product makes out loud.
-
-```bash
-python -m tools.test_eligibility    # countries come from evidence, and the rubric behaves
-python tools/test_delete.py         # deleting a case really does delete every row it touched
-python -m tools.test_occupations    # a quote that is not on the page is refused
-python -m tools.test_alerts         # the right person is told the right thing, once
-python -m tools.test_agent          # the ADK researcher never opens its own model client
-python -m tools.test_scout_agent    # the Scout keeps only pages that state a requirement
-python -m tools.test_extractor_agent  # the Extractor retries a refused quote, never invents one
-python -m tools.test_coverage_agent   # a match on a field nobody uploaded is refused
-python -m tools.test_lane_check     # a page's lane is read off the page, not inherited
-python tools/test_isolation.py      # the identity boundaries hold
-python -m tools.test_run            # the run reports every step, and files its own time honestly
-python -m tools.probe_job_boards    # which government boards are readable today
-```
-
 ## Pre-existing code, and outside services
 
-This repository was started from a prior scaffold of the author's own. `migragent/identity.py` and
+This repository started from a prior scaffold of the author's own. `migragent/identity.py` and
 `migragent/config.py` came from it and were written on 17 August 2026. `docs/INHERITED.md` records
 what came across and what was replaced. Everything else under `migragent/` and `tools/` was written
 for this build.
 
-Outside services: Google Cloud for all of it, which is Vertex AI Gemini, Cloud Vision OCR,
-Firestore, Cloud Run, Cloud Storage and Cloud Scheduler, plus GMI Cloud for one generated video
-clip, because every Veo model returns 404 on this project. Wikidata is used to find school websites
-and is never a source for anything shown. ONS, HESA, IRCC and Times Higher Education appear only in
-internal ranking and never on a page.
+Outside services: Google Cloud for nearly all of it (Vertex AI Gemini, Firestore, Cloud Run, Cloud
+Storage, Cloud Scheduler), and Orbio for the $MIGRA launch and the AI credit it earns.
 
-## Where it is incomplete, said plainly
+## History
 
-Fees exist for 146 of 3,990 courses, because universities keep tuition behind calculators.
+Until 2 October 2026 MIGRAGENT also took people's own cases: uploads, a personal guide, alerts, a
+CV builder. It was built for Google's All Things Agentic hackathon in August, and it was too agent
+shaped for what people actually needed. That part was removed and the old URLs redirect. The
+reading engine underneath it is the same one, and the code for the case product is still in the
+repo where `docs/ARCHITECTURE.md` says it no longer runs.
 
-Twenty-five universities, Cambridge and Manchester and McGill among them, publish their catalogues
-behind search interfaces the crawler can't drive, so their courses are missing.
+## Where it's incomplete, said plainly
 
-The UK's job board won't serve robots.txt and Australia's disallows us, so neither has jobs here.
+Spain's social security site serves us a 403 from the US region the job runs in, so those pages
+don't get read.
 
-Sign-in doesn't exist yet, so a case belongs to a browser rather than to a person.
+Some lanes are thin. Sweden's living lane has a handful of pages, and Saudi Arabia and Ireland
+hold very few requirements.
 
-Billing for the subscription doesn't exist. The page says so instead of taking a card.
+The United States and Australia are on file and never read, because their robots.txt says no.
 
-`docs/DEFECTS.md` and `docs/DECISIONS.md` carry the rest, including the ones that were embarrassing.
+`docs/DEFECTS.md` and `docs/DECISIONS.md` carry the rest, including the embarrassing ones.
