@@ -126,7 +126,11 @@ reproduction, and possibly one small PR.
 
 Number 3 is its own thing and needs a maintainer's opinion on whether early cancellation is meant
 to be supported. Posted as a comment on `google/adk-python#2792` on 22 Aug, with a design for the
-cancel API on `#2425` the same day. Neither has a reply yet.
+cancel API on `#2425` the same day. Both have moved since. Cancellation landed on main on 1 Oct
+(`#2425`). The traceback itself is fixed in `google-adk` 2.12.0 (commit `10c694f`, 12 Oct), which
+stops holding the OTel context across generator yields. Re-ran our repro on 16 Oct: 2.7.1 still
+prints the traceback on a plain `break`, 2.12.0 is clean ten runs out of ten. Confirmed on the
+thread. The `aclose()` loop above can go once we're on 2.12.0 or later; until then it stays.
 
 Per the contribution plan: hit the problem while using the thing, write it up so it leaves nothing
 to search for, quantify it, and never shop an issue tracker for something to fix.
