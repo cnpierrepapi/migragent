@@ -69,7 +69,7 @@ jobs:
             --service-account "migragent-web@$PROJECT.iam.gserviceaccount.com" \
             --allow-unauthenticated \
             --timeout 900 \
-            --update-env-vars MIGRAGENT_MIGRA_PER_MONTH=1000,MIGRAGENT_MIGRA_USD_PER_MONTH=3.49 \
+            --update-env-vars MIGRAGENT_MIGRA_PER_MONTH=1000,MIGRAGENT_MIGRA_USD_PER_MONTH=3.49,MIGRAGENT_MODEL_OFF=1 \
             --quiet
 
       # A deploy that reports success while the service returns 500 is a deploy

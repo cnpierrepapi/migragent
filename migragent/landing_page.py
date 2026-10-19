@@ -26,6 +26,13 @@ THE NEWSROOM FACE
 -----------------
 Paper, ink, wire red for headlines and actions, agent green for anything the
 agent says about itself. See the NEWSROOM block in web/brand/tokens.css.
+
+ARCHIVED 19 OCTOBER 2026
+------------------------
+The reading stopped, so the page is frozen: the archive note leads, the live
+log and the alert signup are gone (one would sit on "idle" forever, the other
+would promise alerts that never come), and the copy says what it did, not what
+it does. `DESK` is kept so the log can come back with the reading.
 """
 from __future__ import annotations
 
@@ -56,7 +63,12 @@ CSS = '''
             color: var(--accent); margin: 0 0 10px }
   .kicker b { color: var(--primary); font-weight: 500 }
 
-  .front { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr) 290px; gap: 0;
+  .archived { border: 1px solid var(--ink); background: var(--paper-raised); padding: 16px 20px; margin: 0 0 26px }
+  .archived h2 { font-size: clamp(1.3rem, 2.4vw, 1.7rem); margin: 0 0 6px }
+  .archived p { font: 1rem/1.6 var(--font-serif); margin: 0; max-width: 72ch }
+  .archived .kicker { margin: 0 0 6px }
+
+  .front { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); gap: 0;
            border-bottom: 1px solid var(--ink); padding-bottom: 30px }
   .front > div { padding: 0 24px; border-right: 1px solid var(--rule) }
   .front > div:first-child { padding-left: 0 }
@@ -171,6 +183,14 @@ CSS = '''
   }
 '''
 
+ARCHIVE_NOTE = '''<div class="archived">
+  <p class="kicker"><b>Archived</b> · 19 October 2026</p>
+  <h2>The agent has stopped reading.</h2>
+  <p>MIGRAGENT read its last page on 19 October 2026. Everything it filed up to then stays here as it was: the
+  articles, the reports behind them, every source. Nothing new gets filed. The rules will keep moving and this
+  page won't see it, so check the official page before you act on anything.</p>
+</div>'''
+
 DESK = '''<div class="desk" id="live">
   <h3>The log <span id="lv-phase">-</span></h3>
   <div class="figs">
@@ -220,8 +240,8 @@ def _lead(a: dict[str, Any] | None) -> str:
         return '''<div class="lead">
   <p class="kicker"><b>The wire</b> · waiting for the first filing</p>
   <h1>Rules move. It reads them first.</h1>
-  <p class="dek">Every morning the agent re-reads the official immigration pages it holds. When one
-  changes a rule, it writes it up here, with who it is for and a report that shows its working.</p>
+  <p class="dek">Every morning the agent re-read the official immigration pages it held. When one
+  changed a rule, it wrote it up here, with who it was for and a report that showed its working.</p>
   <p class="stamp">Nothing has been filed yet.</p></div>'''
     r = a.get("report") or {}
     groups = a.get("who_for") or []
@@ -290,37 +310,37 @@ def landing_html(stats: dict[str, Any], articles: list[dict[str, Any]] | None = 
     t = stats["totals"]
     reads = "".join(
         f'<div class="place"><b>{_e(r["name"])}</b><span>{r["pages"]:,} official pages'
-        f'{" · read every morning" if r["daily"] else " · on file"}</span>'
+        f'{" · read every morning until 19 Oct" if r["daily"] else " · on file"}</span>'
         f'<span>{r["rules"]:,} rule changes caught · {r["articles"]:,} articles</span></div>'
         for r in stats["rows"] if r["pages"])
 
     return f'''<!doctype html>
 <html lang="en" data-theme="newsroom"><head>{HEAD}
-{meta(title="The immigration wire, written by an AI agent", path="/", description="An AI agent reads official immigration pages in 13 countries every morning and writes up every rule change: what changed, who it is for, and the proof.", ld=[organization(), website()])}
+{meta(title="The immigration wire, written by an AI agent (archived)", path="/", description="Archived 19 October 2026. An AI agent read official immigration pages in 13 countries every morning and wrote up every rule change: what changed, who it was for, and the proof.", ld=[organization(), website()])}
 <meta name="theme-color" content="#F6F3EC">
 <style>{CSS}{SIGNUP_STYLE}</style></head>
 <body>
 {MASTHEAD}
 <div class="page">
+  {ARCHIVE_NOTE}
   <div class="front">
     {_lead(articles[0] if articles else None)}
     {_second(articles[1:5])}
-    {DESK}
   </div>
 
   <div class="band">
     <div><b>{t["pages"]:,}</b><span>official pages on file</span></div>
-    <div><b>{t["daily"]}</b><span>countries read every morning</span></div>
+    <div><b>{t["daily"]}</b><span>countries it read every morning</span></div>
     <div><b>{t["rules"]:,}</b><span>rule changes caught</span></div>
     <div><b>{t["articles"]:,}</b><span>articles filed</span></div>
   </div>
 
   <section>
     <p class="kicker"><b>How it reports</b> · an agent, on a beat</p>
-    <h2>Rules move without warning. It reads them first.</h2>
+    <h2>Rules move without warning. It read them first.</h2>
     <p class="lede">Immigration rules change on a Tuesday afternoon with no announcement: a salary floor, a
-    fee, a list of approved schools. MIGRAGENT is an AI reporter on that beat. Every morning it goes back to the
-    official pages it holds, notices what moved, and writes it up.</p>
+    fee, a list of approved schools. MIGRAGENT was an AI reporter on that beat. Every morning it went back to the
+    official pages it held, noticed what moved, and wrote it up.</p>
     <div class="cols">
       <div><em>It reads</em><b>Official pages only</b><p>Government sites, straight from the source. No blogs,
       no forums, no other reporters. <a href="/sources">Every page it reads</a>.</p></div>
@@ -332,8 +352,6 @@ def landing_html(stats: dict[str, Any], articles: list[dict[str, Any]] | None = 
     <div class="row"><a class="cta" href="/articles">Read the wire</a>
       <a class="cta ghost" href="/rounds">The log</a></div>
   </section>
-
-  <div id="alerts" style="max-width:820px">{signup}</div>
 
   <section>
     <h2>How a line gets printed</h2>
@@ -361,14 +379,14 @@ def landing_html(stats: dict[str, Any], articles: list[dict[str, Any]] | None = 
   <section>
     <h2>Where $MIGRA fits</h2>
     <div class="two">
-      <div><b>The reading runs on Google Cloud</b><p>Every morning's reading and writing runs on Gemini, through
+      <div><b>The reading ran on Google Cloud</b><p>Every morning's reading and writing ran on Gemini, through
       Google Cloud. The log shows what moved and when.</p></div>
       <div><b>$MIGRA builds a balance</b><p>$MIGRA's trading fees collect as AI credit on Orbio. That credit paid
       for the agent's first days, and it can again once it builds back up. <a href="/migra">How $MIGRA works</a>.</p></div>
     </div>
   </section>
 
-  <footer>MIGRAGENT is an AI agent that reads official government pages and reports what changed. It is not a
+  <footer>MIGRAGENT was an AI agent that read official government pages and reported what changed, until 19 October 2026. It is not a
   law firm and does not give immigration advice; the official page is always the authority.
   <a href="/sources">Sources</a> · <a href="/rounds">The log</a> · <a href="/architecture">How it works</a> ·
   <a href="/data">Data</a> · <a href="/migra">$MIGRA</a></footer>

@@ -36,6 +36,7 @@ adapter, and `tools/test_agent.py` checks the claim rather than trusting it.
 from __future__ import annotations
 
 import json
+import os
 import random
 import time
 import urllib.error
@@ -82,6 +83,11 @@ def _post(url: str, body: bytes, credentials, timeout: int = TIMEOUT,
     point of D20 is that there is one place where a 429 is recognised as a 429.
     """
     import google.auth.transport.requests
+
+    # Archived 19 October 2026. One switch here stops every model call in the
+    # product, the embedder included, before a token is spent. Unset it to resume.
+    if os.environ.get("MIGRAGENT_MODEL_OFF"):
+        raise ModelError(None, "model calls are off: MIGRAGENT is archived (MIGRAGENT_MODEL_OFF)", 0)
 
     last_status: int | None = None
     last_detail = ""
